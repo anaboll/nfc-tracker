@@ -47,8 +47,9 @@ function LoginForm() {
         setError("Nieprawidlowy login lub haslo");
         setLoading(false);
       } else if (result?.ok) {
-        // Use window.location for reliable redirect (works behind Cloudflare proxy)
-        window.location.href = callbackUrl;
+        // Always redirect using relative path - never use result.url
+        // because Docker internal addresses leak into it (127.0.0.1:3000)
+        window.location.replace("/dashboard");
       } else {
         setError("Wystapil blad logowania");
         setLoading(false);

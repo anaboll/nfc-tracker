@@ -5,15 +5,6 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Force HTTPS redirect when behind Cloudflare
-  const proto = request.headers.get("x-forwarded-proto");
-  const host = request.headers.get("host") || "";
-  if (proto === "http" && !host.includes("localhost") && !host.match(/^\d+\.\d+\.\d+\.\d+/)) {
-    const httpsUrl = new URL(request.url);
-    httpsUrl.protocol = "https:";
-    return NextResponse.redirect(httpsUrl, 301);
-  }
-
   // Protected routes - check auth
   const protectedPaths = ["/dashboard", "/api/stats", "/api/tags", "/api/upload"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
