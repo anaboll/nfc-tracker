@@ -4,9 +4,16 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const method = request.method;
+
+  // Public POST endpoints (tracking from public pages)
+  const publicPostPaths = ["/api/link-click", "/api/video-event"];
+  if (method === "POST" && publicPostPaths.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
 
   // Protected routes - check auth
-  const protectedPaths = ["/dashboard", "/api/stats", "/api/tags", "/api/upload"];
+  const protectedPaths = ["/dashboard", "/api/stats", "/api/tags", "/api/upload", "/api/clients", "/api/link-click", "/api/video-event"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
   if (!isProtected) {
@@ -36,5 +43,8 @@ export const config = {
     "/api/stats/:path*",
     "/api/tags/:path*",
     "/api/upload/:path*",
+    "/api/clients/:path*",
+    "/api/link-click/:path*",
+    "/api/video-event/:path*",
   ],
 };

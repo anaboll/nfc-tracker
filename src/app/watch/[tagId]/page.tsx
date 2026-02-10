@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { parseUserAgent, hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import TrackedVideoPlayer from "./TrackedVideoPlayer";
 
 export default async function WatchPage({ params }: { params: { tagId: string } }) {
   const tag = await prisma.tag.findUnique({
@@ -64,18 +65,7 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
       <div className="w-full max-w-2xl">
         {/* Video Player */}
         <div className="relative rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#111" }}>
-          <video
-            className="w-full"
-            controls
-            autoPlay
-            playsInline
-            preload="metadata"
-            style={{ maxHeight: "80vh" }}
-          >
-            <source src={videoSrc} type="video/mp4" />
-            <source src={videoSrc} type="video/webm" />
-            Twoja przegladarka nie wspiera odtwarzania wideo.
-          </video>
+          <TrackedVideoPlayer tagId={params.tagId} videoSrc={videoSrc} />
         </div>
 
         {/* Info */}

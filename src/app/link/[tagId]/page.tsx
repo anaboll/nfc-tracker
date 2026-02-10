@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import TrackedLink from "./TrackedLink";
 
 interface LinkItem {
   label: string;
@@ -69,11 +70,12 @@ export default async function MultiLinkPage({ params }: { params: { tagId: strin
           {links.map((link, idx) => {
             const iconInfo = getIcon(link.icon);
             return (
-              <a
+              <TrackedLink
                 key={idx}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                tagId={params.tagId}
+                linkUrl={link.url}
+                linkLabel={link.label}
+                linkIcon={link.icon}
                 className="flex items-center gap-4 w-full p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
                 style={{
                   background: "rgba(22, 33, 62, 0.8)",
@@ -91,7 +93,7 @@ export default async function MultiLinkPage({ params }: { params: { tagId: strin
                 <svg className="w-5 h-5 flex-shrink-0" style={{ color: "#6060a0" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </TrackedLink>
             );
           })}
         </div>

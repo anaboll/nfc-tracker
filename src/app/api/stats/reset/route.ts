@@ -12,11 +12,19 @@ export async function POST(request: NextRequest) {
 
   if (tagId) {
     // Reset stats for specific tag
-    const deleted = await prisma.scan.deleteMany({ where: { tagId } });
-    return NextResponse.json({ ok: true, deleted: deleted.count, scope: tagId });
+    const [deletedScans, deletedClicks, deletedVideoEvents] = await Promise.all([
+      prisma.scan.deleteMany({ where: { tagId } }),
+      prisma.linkClick.deleteMany({ where: { tagId } }),
+      prisma.videoEvent.deleteMany({ where: { tagId } }),
+    ]);
+    return NextResponse.json({ ok: true, deletedScans: deletedScans.count, deletedClicks: deletedClicks.count, deletedVideoEvents: deletedVideoEvents.count, scope: tagId });
   } else {
     // Reset ALL stats
-    const deleted = await prisma.scan.deleteMany();
-    return NextResponse.json({ ok: true, deleted: deleted.count, scope: "all" });
+    const [deletedScans, deletedClicks, deletedVideoEvents] = await Promise.all([
+      prisma.scan.deleteMany(),
+      prisma.linkClick.deleteMany(),
+      prisma.videoEvent.deleteMany(),
+    ]);
+    return NextResponse.json({ ok: true, deletedScans: deletedScans.count, deletedClicks: deletedClicks.count, deletedVideoEvents: deletedVideoEvents.count, scope: "all" });
   }
 }

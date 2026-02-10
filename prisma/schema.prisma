@@ -17,6 +17,20 @@ model User {
   updatedAt      DateTime @updatedAt
 }
 
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique  // URL-friendly name, e.g. "bulderownia"
+  description String?
+  color       String?  // Brand color hex, e.g. "#ff6600"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tags        Tag[]
+
+  @@index([isActive])
+}
+
 // Tag types: "url" = simple redirect, "video" = video player, "multilink" = page with multiple links
 model Tag {
   id          String   @id
@@ -27,11 +41,16 @@ model Tag {
   videoFile   String?
   links       Json?    // For multilink: [{ label, url, icon }]
   isActive    Boolean  @default(true)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   scans       Scan[]
+  linkClicks  LinkClick[]
+  videoEvents VideoEvent[]
 
   @@index([isActive])
+  @@index([clientId])
 }
 
 model Scan {
@@ -57,4 +76,33 @@ model Scan {
   @@index([country])
   @@index([deviceType])
   @@index([nfcId])
+}
+
+model LinkClick {
+  id        String   @id @default(cuid())
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id])
+  linkUrl   String   @db.Text
+  linkLabel String?
+  linkIcon  String?
+  timestamp DateTime @default(now())
+  ipHash    String?
+
+  @@index([tagId])
+  @@index([timestamp])
+  @@index([tagId, linkUrl])
+}
+
+model VideoEvent {
+  id        String   @id @default(cuid())
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id])
+  event     String   // "play", "pause", "ended", "progress_25", "progress_50", "progress_75", "progress_100"
+  timestamp DateTime @default(now())
+  ipHash    String?
+  watchTime Float?   // seconds watched at the time of event
+
+  @@index([tagId])
+  @@index([timestamp])
+  @@index([tagId, event])
 }

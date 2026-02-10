@@ -83,6 +83,47 @@ interface TagLink {
   icon: string;
 }
 
+interface LinkClickStat {
+  linkUrl: string;
+  linkLabel: string | null;
+  linkIcon: string | null;
+  clicks: number;
+  percent: number;
+}
+
+interface LinkClickData {
+  tagId: string;
+  total: number;
+  links: LinkClickStat[];
+}
+
+interface VideoStats {
+  tagId: string;
+  plays: number;
+  pauses: number;
+  completions: number;
+  progress25: number;
+  progress50: number;
+  progress75: number;
+  progress100: number;
+  avgWatchTime: number | null;
+  maxWatchTime: number | null;
+}
+
+interface ClientInfo {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
+
+interface ClientFull extends ClientInfo {
+  description: string | null;
+  isActive: boolean;
+  tagCount: number;
+  scanCount: number;
+}
+
 interface TagFull {
   id: string;
   name: string;
@@ -92,6 +133,8 @@ interface TagFull {
   isActive: boolean;
   tagType: string;
   links: TagLink[] | null;
+  clientId: string | null;
+  client: ClientInfo | null;
   _count: { scans: number };
 }
 
@@ -117,9 +160,18 @@ function DashboardPage() {
   /* ---- state ---- */
   const [stats, setStats] = useState<StatsData | null>(null);
   const [tags, setTags] = useState<TagFull[]>([]);
+  const [clients, setClients] = useState<ClientFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState("");
+
+  // client management
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null); // null = all clients
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientDesc, setNewClientDesc] = useState("");
+  const [newClientColor, setNewClientColor] = useState("#7c3aed");
+  const [clientCreating, setClientCreating] = useState(false);
 
   // filters
   const [dateFrom, setDateFrom] = useState("");
@@ -137,6 +189,7 @@ function DashboardPage() {
   // create tag
   const [newTagId, setNewTagId] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const [newTagClient, setNewTagClient] = useState("");
   const [newTagUrl, setNewTagUrl] = useState("");
   const [newTagDesc, setNewTagDesc] = useState("");
   const [newTagType, setNewTagType] = useState("url");
@@ -166,6 +219,14 @@ function DashboardPage() {
   // upload
   const [uploadingTagId, setUploadingTagId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState("");
+
+  // link click stats
+  const [linkClickStats, setLinkClickStats] = useState<Record<string, LinkClickData>>({});
+  const [expandedLinkStats, setExpandedLinkStats] = useState<string | null>(null);
+
+  // video stats
+  const [videoStats, setVideoStats] = useState<Record<string, VideoStats>>({});
+  const [expandedVideoStats, setExpandedVideoStats] = useState<string | null>(null);
 
   /* ---- fetch helpers ---- */
 
@@ -204,11 +265,77 @@ function DashboardPage() {
     }
   }, []);
 
+  const fetchClients = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clients");
+      if (res.ok) {
+        const data: ClientFull[] = await res.json();
+        setClients(data);
+      }
+    } catch (e) {
+      console.error("Clients fetch failed:", e);
+    }
+  }, []);
+
+  const fetchLinkClicks = useCallback(async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/link-click?tagId=${encodeURIComponent(tagId)}`);
+      if (res.ok) {
+        const data: LinkClickData = await res.json();
+        setLinkClickStats(prev => ({ ...prev, [tagId]: data }));
+      }
+    } catch (e) {
+      console.error("LinkClick fetch failed:", e);
+    }
+  }, []);
+
+  const toggleLinkStats = useCallback((tagId: string) => {
+    if (expandedLinkStats === tagId) {
+      setExpandedLinkStats(null);
+    } else {
+      setExpandedLinkStats(tagId);
+      if (!linkClickStats[tagId]) {
+        fetchLinkClicks(tagId);
+      }
+    }
+  }, [expandedLinkStats, linkClickStats, fetchLinkClicks]);
+
+  const fetchVideoStats = useCallback(async (tagId: string) => {
+    try {
+      const res = await fetch(`/api/video-event?tagId=${encodeURIComponent(tagId)}`);
+      if (res.ok) {
+        const data: VideoStats = await res.json();
+        setVideoStats(prev => ({ ...prev, [tagId]: data }));
+      }
+    } catch (e) {
+      console.error("VideoStats fetch failed:", e);
+    }
+  }, []);
+
+  const toggleVideoStats = useCallback((tagId: string) => {
+    if (expandedVideoStats === tagId) {
+      setExpandedVideoStats(null);
+    } else {
+      setExpandedVideoStats(tagId);
+      if (!videoStats[tagId]) {
+        fetchVideoStats(tagId);
+      }
+    }
+  }, [expandedVideoStats, videoStats, fetchVideoStats]);
+
+  const formatWatchTime = (seconds: number | null) => {
+    if (seconds == null) return "---";
+    if (seconds < 60) return `${seconds}s`;
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}m ${sec}s`;
+  };
+
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchTags()]);
+    await Promise.all([fetchStats(), fetchTags(), fetchClients()]);
     setLoading(false);
-  }, [fetchStats, fetchTags]);
+  }, [fetchStats, fetchTags, fetchClients]);
 
   /* ---- initial load ---- */
 
@@ -226,8 +353,39 @@ function DashboardPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchStats(), fetchTags()]);
+    await Promise.all([fetchStats(), fetchTags(), fetchClients()]);
     setRefreshing(false);
+  };
+
+  /* client CRUD */
+  const handleCreateClient = async () => {
+    if (!newClientName.trim()) return;
+    setClientCreating(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newClientName, description: newClientDesc, color: newClientColor }),
+      });
+      if (res.ok) {
+        setNewClientName("");
+        setNewClientDesc("");
+        setNewClientColor("#7c3aed");
+        setShowAddClient(false);
+        await fetchClients();
+      }
+    } catch { /* ignore */ }
+    finally { setClientCreating(false); }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!confirm("Usunac klienta? Kampanie zostana odpięte (nie usuniete).")) return;
+    try {
+      await fetch(`/api/clients?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (selectedClientId === id) setSelectedClientId(null);
+      await fetchClients();
+      await fetchTags();
+    } catch { /* ignore */ }
   };
 
   const handleFilter = async () => {
@@ -312,11 +470,11 @@ function DashboardPage() {
     setTagCreateError("");
     setTagCreateSuccess("");
     if (!newTagId || !newTagName) {
-      setTagCreateError("ID i nazwa sa wymagane");
+      setTagCreateError("ID i nazwa kampanii sa wymagane");
       return;
     }
     if (newTagType === "url" && !newTagUrl) {
-      setTagCreateError("Docelowy URL jest wymagany dla typu URL");
+      setTagCreateError("Docelowy URL jest wymagany");
       return;
     }
     if (newTagType === "multilink" && newTagLinks.every(l => !l.url)) {
@@ -330,6 +488,7 @@ function DashboardPage() {
         name: newTagName,
         description: newTagDesc || undefined,
         tagType: newTagType,
+        ...(newTagClient ? { clientId: newTagClient } : {}),
       };
       if (newTagType === "url") {
         body.targetUrl = newTagUrl;
@@ -346,14 +505,15 @@ function DashboardPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setTagCreateError(data.error || "Blad tworzenia tagu");
+        setTagCreateError(data.error || "Blad tworzenia kampanii");
       } else {
-        setTagCreateSuccess("Tag utworzony pomyslnie!");
+        setTagCreateSuccess("Kampania utworzona pomyslnie!");
         setNewTagId("");
         setNewTagName("");
         setNewTagUrl("");
         setNewTagDesc("");
         setNewTagType("url");
+        setNewTagClient("");
         setNewTagLinks([{ label: "", url: "", icon: "link" }]);
         await fetchTags();
         await fetchStats();
@@ -377,7 +537,7 @@ function DashboardPage() {
   };
 
   const handleDeleteTag = async (id: string) => {
-    if (!confirm(`Czy na pewno chcesz usunac tag "${id}" i wszystkie jego skany?`)) return;
+    if (!confirm(`Czy na pewno chcesz usunac kampanie "${id}" i wszystkie jej skany?`)) return;
     try {
       await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       await fetchTags();
@@ -422,7 +582,7 @@ function DashboardPage() {
 
   /* remove video from tag */
   const handleRemoveVideo = async (tagId: string) => {
-    if (!confirm("Czy na pewno chcesz usunac video z tego tagu?")) return;
+    if (!confirm("Czy na pewno chcesz usunac video z tej kampanii?")) return;
     try {
       await fetch("/api/tags", {
         method: "PUT",
@@ -576,6 +736,11 @@ function DashboardPage() {
   }
 
   /* ---- computed data ---- */
+
+  // Filter tags by selected client
+  const filteredTags = selectedClientId
+    ? tags.filter(t => t.clientId === selectedClientId)
+    : tags;
 
   const kpi = stats?.kpi;
   const devices = stats?.devices;
@@ -740,6 +905,108 @@ function DashboardPage() {
       {/* ============================================================ */}
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 24px 64px" }}>
+        {/* ---- Client Selector ---- */}
+        <section style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "#a0a0c0", marginRight: 8 }}>Klient:</h2>
+            <button
+              onClick={() => setSelectedClientId(null)}
+              style={{
+                background: !selectedClientId ? "linear-gradient(135deg, #7c3aed, #10b981)" : "#1e1e3a",
+                border: !selectedClientId ? "none" : "1px solid #2a2a4a",
+                color: !selectedClientId ? "#fff" : "#a0a0c0",
+                borderRadius: 20,
+                padding: "6px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              Wszyscy
+            </button>
+            {clients.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSelectedClientId(c.id)}
+                style={{
+                  background: selectedClientId === c.id
+                    ? (c.color || "#7c3aed")
+                    : "#1e1e3a",
+                  border: selectedClientId === c.id ? "none" : "1px solid #2a2a4a",
+                  color: selectedClientId === c.id ? "#fff" : "#a0a0c0",
+                  borderRadius: 20,
+                  padding: "6px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {c.color && (
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: selectedClientId === c.id ? "#fff" : c.color,
+                    flexShrink: 0,
+                  }} />
+                )}
+                {c.name}
+                <span style={{
+                  fontSize: 10, opacity: 0.7,
+                  background: "rgba(255,255,255,0.15)",
+                  padding: "1px 6px",
+                  borderRadius: 10,
+                }}>
+                  {c.scanCount}
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => setShowAddClient(!showAddClient)}
+              style={{
+                background: "transparent",
+                border: "1px dashed #3a3a5a",
+                color: "#6060a0",
+                borderRadius: 20,
+                padding: "6px 14px",
+                fontSize: 13,
+                cursor: "pointer",
+                transition: "border-color 0.2s, color 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#7c3aed"; e.currentTarget.style.color = "#9f67ff"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#3a3a5a"; e.currentTarget.style.color = "#6060a0"; }}
+            >
+              + Dodaj klienta
+            </button>
+          </div>
+          {/* Add client form */}
+          {showAddClient && (
+            <div className="card" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap", padding: "14px 18px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Nazwa klienta</label>
+                <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="np. Bulderownia" style={{ fontSize: 13, padding: "7px 12px" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Opis</label>
+                <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opcjonalny opis" style={{ fontSize: 13, padding: "7px 12px" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Kolor</label>
+                <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 40, height: 34, border: "1px solid #2a2a4a", borderRadius: 6, background: "#1e1e3a", cursor: "pointer" }} />
+              </div>
+              <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ padding: "8px 18px", fontSize: 12 }}>
+                {clientCreating ? "..." : "Dodaj"}
+              </button>
+              <button onClick={() => setShowAddClient(false)} style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
+                Anuluj
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* ---- Filter Bar ---- */}
         <section
           className="card"
@@ -775,7 +1042,7 @@ function DashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500 }}>
-              Tag
+              Kampania
             </label>
             <select
               value={tagFilter}
@@ -783,7 +1050,7 @@ function DashboardPage() {
               className="input-field"
               style={{ minWidth: 180, padding: "8px 12px" }}
             >
-              <option value="">Wszystkie tagi</option>
+              <option value="">Wszystkie kampanie</option>
               {allTagsFilter.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.id})
@@ -999,7 +1266,7 @@ function DashboardPage() {
               {/* Top Tags */}
               <div className="card">
                 <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
-                  Najczesciej skanowane tagi
+                  Najczesciej skanowane kampanie
                 </h3>
                 {topTags.length === 0 && (
                   <p style={{ color: "#6060a0", fontSize: 14 }}>Brak danych</p>
@@ -1361,7 +1628,7 @@ function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <h2 style={{ fontSize: 22, fontWeight: 800 }}>
-                    <span className="gradient-text">Zarzadzanie tagami</span>
+                    <span className="gradient-text">Kampanie</span>
                   </h2>
                   <span
                     style={{
@@ -1411,7 +1678,7 @@ function DashboardPage() {
               {/* ---- Create Tag Form ---- */}
               <div className="card" style={{ marginBottom: 20 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#f0f0ff" }}>
-                  Utworz nowy tag
+                  Nowa kampania
                 </h3>
                 <form onSubmit={handleCreateTag}>
                   <div
@@ -1424,7 +1691,7 @@ function DashboardPage() {
                   >
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
-                        ID tagu
+                        ID kampanii
                       </label>
                       <input
                         className="input-field"
@@ -1451,7 +1718,7 @@ function DashboardPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
-                        Typ tagu
+                        Typ kampanii
                       </label>
                       <select
                         className="input-field"
@@ -1477,6 +1744,22 @@ function DashboardPage() {
                         />
                       </div>
                     )}
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                        Klient
+                      </label>
+                      <select
+                        className="input-field"
+                        value={newTagClient}
+                        onChange={(e) => setNewTagClient(e.target.value)}
+                        style={{ padding: "8px 12px" }}
+                      >
+                        <option value="">-- brak klienta --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
                         Opis (opcjonalnie)
@@ -1609,7 +1892,7 @@ function DashboardPage() {
                       disabled={tagCreating}
                       style={{ padding: "10px 24px", fontSize: 13 }}
                     >
-                      {tagCreating ? "Tworzenie..." : "Utworz tag"}
+                      {tagCreating ? "Tworzenie kampanii..." : "Utworz kampanie"}
                     </button>
                     {tagCreateError && (
                       <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>
@@ -1623,15 +1906,15 @@ function DashboardPage() {
 
               {/* ---- Tags List ---- */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {tags.length === 0 && (
+                {filteredTags.length === 0 && (
                   <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
                     <p style={{ color: "#6060a0", fontSize: 14 }}>
-                      Brak tagow. Utworz pierwszy tag powyzej.
+                      {selectedClientId ? "Brak kampanii dla tego klienta." : "Brak kampanii. Utworz pierwsza kampanie powyzej."}
                     </p>
                   </div>
                 )}
 
-                {tags.map((tag) => (
+                {filteredTags.map((tag) => (
                   <div key={tag.id} className="card card-hover" style={{ padding: "16px 20px" }}>
                     {editingTagId === tag.id ? (
                       /* ---- Edit Mode ---- */
@@ -1834,6 +2117,26 @@ function DashboardPage() {
                                 Video wgrane
                               </span>
                             )}
+                            {tag.client && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                  background: tag.client.color ? `${tag.client.color}22` : "rgba(160,160,192,0.12)",
+                                  color: tag.client.color || "#a0a0c0",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                              >
+                                {tag.client.color && (
+                                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: tag.client.color, flexShrink: 0 }} />
+                                )}
+                                {tag.client.name}
+                              </span>
+                            )}
                           </div>
 
                           {/* Right: actions */}
@@ -1917,7 +2220,7 @@ function DashboardPage() {
                             ) : (
                               <button
                                 onClick={() => setResetTagConfirm(tag.id)}
-                                title="Resetuj statystyki tagu"
+                                title="Resetuj statystyki kampanii"
                                 style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#fbbf24"; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
@@ -1978,6 +2281,178 @@ function DashboardPage() {
                           <p style={{ fontSize: 12, color: "#6060a0", marginTop: 4 }}>
                             {tag.description}
                           </p>
+                        )}
+
+                        {/* Link click stats for multilink campaigns */}
+                        {tag.tagType === "multilink" && (
+                          <div style={{ marginTop: 8 }}>
+                            <button
+                              onClick={() => toggleLinkStats(tag.id)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#60a5fa",
+                                fontSize: 12,
+                                cursor: "pointer",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontWeight: 500,
+                              }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                                style={{ transform: expandedLinkStats === tag.id ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}
+                              >
+                                <path d="M9 5l7 7-7 7" />
+                              </svg>
+                              Statystyki klikniec ({linkClickStats[tag.id]?.total ?? "..."})
+                            </button>
+                            {expandedLinkStats === tag.id && linkClickStats[tag.id] && (
+                              <div style={{
+                                marginTop: 8,
+                                padding: 12,
+                                background: "#1a1a2e",
+                                borderRadius: 8,
+                                border: "1px solid #2a2a4a",
+                              }}>
+                                {linkClickStats[tag.id].links.length === 0 ? (
+                                  <p style={{ fontSize: 12, color: "#6060a0" }}>Brak klikniec</p>
+                                ) : (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                    {linkClickStats[tag.id].links.map((lc, idx) => (
+                                      <div key={idx} style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "6px 0",
+                                        borderBottom: idx < linkClickStats[tag.id].links.length - 1 ? "1px solid #252547" : "none",
+                                      }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                                          <span style={{ fontSize: 11, color: "#a0a0c0", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            {lc.linkLabel || lc.linkUrl}
+                                          </span>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                          <div style={{ width: 60, height: 4, background: "#252547", borderRadius: 2, overflow: "hidden" }}>
+                                            <div style={{ width: `${lc.percent}%`, height: "100%", background: "linear-gradient(90deg, #60a5fa, #3b82f6)", borderRadius: 2 }} />
+                                          </div>
+                                          <span style={{ fontSize: 12, fontWeight: 700, color: "#f0f0ff", minWidth: 24, textAlign: "right" }}>{lc.clicks}</span>
+                                          <span style={{ fontSize: 10, color: "#6060a0", minWidth: 28, textAlign: "right" }}>{lc.percent}%</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    <div style={{ fontSize: 11, color: "#6060a0", marginTop: 4, paddingTop: 6, borderTop: "1px solid #252547" }}>
+                                      Razem: {linkClickStats[tag.id].total} klikniec
+                                    </div>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => fetchLinkClicks(tag.id)}
+                                  style={{
+                                    background: "transparent",
+                                    border: "none",
+                                    color: "#60a5fa",
+                                    fontSize: 11,
+                                    cursor: "pointer",
+                                    padding: "4px 0 0 0",
+                                    textDecoration: "underline",
+                                  }}
+                                >
+                                  Odswiez
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Video stats for video campaigns */}
+                        {tag.tagType === "video" && (
+                          <div style={{ marginTop: 8 }}>
+                            <button
+                              onClick={() => toggleVideoStats(tag.id)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#10b981",
+                                fontSize: 12,
+                                cursor: "pointer",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontWeight: 500,
+                              }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                                style={{ transform: expandedVideoStats === tag.id ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}
+                              >
+                                <path d="M9 5l7 7-7 7" />
+                              </svg>
+                              Statystyki video ({videoStats[tag.id]?.plays ?? "..."} odtworzen)
+                            </button>
+                            {expandedVideoStats === tag.id && videoStats[tag.id] && (
+                              <div style={{
+                                marginTop: 8,
+                                padding: 12,
+                                background: "#1a1a2e",
+                                borderRadius: 8,
+                                border: "1px solid #2a2a4a",
+                              }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 10, marginBottom: 10 }}>
+                                  <div style={{ textAlign: "center" }}>
+                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#10b981" }}>{videoStats[tag.id].plays}</p>
+                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Odtworzen</p>
+                                  </div>
+                                  <div style={{ textAlign: "center" }}>
+                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#60a5fa" }}>{videoStats[tag.id].completions}</p>
+                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Do konca</p>
+                                  </div>
+                                  <div style={{ textAlign: "center" }}>
+                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#9f67ff" }}>{formatWatchTime(videoStats[tag.id].avgWatchTime)}</p>
+                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Sred. czas</p>
+                                  </div>
+                                </div>
+                                {/* Progress funnel */}
+                                <div style={{ marginTop: 8 }}>
+                                  <p style={{ fontSize: 11, color: "#a0a0c0", marginBottom: 6, fontWeight: 500 }}>Retencja:</p>
+                                  {[
+                                    { label: "25%", value: videoStats[tag.id].progress25, color: "#10b981" },
+                                    { label: "50%", value: videoStats[tag.id].progress50, color: "#60a5fa" },
+                                    { label: "75%", value: videoStats[tag.id].progress75, color: "#9f67ff" },
+                                    { label: "100%", value: videoStats[tag.id].progress100, color: "#f59e0b" },
+                                  ].map((p) => {
+                                    const maxP = videoStats[tag.id].plays || 1;
+                                    const pct = Math.round((p.value / maxP) * 100);
+                                    return (
+                                      <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                        <span style={{ fontSize: 11, color: "#6060a0", width: 30, textAlign: "right" }}>{p.label}</span>
+                                        <div style={{ flex: 1, height: 6, background: "#252547", borderRadius: 3, overflow: "hidden" }}>
+                                          <div style={{ width: `${pct}%`, height: "100%", background: p.color, borderRadius: 3, transition: "width 0.3s" }} />
+                                        </div>
+                                        <span style={{ fontSize: 11, color: "#f0f0ff", width: 24, fontWeight: 600 }}>{p.value}</span>
+                                        <span style={{ fontSize: 10, color: "#6060a0", width: 30 }}>{pct}%</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <button
+                                  onClick={() => fetchVideoStats(tag.id)}
+                                  style={{
+                                    background: "transparent",
+                                    border: "none",
+                                    color: "#10b981",
+                                    fontSize: 11,
+                                    cursor: "pointer",
+                                    padding: "4px 0 0 0",
+                                    textDecoration: "underline",
+                                  }}
+                                >
+                                  Odswiez
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}

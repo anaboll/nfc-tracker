@@ -9,7 +9,10 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const tags = await prisma.tag.findMany({
-    include: { _count: { select: { scans: true } } },
+    include: {
+      _count: { select: { scans: true } },
+      client: { select: { id: true, name: true, slug: true, color: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -22,7 +25,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, tagType, links } = body;
+  const { id, name, targetUrl, description, tagType, links, clientId } = body;
 
   if (!id || !name) {
     return NextResponse.json({ error: "id i name sa wymagane" }, { status: 400 });
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
       targetUrl: finalUrl,
       description: description || null,
       links: type === "multilink" && links ? links : undefined,
+      ...(clientId ? { clientId } : {}),
     },
   });
 
@@ -64,7 +68,7 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, isActive, videoFile, tagType, links } = body;
+  const { id, name, targetUrl, description, isActive, videoFile, tagType, links, clientId } = body;
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
@@ -78,6 +82,7 @@ export async function PUT(request: NextRequest) {
       ...(videoFile !== undefined && { videoFile }),
       ...(tagType !== undefined && { tagType }),
       ...(links !== undefined && { links }),
+      ...(clientId !== undefined && { clientId: clientId || null }),
     },
   });
 
@@ -93,8 +98,12 @@ export async function DELETE(request: NextRequest) {
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
-  // Delete scans first
-  await prisma.scan.deleteMany({ where: { tagId: id } });
+  // Delete related records first
+  await Promise.all([
+    prisma.scan.deleteMany({ where: { tagId: id } }),
+    prisma.linkClick.deleteMany({ where: { tagId: id } }),
+    prisma.videoEvent.deleteMany({ where: { tagId: id } }),
+  ]);
   await prisma.tag.delete({ where: { id } });
 
   return NextResponse.json({ ok: true });
