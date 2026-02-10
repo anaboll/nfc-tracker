@@ -39,7 +39,7 @@ export default async function MultiLinkPage({ params }: { params: { tagId: strin
     notFound();
   }
 
-  const links = tag.links as LinkItem[];
+  const links = tag.links as unknown as LinkItem[];
 
   return (
     <main
