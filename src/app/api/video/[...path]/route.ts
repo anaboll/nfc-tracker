@@ -133,8 +133,9 @@ export async function GET(
 
   const webStream = new ReadableStream({
     start(controller) {
-      stream.on("data", (chunk: Buffer) => {
-        controller.enqueue(new Uint8Array(chunk));
+      stream.on("data", (chunk: string | Buffer) => {
+        const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+        controller.enqueue(new Uint8Array(buf));
       });
       stream.on("end", () => {
         controller.close();
