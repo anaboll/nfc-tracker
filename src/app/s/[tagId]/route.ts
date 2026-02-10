@@ -63,7 +63,7 @@ export async function GET(
     let targetUrl = tag.targetUrl;
     if (targetUrl.startsWith("/")) {
       const proto = headers.get("x-forwarded-proto") || "https";
-      const host = headers.get("host") || headers.get("x-forwarded-host") || "twojnfc.pl";
+      const host = headers.get("host") || headers.get("x-forwarded-host") || "twojenfc.pl";
       targetUrl = `${proto}://${host}${targetUrl}`;
     }
 

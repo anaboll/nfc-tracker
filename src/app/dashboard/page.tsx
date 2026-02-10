@@ -1795,19 +1795,19 @@ function DashboardPage() {
                           <span>
                             <span style={{ color: "#6060a0" }}>URL:</span>{" "}
                             <a
-                              href={`https://twojnfc.pl/s/${tag.id}`}
+                              href={`/s/${tag.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ color: "#9f67ff", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
                             >
-                              twojnfc.pl/s/{tag.id}
+                              twojenfc.pl/s/{tag.id}
                             </a>
                           </span>
                           {tag.videoFile && (
                             <span>
                               <span style={{ color: "#6060a0" }}>Video:</span>{" "}
                               <a
-                                href={`https://twojnfc.pl${tag.videoFile.replace(/^\/uploads\//, "/api/video/")}`}
+                                href={tag.videoFile.replace(/^\/uploads\//, "/api/video/")}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ color: "#10b981", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}

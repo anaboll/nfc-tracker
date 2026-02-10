@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-DOMAIN="twojnfc.pl"
-EMAIL="admin@twojnfc.pl"
+DOMAIN="twojenfc.pl"
+EMAIL="admin@twojenfc.pl"
 
 echo "=== SSL Setup for $DOMAIN ==="
 
@@ -17,7 +17,7 @@ events { worker_connections 1024; }
 http {
     server {
         listen 80;
-        server_name twojnfc.pl www.twojnfc.pl;
+        server_name twojenfc.pl www.twojenfc.pl;
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
         }
