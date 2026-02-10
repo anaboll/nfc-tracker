@@ -141,6 +141,19 @@ export async function GET(request: NextRequest) {
     return { day, date: dayDate.toISOString().split("T")[0], count };
   });
 
+  // NFC chip breakdown (physical keychains)
+  const nfcStats = await prisma.scan.groupBy({
+    by: ["nfcId"],
+    where: { ...whereBase, nfcId: { not: null } },
+    _count: { nfcId: true },
+    orderBy: { _count: { nfcId: "desc" } },
+    take: 50,
+  });
+  const nfcChips = nfcStats.map((n) => ({
+    nfcId: n.nfcId || "unknown",
+    count: n._count.nfcId,
+  }));
+
   // All tags list (for filter dropdown)
   const allTags = await prisma.tag.findMany({
     select: { id: true, name: true },
@@ -154,6 +167,7 @@ export async function GET(request: NextRequest) {
     topCountries,
     topCities,
     topLanguages,
+    nfcChips,
     weeklyTrend: { data: weeklyData, weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() },
     allTags,
   });

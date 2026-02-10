@@ -29,35 +29,35 @@ export async function GET(
     const referrer = headers.get("referer") || null;
     const url = new URL(request.url);
     const eventSource = url.searchParams.get("event") || null;
+    const nfcId = url.searchParams.get("nfc") || null;
 
     const ipHash = hashIp(rawIp);
     const parsed = parseUserAgent(userAgent);
 
-    // Fire-and-forget scan logging
-    (async () => {
-      try {
-        const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
-        const geo = await getGeoLocation(rawIp);
+    // Record scan BEFORE redirect (fire-and-forget was losing scans)
+    try {
+      const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
+      const geo = await getGeoLocation(rawIp);
 
-        await prisma.scan.create({
-          data: {
-            tagId,
-            ipHash,
-            deviceType: parsed.deviceType,
-            userAgent: userAgent || null,
-            browserLang,
-            city: geo.city,
-            country: geo.country,
-            region: geo.region,
-            isReturning,
-            referrer,
-            eventSource,
-          },
-        });
-      } catch (err) {
-        console.error("Failed to record scan:", err);
-      }
-    })();
+      await prisma.scan.create({
+        data: {
+          tagId,
+          ipHash,
+          deviceType: parsed.deviceType,
+          userAgent: userAgent || null,
+          browserLang,
+          city: geo.city,
+          country: geo.country,
+          region: geo.region,
+          isReturning,
+          referrer,
+          eventSource,
+          nfcId,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to record scan:", err);
+    }
 
     // Build redirect URL using the real host (not Docker 0.0.0.0)
     let targetUrl = tag.targetUrl;

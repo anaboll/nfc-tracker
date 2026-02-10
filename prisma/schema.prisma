@@ -49,10 +49,12 @@ model Scan {
   isReturning Boolean  @default(false)
   referrer    String?  @db.Text
   eventSource String?
+  nfcId       String?  // Physical NFC chip identifier (from ?nfc= URL param)
 
   @@index([tagId])
   @@index([timestamp])
   @@index([ipHash])
   @@index([country])
   @@index([deviceType])
+  @@index([nfcId])
 }

@@ -60,6 +60,11 @@ interface WeeklyTrend {
   weekEnd: string;
 }
 
+interface NfcChip {
+  nfcId: string;
+  count: number;
+}
+
 interface StatsData {
   kpi: KPI;
   devices: Devices;
@@ -67,6 +72,7 @@ interface StatsData {
   topCountries: Country[];
   topCities: City[];
   topLanguages: Language[];
+  nfcChips: NfcChip[];
   weeklyTrend: WeeklyTrend;
   allTags: { id: string; name: string }[];
 }
@@ -1280,6 +1286,45 @@ function DashboardPage() {
                 ))}
               </div>
             </section>
+
+            {/* ========================================================== */}
+            {/*  4b. NFC CHIPS (physical keychains)                        */}
+            {/* ========================================================== */}
+
+            {stats.nfcChips && stats.nfcChips.length > 0 && (
+              <section className="card" style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f0f0ff", marginBottom: 16 }}>
+                  Fizyczne breloczki NFC
+                </h3>
+                <p style={{ fontSize: 12, color: "#6060a0", marginBottom: 16 }}>
+                  Statystyki per fizyczny breloczek (parametr ?nfc= w URL)
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                  {stats.nfcChips.map((chip) => (
+                    <div
+                      key={chip.nfcId}
+                      style={{
+                        background: "rgba(124,58,237,0.08)",
+                        border: "1px solid rgba(124,58,237,0.2)",
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: 11, color: "#9f67ff", fontFamily: "monospace", fontWeight: 600, marginBottom: 4 }}>
+                        #{chip.nfcId}
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f0f0ff" }}>
+                        {chip.count}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#6060a0" }}>
+                        {chip.count === 1 ? "skan" : chip.count < 5 ? "skany" : "skanow"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* ========================================================== */}
             {/*  5. TAG MANAGEMENT                                         */}
