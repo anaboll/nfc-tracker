@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
@@ -85,7 +85,19 @@ interface TagFull {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function DashboardPage() {
+export default function DashboardWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0f0f1a" }}>
+        <p style={{ color: "#a0a0c0" }}>Ladowanie panelu...</p>
+      </div>
+    }>
+      <DashboardPage />
+    </Suspense>
+  );
+}
+
+function DashboardPage() {
   const { data: session, status } = useSession();
 
   /* ---- state ---- */
