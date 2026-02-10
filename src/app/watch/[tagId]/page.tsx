@@ -10,6 +10,10 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
     notFound();
   }
 
+  // Transform /uploads/filename.mp4 -> /api/video/filename.mp4
+  // In Docker standalone mode, Next.js doesn't serve static files from public/
+  const videoSrc = tag.videoFile.replace(/^\/uploads\//, "/api/video/");
+
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center p-4"
@@ -26,8 +30,8 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
             preload="metadata"
             style={{ maxHeight: "80vh" }}
           >
-            <source src={tag.videoFile} type="video/mp4" />
-            <source src={tag.videoFile} type="video/webm" />
+            <source src={videoSrc} type="video/mp4" />
+            <source src={videoSrc} type="video/webm" />
             Twoja przegladarka nie wspiera odtwarzania wideo.
           </video>
         </div>

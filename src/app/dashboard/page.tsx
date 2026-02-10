@@ -394,6 +394,19 @@ function DashboardPage() {
     setEditDesc(tag.description || "");
   };
 
+  /* remove video from tag */
+  const handleRemoveVideo = async (tagId: string) => {
+    if (!confirm("Czy na pewno chcesz usunac video z tego tagu?")) return;
+    try {
+      await fetch("/api/tags", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, videoFile: null }),
+      });
+      await fetchTags();
+    } catch { /* ignore */ }
+  };
+
   /* video upload */
   const handleVideoUpload = async (tagId: string, file: File) => {
     setUploadingTagId(tagId);
@@ -1273,22 +1286,54 @@ function DashboardPage() {
             {/* ========================================================== */}
 
             <section style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 800 }}>
-                  <span className="gradient-text">Zarzadzanie tagami</span>
-                </h2>
-                <span
-                  style={{
-                    background: "#252547",
-                    color: "#a0a0c0",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    padding: "3px 10px",
-                    borderRadius: 20,
-                  }}
-                >
-                  {tags.length}
-                </span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <h2 style={{ fontSize: 22, fontWeight: 800 }}>
+                    <span className="gradient-text">Zarzadzanie tagami</span>
+                  </h2>
+                  <span
+                    style={{
+                      background: "#252547",
+                      color: "#a0a0c0",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                    }}
+                  >
+                    {tags.length}
+                  </span>
+                </div>
+                {/* Global reset stats */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {resetAllConfirm ? (
+                    <>
+                      <span style={{ fontSize: 12, color: "#f87171", fontWeight: 600 }}>Na pewno usunac WSZYSTKIE statystyki?</span>
+                      <button
+                        onClick={() => handleResetStats()}
+                        disabled={resetting}
+                        style={{ background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 700 }}
+                      >
+                        {resetting ? "Usuwanie..." : "TAK, usun wszystko"}
+                      </button>
+                      <button
+                        onClick={() => setResetAllConfirm(false)}
+                        style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer" }}
+                      >
+                        Anuluj
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setResetAllConfirm(true)}
+                      style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#a0a0c0"; }}
+                    >
+                      Reset wszystkich statystyk
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* ---- Create Tag Form ---- */}
@@ -1579,18 +1624,20 @@ function DashboardPage() {
                       </div>
                     ) : (
                       /* ---- View Mode ---- */
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          flexWrap: "wrap",
-                          gap: 12,
-                        }}
-                      >
-                        {/* Left info */}
-                        <div style={{ flex: "1 1 300px", minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <div>
+                        {/* Top row: name + badges + actions */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 12,
+                            marginBottom: 8,
+                          }}
+                        >
+                          {/* Left: name + badges */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 16, fontWeight: 700, color: "#f0f0ff" }}>
                               {tag.name}
                             </span>
@@ -1606,6 +1653,18 @@ function DashboardPage() {
                             >
                               {tag.isActive ? "Aktywny" : "Nieaktywny"}
                             </span>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: "2px 8px",
+                                borderRadius: 4,
+                                background: getTagTypeColor(tag.tagType).bg,
+                                color: getTagTypeColor(tag.tagType).color,
+                              }}
+                            >
+                              {getTagTypeLabel(tag.tagType)}
+                            </span>
                             {tag.videoFile && (
                               <span
                                 style={{
@@ -1613,174 +1672,156 @@ function DashboardPage() {
                                   fontWeight: 600,
                                   padding: "2px 8px",
                                   borderRadius: 4,
-                                  background: "rgba(124,58,237,0.15)",
-                                  color: "#9f67ff",
+                                  background: "rgba(16,185,129,0.15)",
+                                  color: "#10b981",
                                 }}
                               >
-                                Video
+                                Video wgrane
                               </span>
                             )}
                           </div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#a0a0c0" }}>
-                            <span>
-                              <span style={{ color: "#6060a0" }}>ID:</span>{" "}
-                              <span style={{ fontFamily: "monospace", color: "#9f67ff" }}>{tag.id}</span>
-                            </span>
-                            <span>
-                              <span style={{ color: "#6060a0" }}>Skany:</span>{" "}
-                              <span style={{ fontWeight: 600, color: "#f0f0ff" }}>{tag._count.scans}</span>
-                            </span>
-                            <span>
-                              <span style={{ color: "#6060a0" }}>URL:</span>{" "}
+
+                          {/* Right: actions */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <button
+                              onClick={() => handleToggleActive(tag)}
+                              title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
+                              style={{
+                                width: 44,
+                                height: 24,
+                                borderRadius: 12,
+                                background: tag.isActive ? "#10b981" : "#3a3a5a",
+                                border: "none",
+                                cursor: "pointer",
+                                position: "relative",
+                                transition: "background 0.2s",
+                              }}
+                            >
                               <span
                                 style={{
-                                  color: "#9f67ff",
-                                  fontFamily: "monospace",
-                                  fontSize: 11,
+                                  position: "absolute",
+                                  top: 3,
+                                  left: tag.isActive ? 23 : 3,
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: "50%",
+                                  background: "#fff",
+                                  transition: "left 0.2s",
                                 }}
+                              />
+                            </button>
+                            <button
+                              onClick={() => startEdit(tag)}
+                              style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
+                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                            >
+                              Edytuj
+                            </button>
+                            <label
+                              style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
+                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
+                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="23 7 16 12 23 17 23 7" />
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                              </svg>
+                              {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmien video" : "Wgraj video")}
+                              <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tag.id, f); e.target.value = ""; }} />
+                            </label>
+                            {tag.videoFile && (
+                              <button
+                                onClick={() => handleRemoveVideo(tag.id)}
+                                title="Usun video"
+                                style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
                               >
-                                TwojeNFC.pl/s/{tag.id}
-                              </span>
-                            </span>
+                                Usun video
+                              </button>
+                            )}
+                            {resetTagConfirm === tag.id ? (
+                              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                <button
+                                  onClick={() => handleResetStats(tag.id)}
+                                  disabled={resetting}
+                                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                                >
+                                  {resetting ? "..." : "Potwierdz"}
+                                </button>
+                                <button
+                                  onClick={() => setResetTagConfirm(null)}
+                                  style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
+                                >
+                                  Nie
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setResetTagConfirm(tag.id)}
+                                title="Resetuj statystyki tagu"
+                                style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#fbbf24"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
+                              >
+                                Reset stats
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteTag(tag.id)}
+                              style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                            </button>
                           </div>
-                          {tag.description && (
-                            <p style={{ fontSize: 12, color: "#6060a0", marginTop: 4 }}>
-                              {tag.description}
-                            </p>
+                        </div>
+
+                        {/* Bottom row: details */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#a0a0c0" }}>
+                          <span>
+                            <span style={{ color: "#6060a0" }}>ID:</span>{" "}
+                            <span style={{ fontFamily: "monospace", color: "#9f67ff" }}>{tag.id}</span>
+                          </span>
+                          <span>
+                            <span style={{ color: "#6060a0" }}>Skany:</span>{" "}
+                            <span style={{ fontWeight: 600, color: "#f0f0ff" }}>{tag._count.scans}</span>
+                          </span>
+                          <span>
+                            <span style={{ color: "#6060a0" }}>URL:</span>{" "}
+                            <a
+                              href={`https://twojnfc.pl/s/${tag.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "#9f67ff", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
+                            >
+                              twojnfc.pl/s/{tag.id}
+                            </a>
+                          </span>
+                          {tag.videoFile && (
+                            <span>
+                              <span style={{ color: "#6060a0" }}>Video:</span>{" "}
+                              <a
+                                href={`https://twojnfc.pl${tag.videoFile.replace(/^\/uploads\//, "/api/video/")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "#10b981", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
+                              >
+                                {tag.videoFile.split("/").pop()}
+                              </a>
+                            </span>
                           )}
                         </div>
-
-                        {/* Right actions */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {/* Toggle active */}
-                          <button
-                            onClick={() => handleToggleActive(tag)}
-                            title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
-                            style={{
-                              width: 44,
-                              height: 24,
-                              borderRadius: 12,
-                              background: tag.isActive ? "#10b981" : "#3a3a5a",
-                              border: "none",
-                              cursor: "pointer",
-                              position: "relative",
-                              transition: "background 0.2s",
-                            }}
-                          >
-                            <span
-                              style={{
-                                position: "absolute",
-                                top: 3,
-                                left: tag.isActive ? 23 : 3,
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                background: "#fff",
-                                transition: "left 0.2s",
-                              }}
-                            />
-                          </button>
-
-                          {/* Edit */}
-                          <button
-                            onClick={() => startEdit(tag)}
-                            style={{
-                              background: "#252547",
-                              border: "1px solid #2a2a4a",
-                              color: "#a0a0c0",
-                              borderRadius: 6,
-                              padding: "6px 12px",
-                              fontSize: 12,
-                              cursor: "pointer",
-                              transition: "border-color 0.2s",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
-                            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
-                          >
-                            Edytuj
-                          </button>
-
-                          {/* Upload video */}
-                          <label
-                            style={{
-                              background: "#252547",
-                              border: "1px solid #2a2a4a",
-                              color: "#a0a0c0",
-                              borderRadius: 6,
-                              padding: "6px 12px",
-                              fontSize: 12,
-                              cursor: "pointer",
-                              transition: "border-color 0.2s",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
-                            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
-                          >
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polygon points="23 7 16 12 23 17 23 7" />
-                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                            </svg>
-                            {uploadingTagId === tag.id ? uploadProgress : "Video"}
-                            <input
-                              type="file"
-                              accept="video/mp4,video/webm,video/quicktime"
-                              style={{ display: "none" }}
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) handleVideoUpload(tag.id, f);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDeleteTag(tag.id)}
-                            style={{
-                              background: "transparent",
-                              border: "1px solid #2a2a4a",
-                              color: "#6060a0",
-                              borderRadius: 6,
-                              padding: "6px 10px",
-                              fontSize: 12,
-                              cursor: "pointer",
-                              transition: "border-color 0.2s, color 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#ef4444";
-                              e.currentTarget.style.color = "#f87171";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = "#2a2a4a";
-                              e.currentTarget.style.color = "#6060a0";
-                            }}
-                          >
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            </svg>
-                          </button>
-                        </div>
+                        {tag.description && (
+                          <p style={{ fontSize: 12, color: "#6060a0", marginTop: 4 }}>
+                            {tag.description}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
