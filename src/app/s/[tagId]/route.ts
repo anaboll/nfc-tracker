@@ -37,32 +37,45 @@ export async function GET(
     // Record scan BEFORE redirect
     try {
       const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
-      const geo = await getGeoLocation(rawIp);
 
-      const scanData: Record<string, unknown> = {
-        tagId,
-        ipHash,
-        deviceType: parsed.deviceType,
-        userAgent: userAgent || null,
-        browserLang,
-        city: geo.city,
-        country: geo.country,
-        region: geo.region,
-        isReturning,
-        referrer,
-        eventSource,
-      };
-      if (nfcId) scanData.nfcId = nfcId;
-
+      let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
       try {
-        await prisma.scan.create({ data: scanData as Parameters<typeof prisma.scan.create>[0]["data"] });
-      } catch {
-        // If nfcId column doesn't exist yet, retry without it
-        delete scanData.nfcId;
-        await prisma.scan.create({ data: scanData as Parameters<typeof prisma.scan.create>[0]["data"] });
-      }
+        geo = await getGeoLocation(rawIp);
+      } catch { /* geo failed, use empty */ }
+
+      await prisma.scan.create({
+        data: {
+          tagId,
+          ipHash,
+          deviceType: parsed.deviceType,
+          userAgent: userAgent || null,
+          browserLang,
+          city: geo.city,
+          country: geo.country,
+          region: geo.region,
+          isReturning,
+          referrer,
+          eventSource,
+          ...(nfcId ? { nfcId } : {}),
+        },
+      });
     } catch (err) {
-      console.error("Failed to record scan:", err);
+      // If it failed (e.g. nfcId column missing), try without nfcId
+      console.error("Scan create failed, retrying without nfcId:", err);
+      try {
+        await prisma.scan.create({
+          data: {
+            tagId,
+            ipHash,
+            deviceType: parsed.deviceType,
+            userAgent: userAgent || null,
+            browserLang,
+            isReturning: false,
+          },
+        });
+      } catch (err2) {
+        console.error("Scan create retry also failed:", err2);
+      }
     }
 
     // Build redirect URL using the real host (not Docker 0.0.0.0)
