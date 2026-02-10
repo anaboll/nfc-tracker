@@ -17,12 +17,15 @@ model User {
   updatedAt      DateTime @updatedAt
 }
 
+// Tag types: "url" = simple redirect, "video" = video player, "multilink" = page with multiple links
 model Tag {
   id          String   @id
   name        String
+  tagType     String   @default("url")
   targetUrl   String
   description String?
   videoFile   String?
+  links       Json?    // For multilink: [{ label, url, icon }]
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

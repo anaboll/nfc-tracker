@@ -59,10 +59,12 @@ export async function GET(
       }
     })();
 
-    // Build redirect URL
+    // Build redirect URL using the real host (not Docker 0.0.0.0)
     let targetUrl = tag.targetUrl;
     if (targetUrl.startsWith("/")) {
-      targetUrl = new URL(targetUrl, request.url).toString();
+      const proto = headers.get("x-forwarded-proto") || "https";
+      const host = headers.get("host") || headers.get("x-forwarded-host") || "twojnfc.pl";
+      targetUrl = `${proto}://${host}${targetUrl}`;
     }
 
     return NextResponse.redirect(targetUrl, { status: 302 });

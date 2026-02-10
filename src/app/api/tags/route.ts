@@ -22,14 +22,22 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description } = body;
+  const { id, name, targetUrl, description, tagType, links } = body;
 
-  if (!id || !name || !targetUrl) {
-    return NextResponse.json({ error: "id, name i targetUrl sa wymagane" }, { status: 400 });
+  if (!id || !name) {
+    return NextResponse.json({ error: "id i name sa wymagane" }, { status: 400 });
   }
 
-  // Sanitize ID
+  const type = tagType || "url";
+
+  // Auto-set targetUrl based on type
   const cleanId = id.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  let finalUrl = targetUrl || "";
+  if (type === "video") finalUrl = `/watch/${cleanId}`;
+  if (type === "multilink") finalUrl = `/link/${cleanId}`;
+  if (type === "url" && !finalUrl) {
+    return NextResponse.json({ error: "targetUrl wymagane dla typu url" }, { status: 400 });
+  }
 
   const existing = await prisma.tag.findUnique({ where: { id: cleanId } });
   if (existing) {
@@ -37,7 +45,14 @@ export async function POST(request: NextRequest) {
   }
 
   const tag = await prisma.tag.create({
-    data: { id: cleanId, name, targetUrl, description: description || null },
+    data: {
+      id: cleanId,
+      name,
+      tagType: type,
+      targetUrl: finalUrl,
+      description: description || null,
+      links: type === "multilink" && links ? links : undefined,
+    },
   });
 
   return NextResponse.json(tag, { status: 201 });
@@ -49,7 +64,7 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, isActive, videoFile } = body;
+  const { id, name, targetUrl, description, isActive, videoFile, tagType, links } = body;
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
@@ -61,6 +76,8 @@ export async function PUT(request: NextRequest) {
       ...(description !== undefined && { description }),
       ...(isActive !== undefined && { isActive }),
       ...(videoFile !== undefined && { videoFile }),
+      ...(tagType !== undefined && { tagType }),
+      ...(links !== undefined && { links }),
     },
   });
 

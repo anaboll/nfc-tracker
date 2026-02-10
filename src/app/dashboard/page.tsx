@@ -71,6 +71,12 @@ interface StatsData {
   allTags: { id: string; name: string }[];
 }
 
+interface TagLink {
+  label: string;
+  url: string;
+  icon: string;
+}
+
 interface TagFull {
   id: string;
   name: string;
@@ -78,6 +84,8 @@ interface TagFull {
   description: string | null;
   videoFile: string | null;
   isActive: boolean;
+  tagType: string;
+  links: TagLink[] | null;
   _count: { scans: number };
 }
 
@@ -124,6 +132,8 @@ function DashboardPage() {
   const [newTagName, setNewTagName] = useState("");
   const [newTagUrl, setNewTagUrl] = useState("");
   const [newTagDesc, setNewTagDesc] = useState("");
+  const [newTagType, setNewTagType] = useState("url");
+  const [newTagLinks, setNewTagLinks] = useState<TagLink[]>([{ label: "", url: "", icon: "link" }]);
   const [tagCreating, setTagCreating] = useState(false);
   const [tagCreateError, setTagCreateError] = useState("");
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
@@ -133,6 +143,16 @@ function DashboardPage() {
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editDesc, setEditDesc] = useState("");
+
+  // inline link editing for multilink tags
+  const [editingLinksTagId, setEditingLinksTagId] = useState<string | null>(null);
+  const [editLinks, setEditLinks] = useState<TagLink[]>([]);
+  const [editLinksSaving, setEditLinksSaving] = useState(false);
+
+  // reset stats
+  const [resetAllConfirm, setResetAllConfirm] = useState(false);
+  const [resetTagConfirm, setResetTagConfirm] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   // upload
   const [uploadingTagId, setUploadingTagId] = useState<string | null>(null);
@@ -256,26 +276,58 @@ function DashboardPage() {
     }
   };
 
+  /* icon options for multilink */
+  const iconOptions = [
+    { value: "instagram", label: "Instagram" },
+    { value: "whatsapp", label: "WhatsApp" },
+    { value: "facebook", label: "Facebook" },
+    { value: "youtube", label: "YouTube" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "email", label: "Email" },
+    { value: "phone", label: "Telefon" },
+    { value: "website", label: "Strona WWW" },
+    { value: "telegram", label: "Telegram" },
+    { value: "link", label: "Link" },
+  ];
+
   /* tag CRUD */
   const handleCreateTag = async (e: React.FormEvent) => {
     e.preventDefault();
     setTagCreateError("");
     setTagCreateSuccess("");
-    if (!newTagId || !newTagName || !newTagUrl) {
-      setTagCreateError("ID, nazwa i docelowy URL sa wymagane");
+    if (!newTagId || !newTagName) {
+      setTagCreateError("ID i nazwa sa wymagane");
+      return;
+    }
+    if (newTagType === "url" && !newTagUrl) {
+      setTagCreateError("Docelowy URL jest wymagany dla typu URL");
+      return;
+    }
+    if (newTagType === "multilink" && newTagLinks.every(l => !l.url)) {
+      setTagCreateError("Dodaj przynajmniej jeden link");
       return;
     }
     setTagCreating(true);
     try {
+      const body: Record<string, unknown> = {
+        id: newTagId,
+        name: newTagName,
+        description: newTagDesc || undefined,
+        tagType: newTagType,
+      };
+      if (newTagType === "url") {
+        body.targetUrl = newTagUrl;
+      } else if (newTagType === "multilink") {
+        body.targetUrl = "#multilink";
+        body.links = newTagLinks.filter(l => l.url.trim() !== "");
+      } else if (newTagType === "video") {
+        body.targetUrl = "#video";
+      }
       const res = await fetch("/api/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: newTagId,
-          name: newTagName,
-          targetUrl: newTagUrl,
-          description: newTagDesc || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -286,6 +338,8 @@ function DashboardPage() {
         setNewTagName("");
         setNewTagUrl("");
         setNewTagDesc("");
+        setNewTagType("url");
+        setNewTagLinks([{ label: "", url: "", icon: "link" }]);
         await fetchTags();
         await fetchStats();
       }
@@ -361,6 +415,65 @@ function DashboardPage() {
       setUploadProgress("Blad polaczenia");
     } finally {
       setTimeout(() => setUploadingTagId(null), 2200);
+    }
+  };
+
+  /* inline link editor save */
+  const handleSaveLinks = async (tagId: string) => {
+    setEditLinksSaving(true);
+    try {
+      await fetch("/api/tags", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: tagId,
+          links: editLinks.filter(l => l.url.trim() !== ""),
+        }),
+      });
+      setEditingLinksTagId(null);
+      await fetchTags();
+    } catch { /* ignore */ }
+    finally { setEditLinksSaving(false); }
+  };
+
+  const startEditLinks = (tag: TagFull) => {
+    setEditingLinksTagId(tag.id);
+    setEditLinks(tag.links ? [...tag.links.map(l => ({ ...l }))] : [{ label: "", url: "", icon: "link" }]);
+  };
+
+  /* reset stats */
+  const handleResetStats = async (tagId?: string) => {
+    setResetting(true);
+    try {
+      await fetch("/api/stats/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tagId ? { tagId } : {}),
+      });
+      setResetAllConfirm(false);
+      setResetTagConfirm(null);
+      await fetchStats();
+      await fetchTags();
+    } catch { /* ignore */ }
+    finally { setResetting(false); }
+  };
+
+  /* tag type label helper */
+  const getTagTypeLabel = (type: string) => {
+    switch (type) {
+      case "url": return "URL";
+      case "video": return "Video";
+      case "multilink": return "Multi-link";
+      default: return "URL";
+    }
+  };
+
+  const getTagTypeColor = (type: string) => {
+    switch (type) {
+      case "url": return { bg: "rgba(124,58,237,0.15)", color: "#9f67ff" };
+      case "video": return { bg: "rgba(16,185,129,0.15)", color: "#10b981" };
+      case "multilink": return { bg: "rgba(59,130,246,0.15)", color: "#60a5fa" };
+      default: return { bg: "rgba(124,58,237,0.15)", color: "#9f67ff" };
     }
   };
 
@@ -1216,15 +1329,32 @@ function DashboardPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
-                        Docelowy URL
+                        Typ tagu
                       </label>
-                      <input
+                      <select
                         className="input-field"
-                        value={newTagUrl}
-                        onChange={(e) => setNewTagUrl(e.target.value)}
-                        placeholder="https://example.com"
-                      />
+                        value={newTagType}
+                        onChange={(e) => setNewTagType(e.target.value)}
+                        style={{ padding: "8px 12px" }}
+                      >
+                        <option value="url">Przekierowanie URL</option>
+                        <option value="video">Video player</option>
+                        <option value="multilink">Multi-link</option>
+                      </select>
                     </div>
+                    {newTagType === "url" && (
+                      <div>
+                        <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                          Docelowy URL
+                        </label>
+                        <input
+                          className="input-field"
+                          value={newTagUrl}
+                          onChange={(e) => setNewTagUrl(e.target.value)}
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                    )}
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
                         Opis (opcjonalnie)
@@ -1237,6 +1367,119 @@ function DashboardPage() {
                       />
                     </div>
                   </div>
+
+                  {/* Multilink links editor */}
+                  {newTagType === "multilink" && (
+                    <div style={{
+                      marginBottom: 16,
+                      padding: 16,
+                      background: "#1a1a2e",
+                      borderRadius: 10,
+                      border: "1px solid #2a2a4a",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <h4 style={{ fontSize: 13, fontWeight: 600, color: "#f0f0ff" }}>
+                          Linki
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setNewTagLinks([...newTagLinks, { label: "", url: "", icon: "link" }])}
+                          style={{
+                            background: "#252547",
+                            border: "1px solid #2a2a4a",
+                            color: "#10b981",
+                            borderRadius: 6,
+                            padding: "4px 12px",
+                            fontSize: 12,
+                            cursor: "pointer",
+                            fontWeight: 600,
+                          }}
+                        >
+                          + Dodaj link
+                        </button>
+                      </div>
+                      {newTagLinks.map((link, idx) => (
+                        <div key={idx} style={{
+                          display: "flex",
+                          gap: 8,
+                          marginBottom: 8,
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                        }}>
+                          <select
+                            className="input-field"
+                            value={link.icon}
+                            onChange={(e) => {
+                              const updated = [...newTagLinks];
+                              updated[idx] = { ...updated[idx], icon: e.target.value };
+                              setNewTagLinks(updated);
+                            }}
+                            style={{ padding: "6px 8px", width: 130, fontSize: 12 }}
+                          >
+                            {iconOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <input
+                            className="input-field"
+                            placeholder="Etykieta"
+                            value={link.label}
+                            onChange={(e) => {
+                              const updated = [...newTagLinks];
+                              updated[idx] = { ...updated[idx], label: e.target.value };
+                              setNewTagLinks(updated);
+                            }}
+                            style={{ flex: "1 1 120px", minWidth: 100, fontSize: 12, padding: "6px 10px" }}
+                          />
+                          <input
+                            className="input-field"
+                            placeholder="https://..."
+                            value={link.url}
+                            onChange={(e) => {
+                              const updated = [...newTagLinks];
+                              updated[idx] = { ...updated[idx], url: e.target.value };
+                              setNewTagLinks(updated);
+                            }}
+                            style={{ flex: "2 1 180px", minWidth: 140, fontSize: 12, padding: "6px 10px" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = newTagLinks.filter((_, i) => i !== idx);
+                              setNewTagLinks(updated.length ? updated : [{ label: "", url: "", icon: "link" }]);
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "1px solid #2a2a4a",
+                              color: "#6060a0",
+                              borderRadius: 6,
+                              width: 28,
+                              height: 28,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                              transition: "border-color 0.2s, color 0.2s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#ef4444";
+                              e.currentTarget.style.color = "#f87171";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "#2a2a4a";
+                              e.currentTarget.style.color = "#6060a0";
+                            }}
+                          >
+                            X
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <button
                       type="submit"
