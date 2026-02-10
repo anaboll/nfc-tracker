@@ -119,6 +119,7 @@ function DashboardPage() {
   const [tags, setTags] = useState<TagFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState("");
 
   // filters
   const [dateFrom, setDateFrom] = useState("");
@@ -168,6 +169,7 @@ function DashboardPage() {
 
   const fetchStats = useCallback(async (opts?: { wo?: number }) => {
     try {
+      setFetchError("");
       const params = new URLSearchParams();
       if (dateFrom) params.set("from", dateFrom);
       if (dateTo) params.set("to", dateTo);
@@ -177,8 +179,13 @@ function DashboardPage() {
       if (res.ok) {
         const data: StatsData = await res.json();
         setStats(data);
+      } else {
+        const errText = await res.text();
+        setFetchError(`Stats API error ${res.status}: ${errText.substring(0, 200)}`);
+        console.error("Stats API error:", res.status, errText);
       }
     } catch (e) {
+      setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
   }, [dateFrom, dateTo, tagFilter, weekOffset]);
@@ -795,6 +802,13 @@ function DashboardPage() {
             </button>
           </div>
         </section>
+
+        {/* ---- Error display ---- */}
+        {fetchError && (
+          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 12, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "monospace", wordBreak: "break-all" }}>
+            {fetchError}
+          </div>
+        )}
 
         {/* ---- Loading overlay ---- */}
         {loading && (
