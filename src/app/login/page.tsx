@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   return (
@@ -17,7 +17,6 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
@@ -29,25 +28,33 @@ function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!email.trim() || !password.trim()) {
+      setError("Wpisz login i haslo");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const result = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
-        callbackUrl,
       });
 
       if (result?.error) {
         setError("Nieprawidlowy login lub haslo");
+        setLoading(false);
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // Use window.location for reliable redirect (works behind Cloudflare proxy)
+        window.location.href = callbackUrl;
+      } else {
+        setError("Wystapil blad logowania");
+        setLoading(false);
       }
     } catch {
-      setError("Wystapil blad. Sprobuj ponownie.");
-    } finally {
+      setError("Wystapil blad polaczenia. Sprobuj ponownie.");
       setLoading(false);
     }
   };
@@ -91,7 +98,8 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="marcins91"
+                autoComplete="username"
+                placeholder="Wpisz login"
                 className="input-field"
               />
             </div>
@@ -105,7 +113,8 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="********"
+                autoComplete="current-password"
+                placeholder="Wpisz haslo"
                 className="input-field"
               />
             </div>

@@ -29,9 +29,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD:-nfc_secure_pass_2024}@postgres:5432/nfc_tracker"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-https://twojnfc.pl}"
-      NEXTAUTH_URL_INTERNAL: "http://localhost:3000"
-      AUTH_TRUST_HOST: "true"
+      NEXTAUTH_URL: "http://twojnfc.pl"
       NODE_ENV: production
       UPLOAD_DIR: /app/public/uploads
       MAX_FILE_SIZE_MB: "500"
