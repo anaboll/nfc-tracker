@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String
+  name           String?
+  mustChangePass Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Tag {
+  id          String   @id
+  name        String
+  targetUrl   String
+  description String?
+  videoFile   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scans       Scan[]
+
+  @@index([isActive])
+}
+
+model Scan {
+  id          String   @id @default(cuid())
+  tagId       String
+  tag         Tag      @relation(fields: [tagId], references: [id])
+  timestamp   DateTime @default(now())
+  ipHash      String
+  deviceType  String
+  userAgent   String?  @db.Text
+  browserLang String?
+  city        String?
+  country     String?
+  region      String?
+  isReturning Boolean  @default(false)
+  referrer    String?  @db.Text
+  eventSource String?
+
+  @@index([tagId])
+  @@index([timestamp])
+  @@index([ipHash])
+  @@index([country])
+  @@index([deviceType])
+}
