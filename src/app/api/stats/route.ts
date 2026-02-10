@@ -141,18 +141,22 @@ export async function GET(request: NextRequest) {
     return { day, date: dayDate.toISOString().split("T")[0], count };
   });
 
-  // NFC chip breakdown (physical keychains)
-  const nfcStats = await prisma.scan.groupBy({
-    by: ["nfcId"],
-    where: { ...whereBase, nfcId: { not: null } },
-    _count: { nfcId: true },
-    orderBy: { _count: { nfcId: "desc" } },
-    take: 50,
-  });
-  const nfcChips = nfcStats.map((n) => ({
-    nfcId: n.nfcId || "unknown",
-    count: n._count.nfcId,
-  }));
+  // NFC chip breakdown (physical keychains) - wrapped in try/catch
+  // in case nfcId column doesn't exist yet (migration not run)
+  let nfcChips: { nfcId: string; count: number }[] = [];
+  try {
+    const nfcStats = await prisma.scan.groupBy({
+      by: ["nfcId"],
+      where: { ...whereBase, nfcId: { not: null } },
+      _count: { nfcId: true },
+      orderBy: { _count: { nfcId: "desc" } },
+      take: 50,
+    });
+    nfcChips = nfcStats.map((n) => ({
+      nfcId: n.nfcId || "unknown",
+      count: n._count.nfcId,
+    }));
+  } catch { /* nfcId column may not exist yet */ }
 
   // All tags list (for filter dropdown)
   const allTags = await prisma.tag.findMany({

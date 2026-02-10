@@ -34,27 +34,33 @@ export async function GET(
     const ipHash = hashIp(rawIp);
     const parsed = parseUserAgent(userAgent);
 
-    // Record scan BEFORE redirect (fire-and-forget was losing scans)
+    // Record scan BEFORE redirect
     try {
       const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
       const geo = await getGeoLocation(rawIp);
 
-      await prisma.scan.create({
-        data: {
-          tagId,
-          ipHash,
-          deviceType: parsed.deviceType,
-          userAgent: userAgent || null,
-          browserLang,
-          city: geo.city,
-          country: geo.country,
-          region: geo.region,
-          isReturning,
-          referrer,
-          eventSource,
-          nfcId,
-        },
-      });
+      const scanData: Record<string, unknown> = {
+        tagId,
+        ipHash,
+        deviceType: parsed.deviceType,
+        userAgent: userAgent || null,
+        browserLang,
+        city: geo.city,
+        country: geo.country,
+        region: geo.region,
+        isReturning,
+        referrer,
+        eventSource,
+      };
+      if (nfcId) scanData.nfcId = nfcId;
+
+      try {
+        await prisma.scan.create({ data: scanData as Parameters<typeof prisma.scan.create>[0]["data"] });
+      } catch {
+        // If nfcId column doesn't exist yet, retry without it
+        delete scanData.nfcId;
+        await prisma.scan.create({ data: scanData as Parameters<typeof prisma.scan.create>[0]["data"] });
+      }
     } catch (err) {
       console.error("Failed to record scan:", err);
     }
