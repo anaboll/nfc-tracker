@@ -69,5 +69,6 @@ export const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true,
-};
+} as NextAuthOptions;
+
+// Trust host for Cloudflare proxy - set via NEXTAUTH_URL env var
