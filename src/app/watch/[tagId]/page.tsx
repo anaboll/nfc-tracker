@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { parseUserAgent, hashIp, getGeoLocation, extractIp } from "@/lib/utils";
 
 export default async function WatchPage({ params }: { params: { tagId: string } }) {
   const tag = await prisma.tag.findUnique({
@@ -10,8 +12,48 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
     notFound();
   }
 
+  // If someone accesses /watch/ directly (not via /s/ redirect), record the view
+  const hdrs = headers();
+  const referer = hdrs.get("referer") || "";
+  const isDirectAccess = !referer.includes(`/s/${params.tagId}`);
+
+  if (isDirectAccess) {
+    try {
+      const rawIp = extractIp(
+        hdrs.get("x-forwarded-for"),
+        hdrs.get("x-real-ip"),
+        hdrs.get("cf-connecting-ip")
+      );
+      const userAgent = hdrs.get("user-agent") || "";
+      const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
+      const ipHash = hashIp(rawIp);
+      const parsed = parseUserAgent(userAgent);
+      const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
+
+      let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
+      try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }
+
+      await prisma.scan.create({
+        data: {
+          tagId: params.tagId,
+          ipHash,
+          deviceType: parsed.deviceType,
+          userAgent: userAgent || null,
+          browserLang,
+          city: geo.city,
+          country: geo.country,
+          region: geo.region,
+          isReturning,
+          referrer: referer || null,
+          eventSource: "direct-watch",
+        },
+      });
+    } catch (err) {
+      console.error("Watch page scan record failed:", err);
+    }
+  }
+
   // Transform /uploads/filename.mp4 -> /api/video/filename.mp4
-  // In Docker standalone mode, Next.js doesn't serve static files from public/
   const videoSrc = tag.videoFile.replace(/^\/uploads\//, "/api/video/");
 
   return (

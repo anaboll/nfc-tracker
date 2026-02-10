@@ -150,6 +150,8 @@ function DashboardPage() {
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editType, setEditType] = useState("url");
+  const [editTagLinks, setEditTagLinks] = useState<TagLink[]>([]);
 
   // inline link editing for multilink tags
   const [editingLinksTagId, setEditingLinksTagId] = useState<string | null>(null);
@@ -385,15 +387,24 @@ function DashboardPage() {
 
   const handleSaveEdit = async (id: string) => {
     try {
+      const body: Record<string, unknown> = {
+        id,
+        name: editName,
+        description: editDesc,
+        tagType: editType,
+      };
+      if (editType === "url") {
+        body.targetUrl = editUrl;
+      } else if (editType === "video") {
+        body.targetUrl = `/watch/${id}`;
+      } else if (editType === "multilink") {
+        body.targetUrl = `/link/${id}`;
+        body.links = editTagLinks.filter(l => l.url.trim() !== "");
+      }
       await fetch("/api/tags", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id,
-          name: editName,
-          targetUrl: editUrl,
-          description: editDesc,
-        }),
+        body: JSON.stringify(body),
       });
       setEditingTagId(null);
       await fetchTags();
@@ -405,6 +416,8 @@ function DashboardPage() {
     setEditName(tag.name);
     setEditUrl(tag.targetUrl);
     setEditDesc(tag.description || "");
+    setEditType(tag.tagType);
+    setEditTagLinks(tag.links ? [...tag.links.map(l => ({ ...l }))] : [{ label: "", url: "", icon: "link" }]);
   };
 
   /* remove video from tag */
@@ -1419,6 +1432,11 @@ function DashboardPage() {
                         onChange={(e) => setNewTagId(e.target.value)}
                         placeholder="np. moja-wizytowka"
                       />
+                      {newTagId && (
+                        <p style={{ fontSize: 10, color: "#6060a0", marginTop: 4, fontFamily: "monospace" }}>
+                          URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
@@ -1638,14 +1656,31 @@ function DashboardPage() {
                           </div>
                           <div>
                             <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
-                              Docelowy URL
+                              Typ
                             </label>
-                            <input
+                            <select
                               className="input-field"
-                              value={editUrl}
-                              onChange={(e) => setEditUrl(e.target.value)}
-                            />
+                              value={editType}
+                              onChange={(e) => setEditType(e.target.value)}
+                              style={{ padding: "8px 12px" }}
+                            >
+                              <option value="url">Przekierowanie URL</option>
+                              <option value="video">Video player</option>
+                              <option value="multilink">Multi-link</option>
+                            </select>
                           </div>
+                          {editType === "url" && (
+                            <div>
+                              <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
+                                Docelowy URL
+                              </label>
+                              <input
+                                className="input-field"
+                                value={editUrl}
+                                onChange={(e) => setEditUrl(e.target.value)}
+                              />
+                            </div>
+                          )}
                           <div>
                             <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
                               Opis
@@ -1657,6 +1692,67 @@ function DashboardPage() {
                             />
                           </div>
                         </div>
+                        {/* Multilink editor in edit mode */}
+                        {editType === "multilink" && (
+                          <div style={{
+                            marginBottom: 12,
+                            padding: 14,
+                            background: "#1a1a2e",
+                            borderRadius: 10,
+                            border: "1px solid #2a2a4a",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                              <h4 style={{ fontSize: 12, fontWeight: 600, color: "#f0f0ff" }}>Linki</h4>
+                              <button
+                                type="button"
+                                onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
+                                style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                              >
+                                + Dodaj link
+                              </button>
+                            </div>
+                            {editTagLinks.map((link, idx) => (
+                              <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
+                                <select
+                                  className="input-field"
+                                  value={link.icon}
+                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], icon: e.target.value }; setEditTagLinks(u); }}
+                                  style={{ padding: "5px 6px", width: 120, fontSize: 11 }}
+                                >
+                                  {iconOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  className="input-field"
+                                  placeholder="Etykieta"
+                                  value={link.label}
+                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], label: e.target.value }; setEditTagLinks(u); }}
+                                  style={{ flex: "1 1 100px", minWidth: 80, fontSize: 11, padding: "5px 8px" }}
+                                />
+                                <input
+                                  className="input-field"
+                                  placeholder="https://..."
+                                  value={link.url}
+                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], url: e.target.value }; setEditTagLinks(u); }}
+                                  style={{ flex: "2 1 160px", minWidth: 120, fontSize: 11, padding: "5px 8px" }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
+                                  style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
+                                >
+                                  X
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {editType === "video" && (
+                          <p style={{ fontSize: 11, color: "#6060a0", marginBottom: 12 }}>
+                            URL zostanie ustawiony automatycznie na /watch/{tag.id}. Wgraj video po zapisaniu.
+                          </p>
+                        )}
                         <div style={{ display: "flex", gap: 8 }}>
                           <button
                             className="btn-primary"
@@ -1777,19 +1873,21 @@ function DashboardPage() {
                             >
                               Edytuj
                             </button>
-                            <label
-                              style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
-                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
-                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="23 7 16 12 23 17 23 7" />
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                              </svg>
-                              {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmien video" : "Wgraj video")}
-                              <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tag.id, f); e.target.value = ""; }} />
-                            </label>
-                            {tag.videoFile && (
+                            {tag.tagType === "video" && (
+                              <label
+                                style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
+                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                  <polygon points="23 7 16 12 23 17 23 7" />
+                                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg>
+                                {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmien video" : "Wgraj video")}
+                                <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tag.id, f); e.target.value = ""; }} />
+                              </label>
+                            )}
+                            {tag.tagType === "video" && tag.videoFile && (
                               <button
                                 onClick={() => handleRemoveVideo(tag.id)}
                                 title="Usun video"

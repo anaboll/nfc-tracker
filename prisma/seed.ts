@@ -4,8 +4,13 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = process.env.ADMIN_EMAIL || "marcins91";
-  const password = process.env.ADMIN_PASSWORD || "hebanowa10";
+  const email = process.env.ADMIN_EMAIL || "admin";
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!password) {
+    console.error("ADMIN_PASSWORD env variable is required!");
+    process.exit(1);
+  }
 
   const hashedPassword = await bcrypt.hash(password, 12);
 

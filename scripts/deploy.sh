@@ -20,7 +20,7 @@ if [[ "$NEXTAUTH_SECRET" == *"change-this"* ]]; then
 fi
 
 echo "1/4 - Budowanie obrazow Docker..."
-docker compose build app migrate
+docker compose build --no-cache app migrate
 
 echo ""
 echo "2/4 - Uruchamianie PostgreSQL..."
