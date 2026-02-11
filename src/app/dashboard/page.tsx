@@ -2354,7 +2354,7 @@ function DashboardPage() {
                                   <label style={{ display: "block", fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>{field.label}</label>
                                   <input
                                     className="input-field"
-                                    value={(editVCard as Record<string, string>)[field.key] || ""}
+                                    value={(editVCard as unknown as Record<string, string>)[field.key] || ""}
                                     onChange={(e) => setEditVCard({ ...editVCard, [field.key]: e.target.value })}
                                     style={{ fontSize: 11, padding: "5px 8px" }}
                                   />
