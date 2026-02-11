@@ -24,33 +24,52 @@ model Client {
   description String?
   color       String?  // Brand color hex, e.g. "#ff6600"
   isActive    Boolean  @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tags        Tag[]
+  campaigns   Campaign[]
+
+  @@index([isActive])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   tags        Tag[]
 
+  @@index([clientId])
   @@index([isActive])
 }
 
 // Tag types: "url" = simple redirect, "video" = video player, "multilink" = page with multiple links, "vcard" = digital business card, "google-review" = google review redirect
 model Tag {
-  id          String   @id
+  id          String    @id
   name        String
-  tagType     String   @default("url")
+  tagType     String    @default("url")
   targetUrl   String
   description String?
   videoFile   String?
-  links       Json?    // For multilink: [{ label, url, icon }]
-  isActive    Boolean  @default(true)
+  links       Json?     // For multilink: [{ label, url, icon }]
+  isActive    Boolean   @default(true)
   clientId    String?
-  client      Client?  @relation(fields: [clientId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  client      Client?   @relation(fields: [clientId], references: [id])
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   scans       Scan[]
   linkClicks  LinkClick[]
   videoEvents VideoEvent[]
 
   @@index([isActive])
   @@index([clientId])
+  @@index([campaignId])
 }
 
 model Scan {

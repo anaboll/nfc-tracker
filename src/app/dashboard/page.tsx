@@ -65,6 +65,11 @@ interface NfcChip {
   count: number;
 }
 
+interface HourlyData {
+  hour: number;
+  count: number;
+}
+
 interface StatsData {
   kpi: KPI;
   devices: Devices;
@@ -74,7 +79,22 @@ interface StatsData {
   topLanguages: Language[];
   nfcChips: NfcChip[];
   weeklyTrend: WeeklyTrend;
+  hourlyDistribution: HourlyData[];
   allTags: { id: string; name: string }[];
+}
+
+interface CampaignInfo {
+  id: string;
+  name: string;
+}
+
+interface CampaignFull extends CampaignInfo {
+  description: string | null;
+  clientId: string;
+  client: ClientInfo;
+  isActive: boolean;
+  tagCount: number;
+  scanCount: number;
 }
 
 interface TagLink {
@@ -154,6 +174,8 @@ interface TagFull {
   links: TagLink[] | null;
   clientId: string | null;
   client: ClientInfo | null;
+  campaignId: string | null;
+  campaign: CampaignInfo | null;
   _count: { scans: number };
 }
 
@@ -192,11 +214,20 @@ function DashboardPage() {
   const [newClientColor, setNewClientColor] = useState("#e69500");
   const [clientCreating, setClientCreating] = useState(false);
 
+  // campaigns
+  const [campaigns, setCampaigns] = useState<CampaignFull[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [showAddCampaign, setShowAddCampaign] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState("");
+  const [newCampaignDesc, setNewCampaignDesc] = useState("");
+  const [campaignCreating, setCampaignCreating] = useState(false);
+
   // filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
+  const filtersRestoredRef = useRef(false);
 
   // change‑password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -209,6 +240,7 @@ function DashboardPage() {
   const [newTagId, setNewTagId] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagClient, setNewTagClient] = useState("");
+  const [newTagCampaign, setNewTagCampaign] = useState("");
   const [newTagUrl, setNewTagUrl] = useState("");
   const [newTagDesc, setNewTagDesc] = useState("");
   const [newTagType, setNewTagType] = useState("url");
@@ -262,6 +294,7 @@ function DashboardPage() {
       if (dateTo) params.set("to", dateTo);
       if (tagFilter) params.set("tag", tagFilter);
       if (selectedClientId) params.set("clientId", selectedClientId);
+      if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       params.set("weekOffset", String(opts?.wo ?? weekOffset));
       const res = await fetch(`/api/stats?${params.toString()}`);
       if (res.ok) {
@@ -276,7 +309,7 @@ function DashboardPage() {
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, tagFilter, weekOffset, selectedClientId]);
+  }, [dateFrom, dateTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -301,6 +334,20 @@ function DashboardPage() {
       console.error("Clients fetch failed:", e);
     }
   }, []);
+
+  const fetchCampaigns = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedClientId) params.set("clientId", selectedClientId);
+      const res = await fetch(`/api/campaigns?${params.toString()}`);
+      if (res.ok) {
+        const data: CampaignFull[] = await res.json();
+        setCampaigns(data);
+      }
+    } catch (e) {
+      console.error("Campaigns fetch failed:", e);
+    }
+  }, [selectedClientId]);
 
   const fetchLinkClicks = useCallback(async (tagId: string) => {
     try {
@@ -358,9 +405,9 @@ function DashboardPage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchTags(), fetchClients()]);
+    await Promise.all([fetchStats(), fetchTags(), fetchClients(), fetchCampaigns()]);
     setLoading(false);
-  }, [fetchStats, fetchTags, fetchClients]);
+  }, [fetchStats, fetchTags, fetchClients, fetchCampaigns]);
 
   /* ---- auto-load video retention when video campaign selected ---- */
   useEffect(() => {
@@ -379,6 +426,37 @@ function DashboardPage() {
     }
   }, [tagFilter, tags]);
 
+  /* ---- restore filters from localStorage on mount ---- */
+  useEffect(() => {
+    if (filtersRestoredRef.current) return;
+    filtersRestoredRef.current = true;
+    try {
+      const saved = localStorage.getItem("nfc_filters");
+      if (saved) {
+        const f = JSON.parse(saved);
+        if (f.clientId) setSelectedClientId(f.clientId);
+        if (f.campaignId) setSelectedCampaignId(f.campaignId);
+        if (f.tagFilter) setTagFilter(f.tagFilter);
+        if (f.dateFrom) setDateFrom(f.dateFrom);
+        if (f.dateTo) setDateTo(f.dateTo);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ---- save filters to localStorage when they change ---- */
+  useEffect(() => {
+    if (!filtersRestoredRef.current) return;
+    try {
+      localStorage.setItem("nfc_filters", JSON.stringify({
+        clientId: selectedClientId,
+        campaignId: selectedCampaignId,
+        tagFilter,
+        dateFrom,
+        dateTo,
+      }));
+    } catch { /* ignore */ }
+  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo]);
+
   /* ---- initial load ---- */
 
   useEffect(() => {
@@ -391,22 +469,35 @@ function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  /* ---- refresh stats when client changes ---- */
+  /* ---- refresh campaigns when client changes ---- */
   const clientInitRef = useRef(false);
   useEffect(() => {
     if (!clientInitRef.current) { clientInitRef.current = true; return; }
     if (status === "authenticated") {
+      setSelectedCampaignId(null); // reset campaign when client changes
       setTagFilter(""); // reset tag filter when client changes
+      fetchCampaigns();
       fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClientId]);
 
+  /* ---- refresh stats when campaign changes ---- */
+  const campaignInitRef = useRef(false);
+  useEffect(() => {
+    if (!campaignInitRef.current) { campaignInitRef.current = true; return; }
+    if (status === "authenticated") {
+      setTagFilter(""); // reset tag filter when campaign changes
+      fetchStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCampaignId]);
+
   /* ---- handlers ---- */
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchStats(), fetchTags(), fetchClients()]);
+    await Promise.all([fetchStats(), fetchTags(), fetchClients(), fetchCampaigns()]);
     setRefreshing(false);
   };
 
@@ -432,11 +523,42 @@ function DashboardPage() {
   };
 
   const handleDeleteClient = async (id: string) => {
-    if (!confirm("Usunac klienta? Kampanie zostana odpięte (nie usuniete).")) return;
+    if (!confirm("Usunac klienta? Tagi zostana odpiete (nie usuniete).")) return;
     try {
       await fetch(`/api/clients?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (selectedClientId === id) setSelectedClientId(null);
       await fetchClients();
+      await fetchTags();
+      await fetchCampaigns();
+    } catch { /* ignore */ }
+  };
+
+  /* campaign CRUD */
+  const handleCreateCampaign = async () => {
+    if (!newCampaignName.trim() || !selectedClientId) return;
+    setCampaignCreating(true);
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCampaignName, description: newCampaignDesc, clientId: selectedClientId }),
+      });
+      if (res.ok) {
+        setNewCampaignName("");
+        setNewCampaignDesc("");
+        setShowAddCampaign(false);
+        await fetchCampaigns();
+      }
+    } catch { /* ignore */ }
+    finally { setCampaignCreating(false); }
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!confirm("Usunac kampanie? Akcje zostana odpiete (nie usuniete).")) return;
+    try {
+      await fetch(`/api/campaigns?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (selectedCampaignId === id) setSelectedCampaignId(null);
+      await fetchCampaigns();
       await fetchTags();
     } catch { /* ignore */ }
   };
@@ -451,11 +573,12 @@ function DashboardPage() {
     setDateFrom("");
     setDateTo("");
     setTagFilter("");
+    setSelectedClientId(null);
+    setSelectedCampaignId(null);
     setWeekOffset(0);
     setLoading(true);
     const params = new URLSearchParams();
     params.set("weekOffset", "0");
-    if (selectedClientId) params.set("clientId", selectedClientId);
     try {
       const res = await fetch(`/api/stats?${params.toString()}`);
       if (res.ok) setStats(await res.json());
@@ -524,7 +647,7 @@ function DashboardPage() {
     setTagCreateError("");
     setTagCreateSuccess("");
     if (!newTagId || !newTagName) {
-      setTagCreateError("ID i nazwa kampanii sa wymagane");
+      setTagCreateError("ID i nazwa akcji sa wymagane");
       return;
     }
     if ((newTagType === "url" || newTagType === "google-review") && !newTagUrl) {
@@ -547,6 +670,7 @@ function DashboardPage() {
         description: newTagDesc || undefined,
         tagType: newTagType,
         ...(newTagClient ? { clientId: newTagClient } : {}),
+        ...(newTagCampaign ? { campaignId: newTagCampaign } : {}),
       };
       if (newTagType === "url" || newTagType === "google-review") {
         body.targetUrl = newTagUrl;
@@ -566,15 +690,16 @@ function DashboardPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setTagCreateError(data.error || "Blad tworzenia kampanii");
+        setTagCreateError(data.error || "Blad tworzenia akcji");
       } else {
-        setTagCreateSuccess("Kampania utworzona pomyslnie!");
+        setTagCreateSuccess("Akcja utworzona pomyslnie!");
         setNewTagId("");
         setNewTagName("");
         setNewTagUrl("");
         setNewTagDesc("");
         setNewTagType("url");
         setNewTagClient("");
+        setNewTagCampaign("");
         setNewTagLinks([{ label: "", url: "", icon: "link" }]);
         setNewVCard({ firstName: "", lastName: "" });
         await fetchTags();
@@ -599,7 +724,7 @@ function DashboardPage() {
   };
 
   const handleDeleteTag = async (id: string) => {
-    if (!confirm(`Czy na pewno chcesz usunac kampanie "${id}" i wszystkie jej skany?`)) return;
+    if (!confirm(`Czy na pewno chcesz usunac akcje "${id}" i wszystkie jej skany?`)) return;
     try {
       await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       await fetchTags();
@@ -653,7 +778,7 @@ function DashboardPage() {
 
   /* remove video from tag */
   const handleRemoveVideo = async (tagId: string) => {
-    if (!confirm("Czy na pewno chcesz usunac video z tej kampanii?")) return;
+    if (!confirm("Czy na pewno chcesz usunac video z tej akcji?")) return;
     try {
       await fetch("/api/tags", {
         method: "PUT",
@@ -812,10 +937,19 @@ function DashboardPage() {
 
   /* ---- computed data ---- */
 
-  // Filter tags by selected client
-  const filteredTags = selectedClientId
-    ? tags.filter(t => t.clientId === selectedClientId)
-    : tags;
+  // Filter tags by selected client and/or campaign
+  const filteredTags = tags.filter(t => {
+    if (selectedCampaignId && t.campaignId !== selectedCampaignId) return false;
+    if (selectedClientId && !selectedCampaignId && t.clientId !== selectedClientId) return false;
+    return true;
+  });
+  // If no filters, show all
+  const displayTags = (selectedClientId || selectedCampaignId) ? filteredTags : tags;
+
+  // Filter campaigns by selected client
+  const filteredCampaigns = selectedClientId
+    ? campaigns.filter(c => c.clientId === selectedClientId)
+    : campaigns;
 
   const kpi = stats?.kpi;
   const devices = stats?.devices;
@@ -824,6 +958,7 @@ function DashboardPage() {
   const topCities = stats?.topCities ?? [];
   const topLanguages = stats?.topLanguages ?? [];
   const weekly = stats?.weeklyTrend;
+  const hourly = stats?.hourlyDistribution ?? [];
   const allTagsFilter = stats?.allTags ?? [];
 
   const maxWeeklyCount = weekly
@@ -1101,6 +1236,117 @@ function DashboardPage() {
           )}
         </section>
 
+        {/* ---- Campaign Selector (shows when client selected) ---- */}
+        {selectedClientId && (
+          <section style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                </svg>
+                <select
+                  className="input-field"
+                  value={selectedCampaignId || ""}
+                  onChange={(e) => setSelectedCampaignId(e.target.value || null)}
+                  style={{
+                    padding: "8px 14px",
+                    minWidth: 200,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    borderColor: selectedCampaignId ? "#60a5fa" : "#1e2d45",
+                  }}
+                >
+                  <option value="">Wszystkie kampanie ({filteredCampaigns.length})</option>
+                  {filteredCampaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.scanCount} skanow, {c.tagCount} akcji)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedCampaignId && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 10,
+                  background: "rgba(96,165,250,0.1)",
+                  border: "1px solid rgba(96,165,250,0.25)",
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2.5}>
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#60a5fa" }}>
+                    {filteredCampaigns.find(c => c.id === selectedCampaignId)?.name}
+                  </span>
+                  <button
+                    onClick={() => setSelectedCampaignId(null)}
+                    style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 16, padding: "0 2px", lineHeight: 1 }}
+                    title="Pokaz wszystkie kampanie"
+                  >
+                    x
+                  </button>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => setShowAddCampaign(!showAddCampaign)}
+                  style={{
+                    background: "transparent",
+                    border: "1px dashed #2a4060",
+                    color: "#5a6478",
+                    borderRadius: 10,
+                    padding: "8px 14px",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    transition: "border-color 0.2s, color 0.2s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                >
+                  + Dodaj kampanie
+                </button>
+                {selectedCampaignId && (
+                  <button
+                    onClick={() => handleDeleteCampaign(selectedCampaignId)}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #1e2d45",
+                      color: "#5a6478",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                      fontSize: 12,
+                      cursor: "pointer",
+                      transition: "border-color 0.2s, color 0.2s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#5a6478"; }}
+                  >
+                    Usun kampanie
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Add campaign form */}
+            {showAddCampaign && (
+              <div className="card" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap", padding: "14px 18px", marginTop: 10 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Nazwa kampanii</label>
+                  <input className="input-field" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="np. Promocja letnia 2025" style={{ fontSize: 13, padding: "7px 12px" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Opis</label>
+                  <input className="input-field" value={newCampaignDesc} onChange={(e) => setNewCampaignDesc(e.target.value)} placeholder="Opcjonalny opis" style={{ fontSize: 13, padding: "7px 12px" }} />
+                </div>
+                <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ padding: "8px 18px", fontSize: 12 }}>
+                  {campaignCreating ? "..." : "Dodaj"}
+                </button>
+                <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
+                  Anuluj
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* ---- Filter Bar ---- */}
         <section
           className="card"
@@ -1136,7 +1382,7 @@ function DashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
-              Kampania
+              Akcja
             </label>
             <select
               value={tagFilter}
@@ -1144,7 +1390,7 @@ function DashboardPage() {
               className="input-field"
               style={{ minWidth: 180, padding: "8px 12px" }}
             >
-              <option value="">Wszystkie kampanie</option>
+              <option value="">Wszystkie akcje</option>
               {allTagsFilter.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.id})
@@ -1172,7 +1418,7 @@ function DashboardPage() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
             >
-              Resetuj
+              Reset filtrow
             </button>
           </div>
         </section>
@@ -1492,7 +1738,7 @@ function DashboardPage() {
               {/* Top Tags */}
               <div className="card">
                 <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#e8ecf1" }}>
-                  Najczesciej skanowane kampanie
+                  Najczesciej skanowane akcje
                 </h3>
                 {topTags.length === 0 && (
                   <p style={{ color: "#5a6478", fontSize: 14 }}>Brak danych</p>
@@ -1808,6 +2054,60 @@ function DashboardPage() {
             </section>
 
             {/* ========================================================== */}
+            {/*  4a. HOURLY DISTRIBUTION                                   */}
+            {/* ========================================================== */}
+
+            {hourly.length > 0 && hourly.some(h => h.count > 0) && (
+              <section className="card" style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#e8ecf1" }}>
+                  Rozklad godzinowy
+                </h3>
+                <p style={{ fontSize: 12, color: "#5a6478", marginBottom: 16 }}>
+                  Kiedy uzytkownicy najczesciej skanuja (w wybranym zakresie dat)
+                </p>
+                {(() => {
+                  const maxH = Math.max(...hourly.map(h => h.count), 1);
+                  return (
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 140, paddingTop: 8 }}>
+                      {hourly.map((h) => {
+                        const barH = maxH > 0 ? (h.count / maxH) * 120 : 0;
+                        const isHighlight = h.count === maxH && h.count > 0;
+                        return (
+                          <div
+                            key={h.hour}
+                            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
+                            title={`${h.hour}:00 - ${h.count} skanow`}
+                          >
+                            <span style={{ fontSize: 9, fontWeight: 600, color: h.count > 0 ? "#f0f0ff" : "#3a3a5a", minHeight: 12 }}>
+                              {h.count > 0 ? h.count : ""}
+                            </span>
+                            <div
+                              style={{
+                                width: "100%",
+                                maxWidth: 24,
+                                height: Math.max(barH, 2),
+                                borderRadius: "4px 4px 1px 1px",
+                                background: isHighlight
+                                  ? "linear-gradient(180deg, #10b981, #059669)"
+                                  : h.count > 0
+                                    ? "linear-gradient(180deg, #f5b731, #e69500)"
+                                    : "#1a253a",
+                                transition: "height 0.4s ease",
+                              }}
+                            />
+                            <span style={{ fontSize: 9, color: "#8b95a8", fontWeight: 500 }}>
+                              {h.hour}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </section>
+            )}
+
+            {/* ========================================================== */}
             {/*  4b. NFC CHIPS (physical keychains)                        */}
             {/* ========================================================== */}
 
@@ -1854,7 +2154,7 @@ function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <h2 style={{ fontSize: 22, fontWeight: 800 }}>
-                    <span className="gradient-text">Kampanie</span>
+                    <span className="gradient-text">Akcje</span>
                   </h2>
                   <span
                     style={{
@@ -1866,7 +2166,7 @@ function DashboardPage() {
                       borderRadius: 20,
                     }}
                   >
-                    {tags.length}
+                    {displayTags.length}
                   </span>
                 </div>
                 {/* Global reset stats */}
@@ -1904,7 +2204,7 @@ function DashboardPage() {
               {/* ---- Create Tag Form ---- */}
               <div className="card" style={{ marginBottom: 20 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#e8ecf1" }}>
-                  Nowa kampania
+                  Nowa akcja
                 </h3>
                 <form onSubmit={handleCreateTag}>
                   <div
@@ -1917,7 +2217,7 @@ function DashboardPage() {
                   >
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        ID kampanii
+                        ID akcji
                       </label>
                       <input
                         className="input-field"
@@ -1927,7 +2227,7 @@ function DashboardPage() {
                       />
                       {newTagId && (
                         <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4, fontFamily: "monospace" }}>
-                          URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}
+                          URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-")}
                         </p>
                       )}
                     </div>
@@ -1944,7 +2244,7 @@ function DashboardPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Typ kampanii
+                        Typ akcji
                       </label>
                       <select
                         className="input-field"
@@ -1989,6 +2289,22 @@ function DashboardPage() {
                       >
                         <option value="">-- brak klienta --</option>
                         {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
+                        Kampania
+                      </label>
+                      <select
+                        className="input-field"
+                        value={newTagCampaign}
+                        onChange={(e) => setNewTagCampaign(e.target.value)}
+                        style={{ padding: "8px 12px" }}
+                      >
+                        <option value="">-- brak kampanii --</option>
+                        {campaigns.filter(c => !newTagClient || c.clientId === newTagClient).map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </select>
@@ -2209,7 +2525,7 @@ function DashboardPage() {
                       disabled={tagCreating}
                       style={{ padding: "10px 24px", fontSize: 13 }}
                     >
-                      {tagCreating ? "Tworzenie kampanii..." : "Utworz kampanie"}
+                      {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
                     </button>
                     {tagCreateError && (
                       <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>
@@ -2223,15 +2539,15 @@ function DashboardPage() {
 
               {/* ---- Tags List ---- */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {filteredTags.length === 0 && (
+                {displayTags.length === 0 && (
                   <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
                     <p style={{ color: "#5a6478", fontSize: 14 }}>
-                      {selectedClientId ? "Brak kampanii dla tego klienta." : "Brak kampanii. Utworz pierwsza kampanie powyzej."}
+                      {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Utworz pierwsza akcje powyzej."}
                     </p>
                   </div>
                 )}
 
-                {filteredTags.map((tag) => (
+                {displayTags.map((tag) => (
                   <div key={tag.id} className="card card-hover" style={{ padding: "16px 20px" }}>
                     {editingTagId === tag.id ? (
                       /* ---- Edit Mode ---- */
@@ -2496,6 +2812,26 @@ function DashboardPage() {
                                 {tag.client.name}
                               </span>
                             )}
+                            {tag.campaign && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                  background: "rgba(96,165,250,0.12)",
+                                  color: "#60a5fa",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                                </svg>
+                                {tag.campaign.name}
+                              </span>
+                            )}
                           </div>
 
                           {/* Right: actions */}
@@ -2579,7 +2915,7 @@ function DashboardPage() {
                             ) : (
                               <button
                                 onClick={() => setResetTagConfirm(tag.id)}
-                                title="Resetuj statystyki kampanii"
+                                title="Resetuj statystyki akcji"
                                 style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#fbbf24"; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#6060a0"; }}

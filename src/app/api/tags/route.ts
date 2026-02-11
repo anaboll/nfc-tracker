@@ -12,6 +12,7 @@ export async function GET() {
     include: {
       _count: { select: { scans: true } },
       client: { select: { id: true, name: true, slug: true, color: true } },
+      campaign: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, tagType, links, clientId } = body;
+  const { id, name, targetUrl, description, tagType, links, clientId, campaignId } = body;
 
   if (!id || !name) {
     return NextResponse.json({ error: "id i name sa wymagane" }, { status: 400 });
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
   const type = tagType || "url";
 
   // Auto-set targetUrl based on type
-  const cleanId = id.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  const cleanId = id.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   let finalUrl = targetUrl || "";
   if (type === "video") finalUrl = `/watch/${cleanId}`;
   if (type === "multilink") finalUrl = `/link/${cleanId}`;
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       description: description || null,
       links: (type === "multilink" || type === "vcard") && links ? links : undefined,
       ...(clientId ? { clientId } : {}),
+      ...(campaignId ? { campaignId } : {}),
     },
   });
 
@@ -69,7 +71,7 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, isActive, videoFile, tagType, links, clientId } = body;
+  const { id, name, targetUrl, description, isActive, videoFile, tagType, links, clientId, campaignId } = body;
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
@@ -84,6 +86,7 @@ export async function PUT(request: NextRequest) {
       ...(tagType !== undefined && { tagType }),
       ...(links !== undefined && { links }),
       ...(clientId !== undefined && { clientId: clientId || null }),
+      ...(campaignId !== undefined && { campaignId: campaignId || null }),
     },
   });
 

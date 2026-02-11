@@ -12,20 +12,27 @@ export async function GET(request: NextRequest) {
   const toParam = url.searchParams.get("to");
   const tagFilter = url.searchParams.get("tag");
   const clientFilter = url.searchParams.get("clientId");
+  const campaignFilter = url.searchParams.get("campaignId");
   const weekOffset = parseInt(url.searchParams.get("weekOffset") || "0");
 
   const fromDate = fromParam ? new Date(fromParam) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const toDate = toParam ? new Date(toParam) : new Date();
   toDate.setHours(23, 59, 59, 999);
 
-  // If clientId filter is set, get all tag IDs for that client
-  let clientTagIds: string[] | null = null;
-  if (clientFilter) {
+  // Build tag ID filter based on client/campaign selection
+  let filteredTagIds: string[] | null = null;
+  if (campaignFilter) {
+    const campaignTags = await prisma.tag.findMany({
+      where: { campaignId: campaignFilter },
+      select: { id: true },
+    });
+    filteredTagIds = campaignTags.map(t => t.id);
+  } else if (clientFilter) {
     const clientTags = await prisma.tag.findMany({
       where: { clientId: clientFilter },
       select: { id: true },
     });
-    clientTagIds = clientTags.map(t => t.id);
+    filteredTagIds = clientTags.map(t => t.id);
   }
 
   const whereBase: Record<string, unknown> = {
@@ -33,8 +40,8 @@ export async function GET(request: NextRequest) {
   };
   if (tagFilter) {
     whereBase.tagId = tagFilter;
-  } else if (clientTagIds) {
-    whereBase.tagId = { in: clientTagIds };
+  } else if (filteredTagIds) {
+    whereBase.tagId = { in: filteredTagIds };
   }
 
   const [totalScans, uniqueIps, lastScan, returningCount] = await Promise.all([
@@ -136,8 +143,8 @@ export async function GET(request: NextRequest) {
   };
   if (tagFilter) {
     weeklyWhere.tagId = tagFilter;
-  } else if (clientTagIds) {
-    weeklyWhere.tagId = { in: clientTagIds };
+  } else if (filteredTagIds) {
+    weeklyWhere.tagId = { in: filteredTagIds };
   }
 
   const weeklyScans = await prisma.scan.findMany({
@@ -177,9 +184,28 @@ export async function GET(request: NextRequest) {
     }));
   } catch { /* nfcId column may not exist yet */ }
 
-  // All tags list (for filter dropdown) - filtered by client if selected
+  // Hourly distribution (24h breakdown)
+  const hourlyScans = await prisma.scan.findMany({
+    where: whereBase,
+    select: { timestamp: true },
+  });
+  const hourlyData = Array.from({ length: 24 }, (_, hour) => {
+    const count = hourlyScans.filter((s) => {
+      const h = new Date(s.timestamp).getHours();
+      return h === hour;
+    }).length;
+    return { hour, count };
+  });
+
+  // All tags list (for filter dropdown) - filtered by client/campaign if selected
+  const tagWhere: Record<string, unknown> = {};
+  if (campaignFilter) {
+    tagWhere.campaignId = campaignFilter;
+  } else if (clientFilter) {
+    tagWhere.clientId = clientFilter;
+  }
   const allTags = await prisma.tag.findMany({
-    where: clientFilter ? { clientId: clientFilter } : {},
+    where: tagWhere,
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
@@ -193,6 +219,7 @@ export async function GET(request: NextRequest) {
     topLanguages,
     nfcChips,
     weeklyTrend: { data: weeklyData, weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() },
+    hourlyDistribution: hourlyData,
     allTags,
   });
 }

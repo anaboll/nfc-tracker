@@ -12,7 +12,19 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { tagId: string } }
 ) {
-  const { tagId } = params;
+  const rawTagId = params.tagId;
+
+  // Parse tag ID: support "tagId::nfcChipId" separator format
+  // e.g. "bulderownia-ulotka::04:F2:94:70:CC:2A:81"
+  let tagId: string;
+  let chipId: string | null = null;
+  if (rawTagId.includes("::")) {
+    const sepIdx = rawTagId.indexOf("::");
+    tagId = rawTagId.substring(0, sepIdx);
+    chipId = rawTagId.substring(sepIdx + 2); // everything after ::
+  } else {
+    tagId = rawTagId;
+  }
 
   try {
     const tag = await prisma.tag.findUnique({
@@ -35,7 +47,8 @@ export async function GET(
     const referrer = headers.get("referer") || null;
     const url = new URL(request.url);
     const eventSource = url.searchParams.get("event") || null;
-    const nfcId = url.searchParams.get("nfc") || null;
+    // NFC chip ID: from :: separator in URL or ?nfc= query param
+    const nfcId = chipId || url.searchParams.get("nfc") || null;
 
     const ipHash = hashIp(rawIp);
     const parsed = parseUserAgent(userAgent);
