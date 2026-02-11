@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
@@ -266,6 +266,7 @@ function DashboardPage() {
   const [tagFilter, setTagFilter] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const filtersRestoredRef = useRef(false);
+  const scanTableRef = useRef<HTMLElement>(null);
 
   // change‑password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -287,6 +288,9 @@ function DashboardPage() {
   const [tagCreating, setTagCreating] = useState(false);
   const [tagCreateError, setTagCreateError] = useState("");
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
+
+  // hourly chart mode
+  const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
 
   // raw scan table
   const [scanData, setScanData] = useState<ScansResponse | null>(null);
@@ -1066,6 +1070,22 @@ function DashboardPage() {
     }
     return buckets;
   })();
+
+  // Build heatmap data: dayOfWeek (0=Pon..6=Nd) × hour (0-23) → count
+  const heatmapData: number[][] = (() => {
+    const raw = stats?.hourlyRaw ?? [];
+    // 7 rows (days) × 24 cols (hours)
+    const grid = Array.from({ length: 7 }, () => Array(24).fill(0) as number[]);
+    for (const entry of raw) {
+      const d = new Date(entry.t);
+      const h = d.getHours();
+      let dow = d.getDay(); // 0=Sun, 1=Mon..6=Sat
+      dow = dow === 0 ? 6 : dow - 1; // convert to 0=Mon..6=Sun
+      grid[dow][h]++;
+    }
+    return grid;
+  })();
+  const heatmapMax = Math.max(...heatmapData.flat(), 1);
   const allTagsFilter = stats?.allTags ?? [];
 
   const maxWeeklyCount = weekly
@@ -2256,107 +2276,173 @@ function DashboardPage() {
 
             {hourly.length > 0 && hourly.some(h => h.count > 0) && (
               <section className="card" style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#e8ecf1" }}>
-                  Rozklad godzinowy
-                </h3>
-                <div style={{ display: "flex", gap: 16, marginBottom: 16, alignItems: "center" }}>
-                  <p style={{ fontSize: 12, color: "#5a6478" }}>
-                    Kiedy uzytkownicy najczesciej skanuja
-                  </p>
+                {/* Header with peak insight + mode toggle */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#e8ecf1" }}>
+                      Rozklad godzinowy
+                    </h3>
+                    {/* Peak insight */}
+                    {(() => {
+                      const peak = hourly.reduce((a, b) => b.count > a.count ? b : a, hourly[0]);
+                      const totalH = hourly.reduce((s, h) => s + h.count, 0);
+                      const peakPct = totalH > 0 ? Math.round((peak.count / totalH) * 100) : 0;
+                      return peak.count > 0 ? (
+                        <p style={{ fontSize: 12, color: "#8b95a8", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: "#10b981", fontWeight: 700 }}>Szczyt:</span>
+                          {peak.hour}:00–{peak.hour + 1}:00
+                          <span style={{ color: "#f5b731", fontWeight: 600 }}>({peak.count} skanow, {peak.uniqueUsers} unik.)</span>
+                          <span style={{ color: "#5a6478" }}>· {peakPct}% calego ruchu</span>
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                  {/* Mode toggle */}
+                  <div style={{ display: "flex", background: "#0f1a2e", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                    <button
+                      onClick={() => setHourlyMode("bars")}
+                      style={{
+                        padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                        background: hourlyMode === "bars" ? "rgba(245,183,49,0.15)" : "transparent",
+                        color: hourlyMode === "bars" ? "#f5b731" : "#5a6478",
+                      }}
+                    >
+                      Histogram
+                    </button>
+                    <button
+                      onClick={() => setHourlyMode("heatmap")}
+                      style={{
+                        padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                        background: hourlyMode === "heatmap" ? "rgba(245,183,49,0.15)" : "transparent",
+                        color: hourlyMode === "heatmap" ? "#f5b731" : "#5a6478",
+                      }}
+                    >
+                      Heatmapa
+                    </button>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
                   <span style={{ fontSize: 10, color: "#f5b731", display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 14, height: 2, background: "#f5b731", display: "inline-block" }} /> Wszystkie
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f5b731", opacity: 0.6, display: "inline-block" }} /> Wszystkie skany
                   </span>
                   <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 14, height: 2, background: "#10b981", display: "inline-block" }} /> Unikalne
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981", display: "inline-block" }} /> Unikalni
                   </span>
                 </div>
-                {(() => {
-                  const maxH = Math.max(...hourly.map(h => h.count), 1);
-                  const W = 720;
-                  const H = 180;
-                  const padL = 35;
-                  const padR = 10;
-                  const padT = 25;
-                  const padB = 30;
-                  const chartW = W - padL - padR;
-                  const chartH = H - padT - padB;
-                  // Total line points
-                  const points = hourly.map((h, i) => {
-                    const x = padL + (i / 23) * chartW;
-                    const y = padT + chartH - (h.count / maxH) * chartH;
-                    return { x, y, ...h };
-                  });
-                  // Unique line points
-                  const uPoints = hourly.map((h, i) => {
-                    const x = padL + (i / 23) * chartW;
-                    const y = padT + chartH - (h.uniqueUsers / maxH) * chartH;
-                    return { x, y, uniqueUsers: h.uniqueUsers, hour: h.hour };
-                  });
-                  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-                  const areaPath = `${linePath} L${points[points.length - 1].x},${padT + chartH} L${points[0].x},${padT + chartH} Z`;
-                  const uLinePath = uPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-                  const uAreaPath = `${uLinePath} L${uPoints[uPoints.length - 1].x},${padT + chartH} L${uPoints[0].x},${padT + chartH} Z`;
-                  const peakHour = hourly.reduce((a, b) => b.count > a.count ? b : a, hourly[0]);
-                  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => ({
-                    y: padT + chartH - f * chartH,
-                    label: Math.round(f * maxH),
-                  }));
-                  return (
-                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
-                      {/* Grid lines */}
-                      {gridLines.map((g, i) => (
-                        <g key={i}>
-                          <line x1={padL} y1={g.y} x2={W - padR} y2={g.y} stroke="#1e2d45" strokeWidth={0.5} />
-                          <text x={padL - 6} y={g.y + 3} textAnchor="end" fill="#5a6478" fontSize={9}>{g.label}</text>
-                        </g>
-                      ))}
-                      {/* Total: area fill */}
-                      <path d={areaPath} fill="url(#hourlyGrad)" opacity={0.2} />
-                      {/* Total: line */}
-                      <path d={linePath} fill="none" stroke="#f5b731" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-                      {/* Unique: area fill */}
-                      <path d={uAreaPath} fill="url(#hourlyGradGreen)" opacity={0.15} />
-                      {/* Unique: line */}
-                      <path d={uLinePath} fill="none" stroke="#10b981" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="4 2" />
-                      {/* Total dots + labels */}
-                      {points.map((p) => (
-                        <g key={`t-${p.hour}`}>
-                          {p.count > 0 && (
-                            <>
-                              <circle cx={p.x} cy={p.y} r={3} fill={p.hour === peakHour.hour ? "#10b981" : "#f5b731"} />
-                              <text x={p.x} y={p.y - 10} textAnchor="middle" fill="#f5b731" fontSize={8} fontWeight={600}>{p.count}</text>
-                            </>
+
+                {/* HISTOGRAM MODE */}
+                {hourlyMode === "bars" && (
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 200, paddingTop: 8 }}>
+                    {hourly.map((h) => {
+                      const maxH = Math.max(...hourly.map(x => x.count), 1);
+                      const barH = (h.count / maxH) * 160;
+                      const uBarH = (h.uniqueUsers / maxH) * 160;
+                      const isActive = h.count > 0;
+                      return (
+                        <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }} title={`${h.hour}:00 - ${h.count} skanow, ${h.uniqueUsers} unikalnych`}>
+                          {isActive && (
+                            <span style={{ fontSize: 9, fontWeight: 700, color: "#f5b731" }}>{h.count}</span>
                           )}
-                          {(p.hour % 3 === 0 || p.hour === 23) && (
-                            <text x={p.x} y={H - 6} textAnchor="middle" fill="#8b95a8" fontSize={9}>{p.hour}:00</text>
+                          {isActive && h.uniqueUsers < h.count && (
+                            <span style={{ fontSize: 8, fontWeight: 600, color: "#10b981" }}>{h.uniqueUsers}</span>
                           )}
-                        </g>
+                          <div style={{ position: "relative", width: "100%", height: Math.max(barH, isActive ? 4 : 2) }}>
+                            {/* Total bar */}
+                            <div style={{
+                              position: "absolute", bottom: 0, left: "10%", right: "10%",
+                              height: Math.max(barH, isActive ? 4 : 2),
+                              borderRadius: "3px 3px 0 0",
+                              background: isActive ? "linear-gradient(180deg, rgba(245,183,49,0.7), rgba(230,149,0,0.4))" : "#131b2e",
+                              transition: "height 0.3s ease",
+                            }} />
+                            {/* Unique overlay */}
+                            {h.uniqueUsers > 0 && (
+                              <div style={{
+                                position: "absolute", bottom: 0, left: "25%", right: "25%",
+                                height: Math.max(uBarH, 3),
+                                borderRadius: "2px 2px 0 0",
+                                background: "linear-gradient(180deg, rgba(16,185,129,0.85), rgba(5,150,105,0.5))",
+                                transition: "height 0.3s ease",
+                              }} />
+                            )}
+                          </div>
+                          <span style={{ fontSize: 8, color: isActive ? "#8b95a8" : "#2a3650", fontWeight: 500 }}>
+                            {h.hour}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* HEATMAP MODE */}
+                {hourlyMode === "heatmap" && (
+                  <div style={{ overflowX: "auto" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "50px repeat(24, 1fr)", gap: 1, minWidth: 600 }}>
+                      {/* Header row: hours */}
+                      <div />
+                      {Array.from({ length: 24 }, (_, h) => (
+                        <div key={`hdr-${h}`} style={{ textAlign: "center", fontSize: 8, color: "#5a6478", padding: "4px 0", fontWeight: 500 }}>
+                          {h}
+                        </div>
                       ))}
-                      {/* Unique dots + labels */}
-                      {uPoints.map((p) => (
-                        <g key={`u-${p.hour}`}>
-                          {p.uniqueUsers > 0 && (
-                            <>
-                              <circle cx={p.x} cy={p.y} r={2.5} fill="#10b981" />
-                              <text x={p.x} y={p.y + 12} textAnchor="middle" fill="#10b981" fontSize={7} fontWeight={600}>{p.uniqueUsers}</text>
-                            </>
-                          )}
-                        </g>
+                      {/* Data rows: each day */}
+                      {["Pon", "Wt", "Sr", "Czw", "Pt", "Sob", "Nd"].map((dayName, dayIdx) => (
+                        <React.Fragment key={`row-${dayIdx}`}>
+                          <div style={{ fontSize: 10, color: "#8b95a8", fontWeight: 600, display: "flex", alignItems: "center", paddingRight: 8 }}>
+                            {dayName}
+                          </div>
+                          {Array.from({ length: 24 }, (_, h) => {
+                            const val = heatmapData[dayIdx]?.[h] || 0;
+                            const intensity = heatmapMax > 0 ? val / heatmapMax : 0;
+                            // Color interpolation: 0 = dark, 1 = bright orange
+                            const bg = val === 0
+                              ? "#0c1220"
+                              : `rgba(245, 183, 49, ${0.15 + intensity * 0.85})`;
+                            return (
+                              <div
+                                key={`cell-${dayIdx}-${h}`}
+                                title={`${dayName} ${h}:00 — ${val} skanow`}
+                                style={{
+                                  height: 22,
+                                  borderRadius: 2,
+                                  background: bg,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 8,
+                                  fontWeight: 700,
+                                  color: val > 0 ? (intensity > 0.5 ? "#1a1a2e" : "#e8ecf1") : "transparent",
+                                  cursor: val > 0 ? "default" : "default",
+                                  transition: "background 0.2s",
+                                }}
+                              >
+                                {val > 0 ? val : ""}
+                              </div>
+                            );
+                          })}
+                        </React.Fragment>
                       ))}
-                      {/* Gradient defs */}
-                      <defs>
-                        <linearGradient id="hourlyGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f5b731" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="#f5b731" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="hourlyGradGreen" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  );
-                })()}
+                    </div>
+                    {/* Heatmap scale */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+                      <span style={{ fontSize: 9, color: "#5a6478" }}>Mniej</span>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        {[0, 0.25, 0.5, 0.75, 1].map((f, i) => (
+                          <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: f === 0 ? "#0c1220" : `rgba(245, 183, 49, ${0.15 + f * 0.85})` }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: 9, color: "#5a6478" }}>Wiecej</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Timezone note */}
+                <p style={{ fontSize: 10, color: "#3a4560", marginTop: 10, textAlign: "right" }}>
+                  Strefa czasowa: przegladarka ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                </p>
               </section>
             )}
 
@@ -2390,8 +2476,14 @@ function DashboardPage() {
                         return (
                           <tr key={chip.nfcId} style={{ borderBottom: "1px solid #131b2e" }}>
                             <td style={{ padding: "8px 12px", color: "#5a6478" }}>{idx + 1}</td>
-                            <td style={{ padding: "8px 12px", fontFamily: "monospace", color: "#f5b731", fontWeight: 600 }}>
-                              {chip.nfcId}
+                            <td style={{ padding: "8px 12px" }}>
+                              <button
+                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
+                                style={{ background: "none", border: "none", fontFamily: "monospace", color: "#f5b731", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
+                                title="Kliknij zeby zobaczyc skany tego chipa"
+                              >
+                                {chip.nfcId}
+                              </button>
                             </td>
                             <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#e8ecf1" }}>{chip.count}</td>
                             <td style={{ padding: "8px 12px", textAlign: "right" }}>
@@ -2404,7 +2496,7 @@ function DashboardPage() {
                             </td>
                             <td style={{ padding: "8px 12px" }}>
                               <button
-                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); }}
+                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
                                 style={{ background: "transparent", border: "1px solid #1e2d45", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
                               >
                                 Pokaz skany
@@ -2423,7 +2515,7 @@ function DashboardPage() {
             {/*  4c. RAW SCAN TABLE                                        */}
             {/* ========================================================== */}
 
-            <section className="card" style={{ marginBottom: 24 }}>
+            <section ref={scanTableRef} className="card" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e8ecf1" }}>
