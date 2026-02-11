@@ -13,42 +13,55 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
     notFound();
   }
 
-  // If someone accesses /watch/ directly (not via /s/ redirect), record the view
+  // Record view ONLY if accessed directly (not via /s/ redirect)
+  // Check: no recent scan for same tag+IP in last 30s to prevent double counting
   const hdrs = headers();
   const referer = hdrs.get("referer") || "";
-  const isDirectAccess = !referer.includes(`/s/${params.tagId}`);
+  const isFromRedirect = referer.includes(`/s/${params.tagId}`) || referer.includes(`/s/${params.tagId}:`);
 
-  if (isDirectAccess) {
+  if (!isFromRedirect) {
     try {
       const rawIp = extractIp(
         hdrs.get("x-forwarded-for"),
         hdrs.get("x-real-ip"),
         hdrs.get("cf-connecting-ip")
       );
-      const userAgent = hdrs.get("user-agent") || "";
-      const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
       const ipHash = hashIp(rawIp);
-      const parsed = parseUserAgent(userAgent);
-      const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
 
-      let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
-      try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }
-
-      await prisma.scan.create({
-        data: {
+      // Check if scan already recorded in last 30 seconds (from /s/ redirect)
+      const recentScan = await prisma.scan.findFirst({
+        where: {
           tagId: params.tagId,
           ipHash,
-          deviceType: parsed.deviceType,
-          userAgent: userAgent || null,
-          browserLang,
-          city: geo.city,
-          country: geo.country,
-          region: geo.region,
-          isReturning,
-          referrer: referer || null,
-          eventSource: "direct-watch",
+          timestamp: { gte: new Date(Date.now() - 30000) },
         },
       });
+
+      if (!recentScan) {
+        const userAgent = hdrs.get("user-agent") || "";
+        const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
+        const parsed = parseUserAgent(userAgent);
+        const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
+
+        let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
+        try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }
+
+        await prisma.scan.create({
+          data: {
+            tagId: params.tagId,
+            ipHash,
+            deviceType: parsed.deviceType,
+            userAgent: userAgent || null,
+            browserLang,
+            city: geo.city,
+            country: geo.country,
+            region: geo.region,
+            isReturning,
+            referrer: referer || null,
+            eventSource: "direct-watch",
+          },
+        });
+      }
     } catch (err) {
       console.error("Watch page scan record failed:", err);
     }

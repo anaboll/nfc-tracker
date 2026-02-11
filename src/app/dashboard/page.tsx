@@ -97,6 +97,31 @@ interface CampaignFull extends CampaignInfo {
   scanCount: number;
 }
 
+interface ScanRow {
+  seq: number;
+  id: string;
+  tagId: string;
+  tagName: string;
+  tagType: string;
+  timestamp: string;
+  nfcId: string | null;
+  deviceType: string;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  browserLang: string | null;
+  isReturning: boolean;
+  eventSource: string | null;
+}
+
+interface ScansResponse {
+  rows: ScanRow[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface TagLink {
   label: string;
   url: string;
@@ -250,6 +275,15 @@ function DashboardPage() {
   const [tagCreateError, setTagCreateError] = useState("");
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
 
+  // raw scan table
+  const [scanData, setScanData] = useState<ScansResponse | null>(null);
+  const [scanPage, setScanPage] = useState(1);
+  const [scanSortBy, setScanSortBy] = useState("timestamp");
+  const [scanSortDir, setScanSortDir] = useState<"asc" | "desc">("desc");
+  const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [showScanTable, setShowScanTable] = useState(false);
+
   // editing
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -310,6 +344,32 @@ function DashboardPage() {
       console.error("Stats fetch failed:", e);
     }
   }, [dateFrom, dateTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId]);
+
+  const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null }) => {
+    setScanLoading(true);
+    try {
+      const p = opts?.page ?? scanPage;
+      const sb = opts?.sortBy ?? scanSortBy;
+      const sd = opts?.sortDir ?? scanSortDir;
+      const nfc = opts?.nfcId !== undefined ? opts.nfcId : scanNfcFilter;
+      const params = new URLSearchParams();
+      params.set("page", String(p));
+      params.set("limit", "50");
+      params.set("sortBy", sb);
+      params.set("sortDir", sd);
+      if (tagFilter) params.set("tagId", tagFilter);
+      if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
+      if (selectedClientId) params.set("clientId", selectedClientId);
+      if (nfc) params.set("nfcId", nfc);
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
+      const res = await fetch(`/api/scans?${params.toString()}`);
+      if (res.ok) {
+        setScanData(await res.json());
+      }
+    } catch (e) { console.error("Scans fetch failed:", e); }
+    finally { setScanLoading(false); }
+  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -2071,41 +2131,63 @@ function DashboardPage() {
                 </p>
                 {(() => {
                   const maxH = Math.max(...hourly.map(h => h.count), 1);
+                  const W = 720;
+                  const H = 160;
+                  const padL = 35;
+                  const padR = 10;
+                  const padT = 20;
+                  const padB = 30;
+                  const chartW = W - padL - padR;
+                  const chartH = H - padT - padB;
+                  const points = hourly.map((h, i) => {
+                    const x = padL + (i / 23) * chartW;
+                    const y = padT + chartH - (h.count / maxH) * chartH;
+                    return { x, y, ...h };
+                  });
+                  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                  const areaPath = `${linePath} L${points[points.length - 1].x},${padT + chartH} L${points[0].x},${padT + chartH} Z`;
+                  const peakHour = hourly.reduce((a, b) => b.count > a.count ? b : a, hourly[0]);
+                  // Y-axis grid lines
+                  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+                    y: padT + chartH - f * chartH,
+                    label: Math.round(f * maxH),
+                  }));
                   return (
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 140, paddingTop: 8 }}>
-                      {hourly.map((h) => {
-                        const barH = maxH > 0 ? (h.count / maxH) * 120 : 0;
-                        const isHighlight = h.count === maxH && h.count > 0;
-                        return (
-                          <div
-                            key={h.hour}
-                            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
-                            title={`${h.hour}:00 - ${h.count} skanow`}
-                          >
-                            <span style={{ fontSize: 9, fontWeight: 600, color: h.count > 0 ? "#f0f0ff" : "#3a3a5a", minHeight: 12 }}>
-                              {h.count > 0 ? h.count : ""}
-                            </span>
-                            <div
-                              style={{
-                                width: "100%",
-                                maxWidth: 24,
-                                height: Math.max(barH, 2),
-                                borderRadius: "4px 4px 1px 1px",
-                                background: isHighlight
-                                  ? "linear-gradient(180deg, #10b981, #059669)"
-                                  : h.count > 0
-                                    ? "linear-gradient(180deg, #f5b731, #e69500)"
-                                    : "#1a253a",
-                                transition: "height 0.4s ease",
-                              }}
-                            />
-                            <span style={{ fontSize: 9, color: "#8b95a8", fontWeight: 500 }}>
-                              {h.hour}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+                      {/* Grid lines */}
+                      {gridLines.map((g, i) => (
+                        <g key={i}>
+                          <line x1={padL} y1={g.y} x2={W - padR} y2={g.y} stroke="#1e2d45" strokeWidth={0.5} />
+                          <text x={padL - 6} y={g.y + 3} textAnchor="end" fill="#5a6478" fontSize={9}>{g.label}</text>
+                        </g>
+                      ))}
+                      {/* Area fill */}
+                      <path d={areaPath} fill="url(#hourlyGrad)" opacity={0.3} />
+                      {/* Line */}
+                      <path d={linePath} fill="none" stroke="#f5b731" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                      {/* Dots + labels */}
+                      {points.map((p) => (
+                        <g key={p.hour}>
+                          {p.count > 0 && (
+                            <>
+                              <circle cx={p.x} cy={p.y} r={3} fill={p.hour === peakHour.hour ? "#10b981" : "#f5b731"} />
+                              <text x={p.x} y={p.y - 8} textAnchor="middle" fill={p.hour === peakHour.hour ? "#10b981" : "#e8ecf1"} fontSize={8} fontWeight={600}>{p.count}</text>
+                            </>
+                          )}
+                          {/* X-axis labels (every 2h + last) */}
+                          {(p.hour % 3 === 0 || p.hour === 23) && (
+                            <text x={p.x} y={H - 6} textAnchor="middle" fill="#8b95a8" fontSize={9}>{p.hour}:00</text>
+                          )}
+                        </g>
+                      ))}
+                      {/* Gradient def */}
+                      <defs>
+                        <linearGradient id="hourlyGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f5b731" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="#f5b731" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                    </svg>
                   );
                 })()}
               </section>
@@ -2121,34 +2203,221 @@ function DashboardPage() {
                   Fizyczne breloczki NFC
                 </h3>
                 <p style={{ fontSize: 12, color: "#5a6478", marginBottom: 16 }}>
-                  Statystyki per fizyczny breloczek (parametr ?nfc= w URL)
+                  Unikalne chipy NFC ({stats.nfcChips.length} {stats.nfcChips.length === 1 ? "breloczek" : "breloczków"}, {stats.nfcChips.reduce((s, c) => s + c.count, 0)} skanów łącznie)
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                  {stats.nfcChips.map((chip) => (
-                    <div
-                      key={chip.nfcId}
-                      style={{
-                        background: "rgba(139,92,246,0.08)",
-                        border: "1px solid rgba(124,58,237,0.2)",
-                        borderRadius: 8,
-                        padding: "10px 12px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ fontSize: 11, color: "#f5b731", fontFamily: "monospace", fontWeight: 600, marginBottom: 4 }}>
-                        #{chip.nfcId}
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#e8ecf1" }}>
-                        {chip.count}
-                      </div>
-                      <div style={{ fontSize: 10, color: "#5a6478" }}>
-                        {chip.count === 1 ? "skan" : chip.count < 5 ? "skany" : "skanow"}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #1e2d45" }}>
+                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#8b95a8", fontWeight: 600 }}>#</th>
+                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#8b95a8", fontWeight: 600 }}>NFC Chip ID</th>
+                        <th style={{ textAlign: "right", padding: "8px 12px", color: "#8b95a8", fontWeight: 600 }}>Skany</th>
+                        <th style={{ textAlign: "right", padding: "8px 12px", color: "#8b95a8", fontWeight: 600 }}>Udział</th>
+                        <th style={{ padding: "8px 12px" }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.nfcChips.map((chip, idx) => {
+                        const totalNfc = stats.nfcChips.reduce((s, c) => s + c.count, 0);
+                        const pct = totalNfc > 0 ? Math.round((chip.count / totalNfc) * 100) : 0;
+                        return (
+                          <tr key={chip.nfcId} style={{ borderBottom: "1px solid #131b2e" }}>
+                            <td style={{ padding: "8px 12px", color: "#5a6478" }}>{idx + 1}</td>
+                            <td style={{ padding: "8px 12px", fontFamily: "monospace", color: "#f5b731", fontWeight: 600 }}>
+                              {chip.nfcId}
+                            </td>
+                            <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#e8ecf1" }}>{chip.count}</td>
+                            <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                                <div style={{ width: 50, height: 4, background: "#1a253a", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", borderRadius: 2 }} />
+                                </div>
+                                <span style={{ color: "#8b95a8", minWidth: 30 }}>{pct}%</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <button
+                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); }}
+                                style={{ background: "transparent", border: "1px solid #1e2d45", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
+                              >
+                                Pokaz skany
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             )}
+
+            {/* ========================================================== */}
+            {/*  4c. RAW SCAN TABLE                                        */}
+            {/* ========================================================== */}
+
+            <section className="card" style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e8ecf1" }}>
+                    Lista skanow
+                  </h3>
+                  <button
+                    onClick={() => { setShowScanTable(!showScanTable); if (!showScanTable && !scanData) fetchScans({ page: 1 }); }}
+                    style={{
+                      background: showScanTable ? "rgba(245,183,49,0.12)" : "#1a253a",
+                      border: `1px solid ${showScanTable ? "rgba(245,183,49,0.3)" : "#1e2d45"}`,
+                      color: showScanTable ? "#f5b731" : "#8b95a8",
+                      borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
+                    }}
+                  >
+                    {showScanTable ? "Ukryj" : "Pokaz"} {scanData ? `(${scanData.total})` : ""}
+                  </button>
+                </div>
+                {showScanTable && scanNfcFilter && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
+                    <span style={{ fontSize: 11, color: "#a78bfa" }}>NFC: {scanNfcFilter}</span>
+                    <button onClick={() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }} style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14 }}>×</button>
+                  </div>
+                )}
+              </div>
+
+              {showScanTable && (
+                <>
+                  {scanLoading && <p style={{ fontSize: 12, color: "#5a6478", padding: "20px 0", textAlign: "center" }}>Ladowanie...</p>}
+                  {scanData && !scanLoading && (
+                    <>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                          <thead>
+                            <tr style={{ borderBottom: "2px solid #1e2d45" }}>
+                              {[
+                                { key: "seq", label: "#", w: 40 },
+                                { key: "timestamp", label: "Data/Czas", w: 140 },
+                                { key: "tagId", label: "Akcja", w: 140 },
+                                { key: "nfcId", label: "NFC Chip", w: 120 },
+                                { key: "deviceType", label: "Urzadzenie", w: 80 },
+                                { key: "country", label: "Kraj", w: 60 },
+                                { key: "city", label: "Miasto", w: 100 },
+                              ].map(col => (
+                                <th
+                                  key={col.key}
+                                  onClick={() => {
+                                    if (col.key === "seq") return;
+                                    const newDir = scanSortBy === col.key && scanSortDir === "desc" ? "asc" : "desc";
+                                    setScanSortBy(col.key);
+                                    setScanSortDir(newDir);
+                                    fetchScans({ sortBy: col.key, sortDir: newDir, page: 1 });
+                                  }}
+                                  style={{
+                                    textAlign: "left",
+                                    padding: "8px 8px",
+                                    color: scanSortBy === col.key ? "#f5b731" : "#8b95a8",
+                                    fontWeight: 600,
+                                    cursor: col.key === "seq" ? "default" : "pointer",
+                                    minWidth: col.w,
+                                    whiteSpace: "nowrap",
+                                    userSelect: "none",
+                                  }}
+                                >
+                                  {col.label}
+                                  {scanSortBy === col.key && (
+                                    <span style={{ marginLeft: 4 }}>{scanSortDir === "desc" ? "↓" : "↑"}</span>
+                                  )}
+                                </th>
+                              ))}
+                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }}>Jezyk</th>
+                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }}>Powracajacy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {scanData.rows.map((scan) => (
+                              <tr key={scan.id} style={{ borderBottom: "1px solid #131b2e", transition: "background 0.15s" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = "#0c1220")}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                              >
+                                <td style={{ padding: "6px 8px", color: "#5a6478", fontWeight: 600, fontFamily: "monospace" }}>
+                                  {scan.seq}
+                                </td>
+                                <td style={{ padding: "6px 8px", color: "#e8ecf1", fontFamily: "monospace", fontSize: 10 }}>
+                                  {new Date(scan.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                </td>
+                                <td style={{ padding: "6px 8px" }}>
+                                  <button
+                                    onClick={() => { setTagFilter(scan.tagId); }}
+                                    style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textDecoration: "underline" }}
+                                    title={`Filtruj po: ${scan.tagName}`}
+                                  >
+                                    {scan.tagName}
+                                  </button>
+                                  <span style={{ fontSize: 9, color: "#5a6478", marginLeft: 4 }}>{scan.tagId}</span>
+                                </td>
+                                <td style={{ padding: "6px 8px" }}>
+                                  {scan.nfcId ? (
+                                    <button
+                                      onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
+                                      style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "monospace", padding: 0, textDecoration: "underline" }}
+                                    >
+                                      {scan.nfcId}
+                                    </button>
+                                  ) : (
+                                    <span style={{ color: "#2a4060" }}>—</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: "6px 8px", color: "#8b95a8" }}>
+                                  <span style={{
+                                    padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
+                                    background: scan.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : scan.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
+                                    color: scan.deviceType === "iOS" ? "#60a5fa" : scan.deviceType === "Android" ? "#10b981" : "#8b95a8",
+                                  }}>
+                                    {scan.deviceType}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "6px 8px", color: "#8b95a8" }}>
+                                  {scan.country ? `${getCountryFlag(scan.country)} ${scan.country}` : "—"}
+                                </td>
+                                <td style={{ padding: "6px 8px", color: "#8b95a8" }}>{scan.city || "—"}</td>
+                                <td style={{ padding: "6px 8px", color: "#5a6478", fontSize: 10 }}>{scan.browserLang || "—"}</td>
+                                <td style={{ padding: "6px 8px" }}>
+                                  {scan.isReturning ? (
+                                    <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
+                                  ) : (
+                                    <span style={{ color: "#2a4060", fontSize: 10 }}>Nie</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid #1e2d45" }}>
+                        <span style={{ fontSize: 11, color: "#5a6478" }}>
+                          {scanData.total} skanów • strona {scanData.page}/{scanData.totalPages}
+                        </span>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button
+                            disabled={scanData.page <= 1}
+                            onClick={() => { setScanPage(scanData.page - 1); fetchScans({ page: scanData.page - 1 }); }}
+                            style={{ background: "#1a253a", border: "1px solid #1e2d45", color: scanData.page <= 1 ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
+                          >
+                            ← Poprz.
+                          </button>
+                          <button
+                            disabled={scanData.page >= scanData.totalPages}
+                            onClick={() => { setScanPage(scanData.page + 1); fetchScans({ page: scanData.page + 1 }); }}
+                            style={{ background: "#1a253a", border: "1px solid #1e2d45", color: scanData.page >= scanData.totalPages ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
+                          >
+                            Nast. →
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </section>
 
             {/* ========================================================== */}
             {/*  5. TAG MANAGEMENT                                         */}
