@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
   ]);
 
   const uniqueCount = uniqueIps.length;
-  // Average scans per user (more meaningful than "returning %")
   const avgScansPerUser = uniqueCount > 0 ? Math.round((totalScans / uniqueCount) * 10) / 10 : 0;
 
   // Device breakdown
@@ -81,13 +80,12 @@ export async function GET(request: NextRequest) {
   });
   const tagNameMap = Object.fromEntries(tagDetails.map((t) => [t.id, t.name]));
 
-  // Get unique users per tag (groupBy tagId + ipHash)
+  // Unique users per tag
   const tagUniqueStats = tagIds.length > 0 ? await prisma.scan.groupBy({
     by: ["tagId", "ipHash"],
     where: { ...whereBase, tagId: { in: tagIds } },
     _count: true,
   }) : [];
-  // Count unique IPs per tag
   const tagUniqueMap: Record<string, number> = {};
   for (const row of tagUniqueStats) {
     tagUniqueMap[row.tagId] = (tagUniqueMap[row.tagId] || 0) + 1;
@@ -101,7 +99,7 @@ export async function GET(request: NextRequest) {
     percent: totalScans > 0 ? Math.round((t._count.tagId / totalScans) * 100) : 0,
   }));
 
-  // Countries
+  // Countries - with unique users
   const countryStats = await prisma.scan.groupBy({
     by: ["country"],
     where: { ...whereBase, country: { not: null } },
@@ -109,13 +107,25 @@ export async function GET(request: NextRequest) {
     orderBy: { _count: { country: "desc" } },
     take: 10,
   });
+  const countryNames = countryStats.map(c => c.country).filter(Boolean) as string[];
+  const countryUniqueStats = countryNames.length > 0 ? await prisma.scan.groupBy({
+    by: ["country", "ipHash"],
+    where: { ...whereBase, country: { in: countryNames } },
+    _count: true,
+  }) : [];
+  const countryUniqueMap: Record<string, number> = {};
+  for (const row of countryUniqueStats) {
+    const key = row.country || "Unknown";
+    countryUniqueMap[key] = (countryUniqueMap[key] || 0) + 1;
+  }
   const topCountries = countryStats.map((c) => ({
     country: c.country || "Unknown",
     count: c._count.country,
+    uniqueUsers: countryUniqueMap[c.country || "Unknown"] || 0,
     percent: totalScans > 0 ? Math.round((c._count.country / totalScans) * 100) : 0,
   }));
 
-  // Cities
+  // Cities - with unique users
   const cityStats = await prisma.scan.groupBy({
     by: ["city", "country"],
     where: { ...whereBase, city: { not: null } },
@@ -123,13 +133,25 @@ export async function GET(request: NextRequest) {
     orderBy: { _count: { city: "desc" } },
     take: 10,
   });
+  const cityNames = cityStats.map(c => c.city).filter(Boolean) as string[];
+  const cityUniqueStats = cityNames.length > 0 ? await prisma.scan.groupBy({
+    by: ["city", "ipHash"],
+    where: { ...whereBase, city: { in: cityNames } },
+    _count: true,
+  }) : [];
+  const cityUniqueMap: Record<string, number> = {};
+  for (const row of cityUniqueStats) {
+    const key = row.city || "Unknown";
+    cityUniqueMap[key] = (cityUniqueMap[key] || 0) + 1;
+  }
   const topCities = cityStats.map((c) => ({
     city: c.city || "Unknown",
     country: c.country || "",
     count: c._count.city,
+    uniqueUsers: cityUniqueMap[c.city || "Unknown"] || 0,
   }));
 
-  // Languages
+  // Languages - with unique users
   const langStats = await prisma.scan.groupBy({
     by: ["browserLang"],
     where: { ...whereBase, browserLang: { not: null } },
@@ -138,9 +160,21 @@ export async function GET(request: NextRequest) {
     take: 10,
   });
   const totalLangs = langStats.reduce((sum, l) => sum + l._count.browserLang, 0);
+  const langNames = langStats.map(l => l.browserLang).filter(Boolean) as string[];
+  const langUniqueStats = langNames.length > 0 ? await prisma.scan.groupBy({
+    by: ["browserLang", "ipHash"],
+    where: { ...whereBase, browserLang: { in: langNames } },
+    _count: true,
+  }) : [];
+  const langUniqueMap: Record<string, number> = {};
+  for (const row of langUniqueStats) {
+    const key = row.browserLang || "unknown";
+    langUniqueMap[key] = (langUniqueMap[key] || 0) + 1;
+  }
   const topLanguages = langStats.map((l) => ({
     lang: l.browserLang || "unknown",
     count: l._count.browserLang,
+    uniqueUsers: langUniqueMap[l.browserLang || "unknown"] || 0,
     percent: totalLangs > 0 ? Math.round((l._count.browserLang / totalLangs) * 100) : 0,
   }));
 
@@ -164,9 +198,10 @@ export async function GET(request: NextRequest) {
     weeklyWhere.tagId = { in: filteredTagIds };
   }
 
+  // Weekly: fetch timestamp + ipHash for unique counting on client
   const weeklyScans = await prisma.scan.findMany({
     where: weeklyWhere,
-    select: { timestamp: true },
+    select: { timestamp: true, ipHash: true },
   });
 
   const weekDays = ["Pon", "Wt", "Sr", "Czw", "Pt", "Sob", "Nd"];
@@ -177,14 +212,15 @@ export async function GET(request: NextRequest) {
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayDate);
     dayEnd.setHours(23, 59, 59, 999);
-    const count = weeklyScans.filter((s) => {
+    const dayScans = weeklyScans.filter((s) => {
       const t = new Date(s.timestamp);
       return t >= dayStart && t <= dayEnd;
-    }).length;
-    return { day, date: dayDate.toISOString().split("T")[0], count };
+    });
+    const uniqueIpsDay = new Set(dayScans.map(s => s.ipHash));
+    return { day, date: dayDate.toISOString().split("T")[0], count: dayScans.length, uniqueUsers: uniqueIpsDay.size };
   });
 
-  // NFC chip breakdown (physical keychains)
+  // NFC chip breakdown
   let nfcChips: { nfcId: string; count: number }[] = [];
   try {
     const nfcStats = await prisma.scan.groupBy({
@@ -200,13 +236,12 @@ export async function GET(request: NextRequest) {
     }));
   } catch { /* nfcId column may not exist yet */ }
 
-  // Hourly distribution: send raw ISO timestamps to client
-  // so timezone conversion happens in the browser (fixes UTC vs local timezone mismatch)
+  // Hourly: send timestamp + ipHash so client can compute both total and unique per hour
   const hourlyScans = await prisma.scan.findMany({
     where: whereBase,
-    select: { timestamp: true },
+    select: { timestamp: true, ipHash: true },
   });
-  const hourlyTimestamps = hourlyScans.map(s => s.timestamp.toISOString());
+  const hourlyRaw = hourlyScans.map(s => ({ t: s.timestamp.toISOString(), ip: s.ipHash }));
 
   // All tags list (for filter dropdown)
   const tagWhere: Record<string, unknown> = {};
@@ -230,7 +265,7 @@ export async function GET(request: NextRequest) {
     topLanguages,
     nfcChips,
     weeklyTrend: { data: weeklyData, weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() },
-    hourlyTimestamps,
+    hourlyRaw,
     allTags,
   });
 }

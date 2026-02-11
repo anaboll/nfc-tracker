@@ -34,6 +34,7 @@ interface TopTag {
 interface Country {
   country: string;
   count: number;
+  uniqueUsers: number;
   percent: number;
 }
 
@@ -41,11 +42,13 @@ interface City {
   city: string;
   country: string;
   count: number;
+  uniqueUsers: number;
 }
 
 interface Language {
   lang: string;
   count: number;
+  uniqueUsers: number;
   percent: number;
 }
 
@@ -53,6 +56,7 @@ interface WeekDay {
   day: string;
   date: string;
   count: number;
+  uniqueUsers: number;
 }
 
 interface WeeklyTrend {
@@ -69,6 +73,12 @@ interface NfcChip {
 interface HourlyData {
   hour: number;
   count: number;
+  uniqueUsers: number;
+}
+
+interface HourlyRawEntry {
+  t: string;
+  ip: string;
 }
 
 interface StatsData {
@@ -80,7 +90,7 @@ interface StatsData {
   topLanguages: Language[];
   nfcChips: NfcChip[];
   weeklyTrend: WeeklyTrend;
-  hourlyTimestamps: string[];
+  hourlyRaw: HourlyRawEntry[];
   allTags: { id: string; name: string }[];
 }
 
@@ -925,6 +935,10 @@ function DashboardPage() {
       });
       setResetAllConfirm(false);
       setResetTagConfirm(null);
+      // Clear scan table data so it doesn't show stale rows
+      setScanData(null);
+      setShowScanTable(false);
+      setScanNfcFilter(null);
       await fetchStats();
       await fetchTags();
     } catch { /* ignore */ }
@@ -1036,14 +1050,19 @@ function DashboardPage() {
   const topCities = stats?.topCities ?? [];
   const topLanguages = stats?.topLanguages ?? [];
   const weekly = stats?.weeklyTrend;
-  // Build hourly distribution from raw timestamps (client-side timezone!)
+  // Build hourly distribution from raw timestamps + ipHash (client-side timezone!)
   const hourly: HourlyData[] = (() => {
-    const timestamps = stats?.hourlyTimestamps ?? [];
-    if (timestamps.length === 0) return [];
-    const buckets = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
-    for (const iso of timestamps) {
-      const h = new Date(iso).getHours(); // browser local timezone
+    const raw = stats?.hourlyRaw ?? [];
+    if (raw.length === 0) return [];
+    const buckets = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0, uniqueUsers: 0 }));
+    const ipSets: Set<string>[] = Array.from({ length: 24 }, () => new Set());
+    for (const entry of raw) {
+      const h = new Date(entry.t).getHours(); // browser local timezone
       buckets[h].count++;
+      ipSets[h].add(entry.ip);
+    }
+    for (let i = 0; i < 24; i++) {
+      buckets[i].uniqueUsers = ipSets[i].size;
     }
     return buckets;
   })();
@@ -1971,13 +1990,15 @@ function DashboardPage() {
                         {c.country}
                       </span>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>
-                        {c.count}
-                      </span>
-                      <span style={{ fontSize: 12, color: "#8b95a8", marginLeft: 6 }}>
-                        ({c.percent}%)
-                      </span>
+                    <div style={{ textAlign: "right", display: "flex", gap: 12, alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>{c.count}</span>
+                        <span style={{ fontSize: 10, color: "#8b95a8", marginLeft: 4 }}>sk.</span>
+                      </div>
+                      <div style={{ borderLeft: "1px solid #2a2a4a", paddingLeft: 12 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>{c.uniqueUsers}</span>
+                        <span style={{ fontSize: 10, color: "#8b95a8", marginLeft: 4 }}>unik.</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2008,9 +2029,16 @@ function DashboardPage() {
                       </p>
                       <p style={{ fontSize: 11, color: "#5a6478" }}>{c.country}</p>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>
-                      {c.count}
-                    </span>
+                    <div style={{ textAlign: "right", display: "flex", gap: 12, alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>{c.count}</span>
+                        <span style={{ fontSize: 10, color: "#8b95a8", marginLeft: 4 }}>sk.</span>
+                      </div>
+                      <div style={{ borderLeft: "1px solid #2a2a4a", paddingLeft: 12 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>{c.uniqueUsers}</span>
+                        <span style={{ fontSize: 10, color: "#8b95a8", marginLeft: 4 }}>unik.</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2095,18 +2123,19 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Bar chart */}
+                {/* Bar chart with unique overlay */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "flex-end",
                     gap: 8,
-                    height: 180,
+                    height: 200,
                     paddingTop: 8,
                   }}
                 >
                   {weekly?.data.map((d) => {
                     const barH = maxWeeklyCount > 0 ? (d.count / maxWeeklyCount) * 160 : 0;
+                    const uBarH = maxWeeklyCount > 0 ? (d.uniqueUsers / maxWeeklyCount) * 160 : 0;
                     return (
                       <div
                         key={d.date}
@@ -2115,37 +2144,58 @@ function DashboardPage() {
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
-                          gap: 6,
+                          gap: 4,
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: d.count > 0 ? "#f0f0ff" : "#6060a0",
-                          }}
-                        >
+                        <span style={{ fontSize: 10, fontWeight: 600, color: d.count > 0 ? "#f5b731" : "#3a4560" }}>
                           {d.count}
                         </span>
-                        <div
-                          style={{
-                            width: "100%",
-                            maxWidth: 48,
-                            height: Math.max(barH, 4),
-                            borderRadius: "6px 6px 2px 2px",
-                            background:
-                              d.count > 0
-                                ? "linear-gradient(180deg, #f5b731, #e69500)"
-                                : "#1a253a",
-                            transition: "height 0.4s ease",
-                          }}
-                        />
+                        <span style={{ fontSize: 9, fontWeight: 600, color: d.uniqueUsers > 0 ? "#10b981" : "#3a4560" }}>
+                          {d.uniqueUsers} un.
+                        </span>
+                        <div style={{ position: "relative", width: "100%", maxWidth: 48, height: Math.max(barH, 4) }}>
+                          {/* Total bar (orange) */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: Math.max(barH, 4),
+                              borderRadius: "6px 6px 2px 2px",
+                              background: d.count > 0 ? "linear-gradient(180deg, #f5b731, #e69500)" : "#1a253a",
+                              transition: "height 0.4s ease",
+                              opacity: 0.35,
+                            }}
+                          />
+                          {/* Unique bar (green, on top) */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: "15%",
+                              right: "15%",
+                              height: Math.max(uBarH, d.uniqueUsers > 0 ? 4 : 0),
+                              borderRadius: "4px 4px 2px 2px",
+                              background: d.uniqueUsers > 0 ? "linear-gradient(180deg, #10b981, #059669)" : "transparent",
+                              transition: "height 0.4s ease",
+                            }}
+                          />
+                        </div>
                         <span style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>
                           {d.day}
                         </span>
                       </div>
                     );
                   })}
+                </div>
+                <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
+                  <span style={{ fontSize: 10, color: "#f5b731", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f5b731", opacity: 0.5, display: "inline-block" }} /> Wszystkie
+                  </span>
+                  <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981", display: "inline-block" }} /> Unikalne
+                  </span>
                 </div>
               </div>
 
@@ -2189,7 +2239,10 @@ function DashboardPage() {
                         <div className="progress-fill" style={{ width: `${l.percent}%` }} />
                       </div>
                       <span style={{ fontSize: 13, color: "#8b95a8", minWidth: 50, textAlign: "right" }}>
-                        {l.count} ({l.percent}%)
+                        {l.count}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#10b981", minWidth: 40, textAlign: "right" }}>
+                        {l.uniqueUsers} un.
                       </span>
                     </div>
                   </div>
@@ -2203,31 +2256,47 @@ function DashboardPage() {
 
             {hourly.length > 0 && hourly.some(h => h.count > 0) && (
               <section className="card" style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#e8ecf1" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#e8ecf1" }}>
                   Rozklad godzinowy
                 </h3>
-                <p style={{ fontSize: 12, color: "#5a6478", marginBottom: 16 }}>
-                  Kiedy uzytkownicy najczesciej skanuja (w wybranym zakresie dat)
-                </p>
+                <div style={{ display: "flex", gap: 16, marginBottom: 16, alignItems: "center" }}>
+                  <p style={{ fontSize: 12, color: "#5a6478" }}>
+                    Kiedy uzytkownicy najczesciej skanuja
+                  </p>
+                  <span style={{ fontSize: 10, color: "#f5b731", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 14, height: 2, background: "#f5b731", display: "inline-block" }} /> Wszystkie
+                  </span>
+                  <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 14, height: 2, background: "#10b981", display: "inline-block" }} /> Unikalne
+                  </span>
+                </div>
                 {(() => {
                   const maxH = Math.max(...hourly.map(h => h.count), 1);
                   const W = 720;
-                  const H = 160;
+                  const H = 180;
                   const padL = 35;
                   const padR = 10;
-                  const padT = 20;
+                  const padT = 25;
                   const padB = 30;
                   const chartW = W - padL - padR;
                   const chartH = H - padT - padB;
+                  // Total line points
                   const points = hourly.map((h, i) => {
                     const x = padL + (i / 23) * chartW;
                     const y = padT + chartH - (h.count / maxH) * chartH;
                     return { x, y, ...h };
                   });
+                  // Unique line points
+                  const uPoints = hourly.map((h, i) => {
+                    const x = padL + (i / 23) * chartW;
+                    const y = padT + chartH - (h.uniqueUsers / maxH) * chartH;
+                    return { x, y, uniqueUsers: h.uniqueUsers, hour: h.hour };
+                  });
                   const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
                   const areaPath = `${linePath} L${points[points.length - 1].x},${padT + chartH} L${points[0].x},${padT + chartH} Z`;
+                  const uLinePath = uPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                  const uAreaPath = `${uLinePath} L${uPoints[uPoints.length - 1].x},${padT + chartH} L${uPoints[0].x},${padT + chartH} Z`;
                   const peakHour = hourly.reduce((a, b) => b.count > a.count ? b : a, hourly[0]);
-                  // Y-axis grid lines
                   const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => ({
                     y: padT + chartH - f * chartH,
                     label: Math.round(f * maxH),
@@ -2241,30 +2310,48 @@ function DashboardPage() {
                           <text x={padL - 6} y={g.y + 3} textAnchor="end" fill="#5a6478" fontSize={9}>{g.label}</text>
                         </g>
                       ))}
-                      {/* Area fill */}
-                      <path d={areaPath} fill="url(#hourlyGrad)" opacity={0.3} />
-                      {/* Line */}
+                      {/* Total: area fill */}
+                      <path d={areaPath} fill="url(#hourlyGrad)" opacity={0.2} />
+                      {/* Total: line */}
                       <path d={linePath} fill="none" stroke="#f5b731" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-                      {/* Dots + labels */}
+                      {/* Unique: area fill */}
+                      <path d={uAreaPath} fill="url(#hourlyGradGreen)" opacity={0.15} />
+                      {/* Unique: line */}
+                      <path d={uLinePath} fill="none" stroke="#10b981" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="4 2" />
+                      {/* Total dots + labels */}
                       {points.map((p) => (
-                        <g key={p.hour}>
+                        <g key={`t-${p.hour}`}>
                           {p.count > 0 && (
                             <>
                               <circle cx={p.x} cy={p.y} r={3} fill={p.hour === peakHour.hour ? "#10b981" : "#f5b731"} />
-                              <text x={p.x} y={p.y - 8} textAnchor="middle" fill={p.hour === peakHour.hour ? "#10b981" : "#e8ecf1"} fontSize={8} fontWeight={600}>{p.count}</text>
+                              <text x={p.x} y={p.y - 10} textAnchor="middle" fill="#f5b731" fontSize={8} fontWeight={600}>{p.count}</text>
                             </>
                           )}
-                          {/* X-axis labels (every 2h + last) */}
                           {(p.hour % 3 === 0 || p.hour === 23) && (
                             <text x={p.x} y={H - 6} textAnchor="middle" fill="#8b95a8" fontSize={9}>{p.hour}:00</text>
                           )}
                         </g>
                       ))}
-                      {/* Gradient def */}
+                      {/* Unique dots + labels */}
+                      {uPoints.map((p) => (
+                        <g key={`u-${p.hour}`}>
+                          {p.uniqueUsers > 0 && (
+                            <>
+                              <circle cx={p.x} cy={p.y} r={2.5} fill="#10b981" />
+                              <text x={p.x} y={p.y + 12} textAnchor="middle" fill="#10b981" fontSize={7} fontWeight={600}>{p.uniqueUsers}</text>
+                            </>
+                          )}
+                        </g>
+                      ))}
+                      {/* Gradient defs */}
                       <defs>
                         <linearGradient id="hourlyGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#f5b731" stopOpacity={0.4} />
                           <stop offset="100%" stopColor="#f5b731" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="hourlyGradGreen" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                     </svg>
