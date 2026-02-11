@@ -55,7 +55,8 @@ export async function GET(
 
     // Record scan BEFORE redirect
     try {
-      const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
+      // Per-tag returning: has this IP scanned THIS specific tag before?
+      const isReturning = (await prisma.scan.count({ where: { ipHash, tagId } })) > 0;
 
       let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
       try {

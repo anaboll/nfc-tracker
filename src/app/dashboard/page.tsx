@@ -13,7 +13,7 @@ interface KPI {
   totalScans: number;
   uniqueUsers: number;
   lastScan: string | null;
-  returningPercent: number;
+  avgScansPerUser: number;
 }
 
 interface Devices {
@@ -27,6 +27,7 @@ interface TopTag {
   tagId: string;
   tagName: string;
   count: number;
+  uniqueUsers: number;
   percent: number;
 }
 
@@ -79,7 +80,7 @@ interface StatsData {
   topLanguages: Language[];
   nfcChips: NfcChip[];
   weeklyTrend: WeeklyTrend;
-  hourlyDistribution: HourlyData[];
+  hourlyTimestamps: string[];
   allTags: { id: string; name: string }[];
 }
 
@@ -250,6 +251,8 @@ function DashboardPage() {
   // filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [timeFrom, setTimeFrom] = useState("");
+  const [timeTo, setTimeTo] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const filtersRestoredRef = useRef(false);
@@ -324,8 +327,13 @@ function DashboardPage() {
     try {
       setFetchError("");
       const params = new URLSearchParams();
-      if (dateFrom) params.set("from", dateFrom);
-      if (dateTo) params.set("to", dateTo);
+      if (dateFrom) {
+        // Combine date + optional time: "2025-01-15T08:00" or just "2025-01-15"
+        params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      }
+      if (dateTo) {
+        params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+      }
       if (tagFilter) params.set("tag", tagFilter);
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
@@ -343,7 +351,7 @@ function DashboardPage() {
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId]);
+  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId]);
 
   const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null }) => {
     setScanLoading(true);
@@ -361,15 +369,15 @@ function DashboardPage() {
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (nfc) params.set("nfcId", nfc);
-      if (dateFrom) params.set("from", dateFrom);
-      if (dateTo) params.set("to", dateTo);
+      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
       const res = await fetch(`/api/scans?${params.toString()}`);
       if (res.ok) {
         setScanData(await res.json());
       }
     } catch (e) { console.error("Scans fetch failed:", e); }
     finally { setScanLoading(false); }
-  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo]);
+  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo, timeFrom, timeTo]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -499,6 +507,8 @@ function DashboardPage() {
         if (f.tagFilter) setTagFilter(f.tagFilter);
         if (f.dateFrom) setDateFrom(f.dateFrom);
         if (f.dateTo) setDateTo(f.dateTo);
+        if (f.timeFrom) setTimeFrom(f.timeFrom);
+        if (f.timeTo) setTimeTo(f.timeTo);
       }
     } catch { /* ignore */ }
   }, []);
@@ -513,9 +523,11 @@ function DashboardPage() {
         tagFilter,
         dateFrom,
         dateTo,
+        timeFrom,
+        timeTo,
       }));
     } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo]);
+  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo, timeFrom, timeTo]);
 
   /* ---- initial load ---- */
 
@@ -636,6 +648,8 @@ function DashboardPage() {
   const handleResetFilters = async () => {
     setDateFrom("");
     setDateTo("");
+    setTimeFrom("");
+    setTimeTo("");
     setTagFilter("");
     setSelectedClientId(null);
     setSelectedCampaignId(null);
@@ -1022,7 +1036,17 @@ function DashboardPage() {
   const topCities = stats?.topCities ?? [];
   const topLanguages = stats?.topLanguages ?? [];
   const weekly = stats?.weeklyTrend;
-  const hourly = stats?.hourlyDistribution ?? [];
+  // Build hourly distribution from raw timestamps (client-side timezone!)
+  const hourly: HourlyData[] = (() => {
+    const timestamps = stats?.hourlyTimestamps ?? [];
+    if (timestamps.length === 0) return [];
+    const buckets = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
+    for (const iso of timestamps) {
+      const h = new Date(iso).getHours(); // browser local timezone
+      buckets[h].count++;
+    }
+    return buckets;
+  })();
   const allTagsFilter = stats?.allTags ?? [];
 
   const maxWeeklyCount = weekly
@@ -1426,23 +1450,59 @@ function DashboardPage() {
             <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
               Od
             </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{ minWidth: 150 }}
-            />
+            <div style={{ display: "flex", gap: 4 }}>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                style={{ minWidth: 140 }}
+              />
+              <input
+                type="time"
+                value={timeFrom}
+                onChange={(e) => setTimeFrom(e.target.value)}
+                placeholder="00:00"
+                style={{
+                  minWidth: 90,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--txt)",
+                  borderRadius: 8,
+                  padding: "0.5rem 0.5rem",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
               Do
             </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{ minWidth: 150 }}
-            />
+            <div style={{ display: "flex", gap: 4 }}>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                style={{ minWidth: 140 }}
+              />
+              <input
+                type="time"
+                value={timeTo}
+                onChange={(e) => setTimeTo(e.target.value)}
+                placeholder="23:59"
+                style={{
+                  minWidth: 90,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--txt)",
+                  borderRadius: 8,
+                  padding: "0.5rem 0.5rem",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
@@ -1539,11 +1599,14 @@ function DashboardPage() {
                     background: "rgba(139,92,246,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
                   Wszystkie skany
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
                   {kpi?.totalScans.toLocaleString("pl-PL") ?? "0"}
+                </p>
+                <p style={{ fontSize: 11, color: "#5a6478", marginTop: 4 }}>
+                  Lacznie zarejestrowanych skanow
                 </p>
               </div>
 
@@ -1560,11 +1623,14 @@ function DashboardPage() {
                     background: "rgba(52,211,153,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
                   Unikalni uzytkownicy
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
                   {kpi?.uniqueUsers.toLocaleString("pl-PL") ?? "0"}
+                </p>
+                <p style={{ fontSize: 11, color: "#5a6478", marginTop: 4 }}>
+                  Rozne urzadzenia / osoby
                 </p>
               </div>
 
@@ -1581,7 +1647,7 @@ function DashboardPage() {
                     background: "rgba(139,92,246,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
                   Ostatni skan
                 </p>
                 <p style={{ fontSize: 18, fontWeight: 700, color: "#e8ecf1" }}>
@@ -1589,7 +1655,7 @@ function DashboardPage() {
                 </p>
               </div>
 
-              {/* Returning % */}
+              {/* Avg Scans Per User */}
               <div className="card card-hover" style={{ position: "relative", overflow: "hidden" }}>
                 <div
                   style={{
@@ -1602,11 +1668,14 @@ function DashboardPage() {
                     background: "rgba(52,211,153,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-                  Powracajacy
+                <p style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Sr. skanow / osoba
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1, color: "#10b981" }}>
-                  {kpi?.returningPercent ?? 0}%
+                  {kpi?.avgScansPerUser ?? 0}x
+                </p>
+                <p style={{ fontSize: 11, color: "#5a6478", marginTop: 4 }}>
+                  {(kpi?.avgScansPerUser ?? 0) <= 1.2 ? "Wiekszosc skanuje raz" : "Uzytkownicy wracaja"}
                 </p>
               </div>
             </section>
@@ -1801,9 +1870,12 @@ function DashboardPage() {
 
               {/* Top Tags */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#e8ecf1" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#e8ecf1" }}>
                   Najczesciej skanowane akcje
                 </h3>
+                <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 16 }}>
+                  Skany = lacznie | Unikalni = rozne osoby/urzadzenia
+                </p>
                 {topTags.length === 0 && (
                   <p style={{ color: "#5a6478", fontSize: 14 }}>Brak danych</p>
                 )}
@@ -1843,11 +1915,19 @@ function DashboardPage() {
                         <p style={{ fontSize: 11, color: "#5a6478" }}>{t.tagId}</p>
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>
-                        {t.count}
-                      </p>
-                      <p style={{ fontSize: 11, color: "#8b95a8" }}>{t.percent}%</p>
+                    <div style={{ textAlign: "right", display: "flex", gap: 16, alignItems: "center" }}>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#e8ecf1" }}>
+                          {t.count}
+                        </p>
+                        <p style={{ fontSize: 10, color: "#8b95a8" }}>skanow</p>
+                      </div>
+                      <div style={{ borderLeft: "1px solid #2a2a4a", paddingLeft: 16 }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>
+                          {t.uniqueUsers}
+                        </p>
+                        <p style={{ fontSize: 10, color: "#8b95a8" }}>unikalnych</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2327,7 +2407,7 @@ function DashboardPage() {
                                 </th>
                               ))}
                               <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }}>Jezyk</th>
-                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }}>Powracajacy</th>
+                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }} title="Czy ta osoba skanowala te sama akcje wczesniej">Ponowny</th>
                             </tr>
                           </thead>
                           <tbody>

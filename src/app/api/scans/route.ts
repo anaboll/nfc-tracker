@@ -28,7 +28,10 @@ export async function GET(request: NextRequest) {
     if (fromParam) ts.gte = new Date(fromParam);
     if (toParam) {
       const to = new Date(toParam);
-      to.setHours(23, 59, 59, 999);
+      // Only set to end-of-day if no time was specified
+      if (!toParam.includes("T")) {
+        to.setHours(23, 59, 59, 999);
+      }
       ts.lte = to;
     }
     where.timestamp = ts;

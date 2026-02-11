@@ -41,7 +41,8 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
         const userAgent = hdrs.get("user-agent") || "";
         const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
         const parsed = parseUserAgent(userAgent);
-        const isReturning = (await prisma.scan.count({ where: { ipHash } })) > 0;
+        // Per-tag returning: has this IP scanned THIS specific tag before?
+        const isReturning = (await prisma.scan.count({ where: { ipHash, tagId: params.tagId } })) > 0;
 
         let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
         try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }

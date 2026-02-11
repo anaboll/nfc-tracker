@@ -121,6 +121,22 @@ input[type="date"]:focus {
 }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
+input[type="time"] {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--txt);
+  border-radius: 8px;
+  padding: 0.5rem 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input[type="time"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(230, 149, 0, 0.12);
+}
+input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
 select {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b95a8' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");

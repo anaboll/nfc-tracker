@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
 
   const fromDate = fromParam ? new Date(fromParam) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const toDate = toParam ? new Date(toParam) : new Date();
-  toDate.setHours(23, 59, 59, 999);
+  // Only set to end-of-day if no time was specified (date-only format: "2025-01-15")
+  if (!toParam || !toParam.includes("T")) {
+    toDate.setHours(23, 59, 59, 999);
+  }
 
   // Build tag ID filter based on client/campaign selection
   let filteredTagIds: string[] | null = null;
@@ -44,15 +47,15 @@ export async function GET(request: NextRequest) {
     whereBase.tagId = { in: filteredTagIds };
   }
 
-  const [totalScans, uniqueIps, lastScan, returningCount] = await Promise.all([
+  const [totalScans, uniqueIps, lastScan] = await Promise.all([
     prisma.scan.count({ where: whereBase }),
     prisma.scan.groupBy({ by: ["ipHash"], where: whereBase, _count: true }),
     prisma.scan.findFirst({ where: whereBase, orderBy: { timestamp: "desc" }, select: { timestamp: true } }),
-    prisma.scan.count({ where: { ...whereBase, isReturning: true } }),
   ]);
 
   const uniqueCount = uniqueIps.length;
-  const returningPercent = totalScans > 0 ? Math.round((returningCount / totalScans) * 100) : 0;
+  // Average scans per user (more meaningful than "returning %")
+  const avgScansPerUser = uniqueCount > 0 ? Math.round((totalScans / uniqueCount) * 10) / 10 : 0;
 
   // Device breakdown
   const deviceStats = await prisma.scan.groupBy({
@@ -63,7 +66,7 @@ export async function GET(request: NextRequest) {
   const deviceMap: Record<string, number> = {};
   for (const d of deviceStats) deviceMap[d.deviceType] = d._count.deviceType;
 
-  // Top tags
+  // Top tags - with unique user counts per tag
   const topTags = await prisma.scan.groupBy({
     by: ["tagId"],
     where: whereBase,
@@ -77,10 +80,24 @@ export async function GET(request: NextRequest) {
     select: { id: true, name: true },
   });
   const tagNameMap = Object.fromEntries(tagDetails.map((t) => [t.id, t.name]));
+
+  // Get unique users per tag (groupBy tagId + ipHash)
+  const tagUniqueStats = tagIds.length > 0 ? await prisma.scan.groupBy({
+    by: ["tagId", "ipHash"],
+    where: { ...whereBase, tagId: { in: tagIds } },
+    _count: true,
+  }) : [];
+  // Count unique IPs per tag
+  const tagUniqueMap: Record<string, number> = {};
+  for (const row of tagUniqueStats) {
+    tagUniqueMap[row.tagId] = (tagUniqueMap[row.tagId] || 0) + 1;
+  }
+
   const topTagsData = topTags.map((t) => ({
     tagId: t.tagId,
     tagName: tagNameMap[t.tagId] || t.tagId,
     count: t._count.tagId,
+    uniqueUsers: tagUniqueMap[t.tagId] || 0,
     percent: totalScans > 0 ? Math.round((t._count.tagId / totalScans) * 100) : 0,
   }));
 
@@ -167,8 +184,7 @@ export async function GET(request: NextRequest) {
     return { day, date: dayDate.toISOString().split("T")[0], count };
   });
 
-  // NFC chip breakdown (physical keychains) - wrapped in try/catch
-  // in case nfcId column doesn't exist yet (migration not run)
+  // NFC chip breakdown (physical keychains)
   let nfcChips: { nfcId: string; count: number }[] = [];
   try {
     const nfcStats = await prisma.scan.groupBy({
@@ -184,20 +200,15 @@ export async function GET(request: NextRequest) {
     }));
   } catch { /* nfcId column may not exist yet */ }
 
-  // Hourly distribution (24h breakdown)
+  // Hourly distribution: send raw ISO timestamps to client
+  // so timezone conversion happens in the browser (fixes UTC vs local timezone mismatch)
   const hourlyScans = await prisma.scan.findMany({
     where: whereBase,
     select: { timestamp: true },
   });
-  const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-    const count = hourlyScans.filter((s) => {
-      const h = new Date(s.timestamp).getHours();
-      return h === hour;
-    }).length;
-    return { hour, count };
-  });
+  const hourlyTimestamps = hourlyScans.map(s => s.timestamp.toISOString());
 
-  // All tags list (for filter dropdown) - filtered by client/campaign if selected
+  // All tags list (for filter dropdown)
   const tagWhere: Record<string, unknown> = {};
   if (campaignFilter) {
     tagWhere.campaignId = campaignFilter;
@@ -211,7 +222,7 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({
-    kpi: { totalScans, uniqueUsers: uniqueCount, lastScan: lastScan?.timestamp || null, returningPercent },
+    kpi: { totalScans, uniqueUsers: uniqueCount, lastScan: lastScan?.timestamp || null, avgScansPerUser },
     devices: { iOS: deviceMap["iOS"] || 0, Android: deviceMap["Android"] || 0, Desktop: deviceMap["Desktop"] || 0, total: totalScans },
     topTags: topTagsData,
     topCountries,
@@ -219,7 +230,7 @@ export async function GET(request: NextRequest) {
     topLanguages,
     nfcChips,
     weeklyTrend: { data: weeklyData, weekStart: weekStart.toISOString(), weekEnd: weekEnd.toISOString() },
-    hourlyDistribution: hourlyData,
+    hourlyTimestamps,
     allTags,
   });
 }
