@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes - check auth
-  const protectedPaths = ["/dashboard", "/api/stats", "/api/scans", "/api/tags", "/api/upload", "/api/clients", "/api/campaigns", "/api/link-click", "/api/video-event"];
+  const protectedPaths = ["/dashboard", "/api/stats", "/api/scans", "/api/tags", "/api/upload", "/api/clients", "/api/campaigns", "/api/link-click", "/api/video-event", "/api/manage"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
   if (!isProtected) {
@@ -51,5 +51,6 @@ export const config = {
     "/api/scans/:path*",
     "/api/link-click/:path*",
     "/api/video-event/:path*",
+    "/api/manage/:path*",
   ],
 };

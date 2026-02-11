@@ -335,6 +335,28 @@ function DashboardPage() {
   // video retention chart (shown in analytics section when video campaign selected)
   const [selectedVideoRetention, setSelectedVideoRetention] = useState<VideoStats | null>(null);
 
+  // management panel
+  const [showManagePanel, setShowManagePanel] = useState(false);
+  const [managePanelTab, setManagePanelTab] = useState<"clients" | "campaigns" | "tags">("clients");
+  const [manageLoading, setManageLoading] = useState(false);
+  const [manageMsg, setManageMsg] = useState("");
+  // cascade delete confirmations (2-step)
+  const [cascadeDeleteCampaignId, setCascadeDeleteCampaignId] = useState<string | null>(null);
+  const [cascadeDeleteCampaignPreview, setCascadeDeleteCampaignPreview] = useState<{ campaignName: string; tagsCount: number; tagNames: string[]; scanCount: number; clickCount: number; eventCount: number } | null>(null);
+  const [cascadeDeleteClientId, setCascadeDeleteClientId] = useState<string | null>(null);
+  const [cascadeDeleteClientPreview, setCascadeDeleteClientPreview] = useState<{ clientName: string; campaignsCount: number; campaignNames: string[]; tagsCount: number; tagNames: string[]; scanCount: number; clickCount: number; eventCount: number } | null>(null);
+  const [resetClientStatsId, setResetClientStatsId] = useState<string | null>(null);
+  // reassign tag
+  const [reassignTagId, setReassignTagId] = useState<string | null>(null);
+  const [reassignCampaignId, setReassignCampaignId] = useState("");
+  // clone tag
+  const [cloneSourceTag, setCloneSourceTag] = useState<string | null>(null);
+  const [cloneNewId, setCloneNewId] = useState("");
+  const [cloneTargetClient, setCloneTargetClient] = useState("");
+  const [cloneTargetCampaign, setCloneTargetCampaign] = useState("");
+  // manage filter
+  const [manageCampaignFilter, setManageCampaignFilter] = useState<string | null>(null);
+
   /* ---- fetch helpers ---- */
 
   const fetchStats = useCallback(async (opts?: { wo?: number }) => {
@@ -947,6 +969,174 @@ function DashboardPage() {
       await fetchTags();
     } catch { /* ignore */ }
     finally { setResetting(false); }
+  };
+
+  /* ---- management panel handlers ---- */
+
+  const handleCascadeDeleteCampaignPreview = async (campaignId: string) => {
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/cascade-delete-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCascadeDeleteCampaignId(campaignId);
+        setCascadeDeleteCampaignPreview(data);
+      } else {
+        setManageMsg("Blad pobierania podgladu kampanii");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleCascadeDeleteCampaign = async () => {
+    if (!cascadeDeleteCampaignId) return;
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/cascade-delete-campaign", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: cascadeDeleteCampaignId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setManageMsg(`Usunieto kampanie "${data.campaignName}": ${data.deletedTags} akcji, ${data.deletedScans} skanow, ${data.deletedClicks} klikniec, ${data.deletedVideoEvents} eventow video`);
+        setCascadeDeleteCampaignId(null);
+        setCascadeDeleteCampaignPreview(null);
+        await Promise.all([fetchClients(), fetchCampaigns(), fetchTags(), fetchStats()]);
+      } else {
+        setManageMsg("Blad usuwania kampanii");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleCascadeDeleteClientPreview = async (clientId: string) => {
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/cascade-delete-client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCascadeDeleteClientId(clientId);
+        setCascadeDeleteClientPreview(data);
+      } else {
+        setManageMsg("Blad pobierania podgladu klienta");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleCascadeDeleteClient = async () => {
+    if (!cascadeDeleteClientId) return;
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/cascade-delete-client", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: cascadeDeleteClientId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setManageMsg(`Usunieto klienta "${data.clientName}": ${data.deletedCampaigns} kampanii, ${data.deletedTags} akcji, ${data.deletedScans} skanow`);
+        setCascadeDeleteClientId(null);
+        setCascadeDeleteClientPreview(null);
+        setSelectedClientId(null);
+        setSelectedCampaignId(null);
+        await Promise.all([fetchClients(), fetchCampaigns(), fetchTags(), fetchStats()]);
+      } else {
+        setManageMsg("Blad usuwania klienta");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleResetClientStats = async (clientId: string) => {
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/reset-client-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setManageMsg(`Zresetowano statystyki klienta "${data.clientName}": ${data.deletedScans} skanow, ${data.deletedClicks} klikniec, ${data.deletedVideoEvents} eventow (${data.tagsAffected} akcji zachowanych)`);
+        setResetClientStatsId(null);
+        setScanData(null);
+        setShowScanTable(false);
+        await Promise.all([fetchClients(), fetchTags(), fetchStats()]);
+      } else {
+        setManageMsg("Blad resetowania statystyk");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleReassignTag = async () => {
+    if (!reassignTagId) return;
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/tag-operations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tagId: reassignTagId, newCampaignId: reassignCampaignId || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setManageMsg(`Przeniesiono akcje "${data.tag.name}" do ${data.tag.campaignId ? "nowej kampanii" : "bez kampanii"}`);
+        setReassignTagId(null);
+        setReassignCampaignId("");
+        await Promise.all([fetchCampaigns(), fetchTags(), fetchStats()]);
+      } else {
+        const err = await res.json();
+        setManageMsg(err.error || "Blad przenoszenia akcji");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
+  };
+
+  const handleCloneTag = async () => {
+    if (!cloneSourceTag || !cloneNewId) return;
+    setManageLoading(true);
+    setManageMsg("");
+    try {
+      const res = await fetch("/api/manage/tag-operations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceTagId: cloneSourceTag,
+          newId: cloneNewId,
+          targetClientId: cloneTargetClient || undefined,
+          targetCampaignId: cloneTargetCampaign || undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setManageMsg(`Sklonowano akcje jako "${data.clonedTag.name}" (ID: ${data.clonedTag.id})`);
+        setCloneSourceTag(null);
+        setCloneNewId("");
+        setCloneTargetClient("");
+        setCloneTargetCampaign("");
+        await fetchTags();
+      } else {
+        const err = await res.json();
+        setManageMsg(err.error || "Blad klonowania akcji");
+      }
+    } catch { setManageMsg("Blad polaczenia"); }
+    finally { setManageLoading(false); }
   };
 
   /* tag type label helper */
@@ -3693,6 +3883,400 @@ function DashboardPage() {
             </section>
           </div>
         )}
+        {/* ============================================================ */}
+        {/*  MANAGEMENT PANEL                                            */}
+        {/* ============================================================ */}
+
+        <section style={{ margin: "40px 0 0", padding: "0 20px 30px" }}>
+          <button
+            onClick={() => setShowManagePanel(!showManagePanel)}
+            style={{
+              width: "100%",
+              padding: "14px 20px",
+              background: "rgba(239,68,68,0.06)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              borderRadius: 12,
+              color: "#f87171",
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "all 0.2s",
+            }}
+          >
+            <span>⚙️ Panel zarzadzania (kaskadowe usuwanie, przenoszenie, klonowanie)</span>
+            <span style={{ fontSize: 18, transform: showManagePanel ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+          </button>
+
+          {showManagePanel && (
+            <div style={{
+              marginTop: 12,
+              padding: 20,
+              background: "var(--surface-1)",
+              borderRadius: 12,
+              border: "1px solid rgba(239,68,68,0.15)",
+            }}>
+              {/* Tab buttons */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {(["clients", "campaigns", "tags"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => { setManagePanelTab(tab); setManageMsg(""); }}
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: 8,
+                      border: "1px solid",
+                      borderColor: managePanelTab === tab ? "#e69500" : "var(--border)",
+                      background: managePanelTab === tab ? "rgba(230,149,0,0.12)" : "transparent",
+                      color: managePanelTab === tab ? "#e69500" : "#8b95a8",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {tab === "clients" ? "Klienci" : tab === "campaigns" ? "Kampanie" : "Akcje"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status message */}
+              {manageMsg && (
+                <div style={{
+                  marginBottom: 16,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  background: manageMsg.startsWith("Blad") ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                  color: manageMsg.startsWith("Blad") ? "#f87171" : "#10b981",
+                  border: `1px solid ${manageMsg.startsWith("Blad") ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
+                }}>
+                  {manageMsg}
+                </div>
+              )}
+
+              {/* ---- CLIENTS TAB ---- */}
+              {managePanelTab === "clients" && (
+                <div>
+                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
+                    Kaskadowe usuwanie: usunie klienta + wszystkie jego kampanie + akcje + skany/kliki/eventy.
+                    Reset stats: usunie tylko dane (skany/kliki/eventy), zachowa akcje.
+                  </p>
+                  {clients.length === 0 && <p style={{ color: "#555", fontSize: 13 }}>Brak klientow</p>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {clients.map(cl => (
+                      <div key={cl.id} style={{
+                        padding: "12px 16px",
+                        background: "var(--surface-2)",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 8,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 200 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: cl.color || "#666" }} />
+                          <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{cl.name}</span>
+                          <span style={{ fontSize: 11, color: "#8b95a8" }}>
+                            {cl.tagCount} akcji · {cl.scanCount} skanow
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {/* Reset stats */}
+                          {resetClientStatsId === cl.id ? (
+                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                              <span style={{ fontSize: 11, color: "#f59e0b" }}>Na pewno reset?</span>
+                              <button
+                                onClick={() => handleResetClientStats(cl.id)}
+                                disabled={manageLoading}
+                                style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                              >
+                                {manageLoading ? "..." : "TAK"}
+                              </button>
+                              <button
+                                onClick={() => setResetClientStatsId(null)}
+                                style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
+                              >
+                                Nie
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setResetClientStatsId(cl.id)}
+                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)", color: "#f59e0b", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
+                            >
+                              Reset stats
+                            </button>
+                          )}
+
+                          {/* Cascade delete */}
+                          {cascadeDeleteClientId === cl.id && cascadeDeleteClientPreview ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4, background: "rgba(239,68,68,0.06)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
+                              <span style={{ fontSize: 11, color: "#f87171", fontWeight: 600 }}>
+                                Usuniesz: {cascadeDeleteClientPreview.campaignsCount} kampanii, {cascadeDeleteClientPreview.tagsCount} akcji, {cascadeDeleteClientPreview.scanCount} skanow
+                              </span>
+                              {cascadeDeleteClientPreview.tagNames.length > 0 && (
+                                <span style={{ fontSize: 10, color: "#8b95a8" }}>
+                                  Akcje: {cascadeDeleteClientPreview.tagNames.slice(0, 5).join(", ")}{cascadeDeleteClientPreview.tagNames.length > 5 ? ` +${cascadeDeleteClientPreview.tagNames.length - 5}` : ""}
+                                </span>
+                              )}
+                              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                                <button
+                                  onClick={handleCascadeDeleteClient}
+                                  disabled={manageLoading}
+                                  style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.15)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 700 }}
+                                >
+                                  {manageLoading ? "Usuwanie..." : "USUN WSZYSTKO"}
+                                </button>
+                                <button
+                                  onClick={() => { setCascadeDeleteClientId(null); setCascadeDeleteClientPreview(null); }}
+                                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
+                                >
+                                  Anuluj
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleCascadeDeleteClientPreview(cl.id)}
+                              disabled={manageLoading}
+                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
+                            >
+                              Usun kaskadowo
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ---- CAMPAIGNS TAB ---- */}
+              {managePanelTab === "campaigns" && (
+                <div>
+                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
+                    Usuwanie kampanii: usunie kampanie + wszystkie jej akcje + ich dane (skany/kliki/eventy).
+                  </p>
+                  {/* Client filter */}
+                  <div style={{ marginBottom: 12 }}>
+                    <select
+                      value={manageCampaignFilter || ""}
+                      onChange={e => setManageCampaignFilter(e.target.value || null)}
+                      style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 13 }}
+                    >
+                      <option value="">Wszystkie klienci</option>
+                      {clients.map(cl => (
+                        <option key={cl.id} value={cl.id}>{cl.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {campaigns.filter(c => !manageCampaignFilter || c.clientId === manageCampaignFilter).length === 0 && (
+                    <p style={{ color: "#555", fontSize: 13 }}>Brak kampanii</p>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {campaigns
+                      .filter(c => !manageCampaignFilter || c.clientId === manageCampaignFilter)
+                      .map(camp => (
+                        <div key={camp.id} style={{
+                          padding: "12px 16px",
+                          background: "var(--surface-2)",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: 8,
+                        }}>
+                          <div style={{ minWidth: 200 }}>
+                            <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{camp.name}</span>
+                            <span style={{ fontSize: 11, color: "#8b95a8", marginLeft: 8 }}>
+                              ({camp.client?.name || "?"}) · {camp.tagCount} akcji · {camp.scanCount} skanow
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {cascadeDeleteCampaignId === camp.id && cascadeDeleteCampaignPreview ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4, background: "rgba(239,68,68,0.06)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
+                                <span style={{ fontSize: 11, color: "#f87171", fontWeight: 600 }}>
+                                  Usuniesz: {cascadeDeleteCampaignPreview.tagsCount} akcji, {cascadeDeleteCampaignPreview.scanCount} skanow, {cascadeDeleteCampaignPreview.clickCount} klikniec
+                                </span>
+                                {cascadeDeleteCampaignPreview.tagNames.length > 0 && (
+                                  <span style={{ fontSize: 10, color: "#8b95a8" }}>
+                                    Akcje: {cascadeDeleteCampaignPreview.tagNames.join(", ")}
+                                  </span>
+                                )}
+                                <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                                  <button
+                                    onClick={handleCascadeDeleteCampaign}
+                                    disabled={manageLoading}
+                                    style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.15)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 700 }}
+                                  >
+                                    {manageLoading ? "Usuwanie..." : "USUN WSZYSTKO"}
+                                  </button>
+                                  <button
+                                    onClick={() => { setCascadeDeleteCampaignId(null); setCascadeDeleteCampaignPreview(null); }}
+                                    style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
+                                  >
+                                    Anuluj
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleCascadeDeleteCampaignPreview(camp.id)}
+                                disabled={manageLoading}
+                                style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
+                              >
+                                Usun kaskadowo
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ---- TAGS TAB ---- */}
+              {managePanelTab === "tags" && (
+                <div>
+                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
+                    Przenoszenie akcji miedzy kampaniami (w ramach tego samego klienta). Klonowanie akcji (kopia konfiguracji bez danych).
+                  </p>
+                  {tags.length === 0 && <p style={{ color: "#555", fontSize: 13 }}>Brak akcji</p>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {tags.map(tag => (
+                      <div key={tag.id} style={{
+                        padding: "12px 16px",
+                        background: "var(--surface-2)",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                          <div style={{ minWidth: 200 }}>
+                            <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{tag.name}</span>
+                            <span style={{ fontSize: 11, color: "#8b95a8", marginLeft: 6 }}>
+                              ({tag.id}) · {tag.client?.name || "brak klienta"} · {tag.campaign?.name || "brak kampanii"} · {tag.tagType} · {tag._count.scans} skanow
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => {
+                                if (reassignTagId === tag.id) { setReassignTagId(null); }
+                                else { setReassignTagId(tag.id); setReassignCampaignId(tag.campaignId || ""); setCloneSourceTag(null); }
+                              }}
+                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)", color: "#60a5fa", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
+                            >
+                              {reassignTagId === tag.id ? "Anuluj" : "Przenies"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (cloneSourceTag === tag.id) { setCloneSourceTag(null); }
+                                else { setCloneSourceTag(tag.id); setCloneNewId(""); setCloneTargetClient(tag.clientId || ""); setCloneTargetCampaign(""); setReassignTagId(null); }
+                              }}
+                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10b981", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
+                            >
+                              {cloneSourceTag === tag.id ? "Anuluj" : "Klonuj"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Reassign inline form */}
+                        {reassignTagId === tag.id && (
+                          <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(59,130,246,0.05)", borderRadius: 8, border: "1px solid rgba(59,130,246,0.15)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 12, color: "#60a5fa", fontWeight: 500 }}>Przenies do kampanii:</span>
+                            <select
+                              value={reassignCampaignId}
+                              onChange={e => setReassignCampaignId(e.target.value)}
+                              style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
+                            >
+                              <option value="">(bez kampanii)</option>
+                              {campaigns
+                                .filter(c => !tag.clientId || c.clientId === tag.clientId)
+                                .map(c => (
+                                  <option key={c.id} value={c.id}>{c.name} ({c.client?.name})</option>
+                                ))}
+                            </select>
+                            <button
+                              onClick={handleReassignTag}
+                              disabled={manageLoading}
+                              style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: "#3b82f6", color: "#fff", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
+                            >
+                              {manageLoading ? "..." : "Przenies"}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Clone inline form */}
+                        {cloneSourceTag === tag.id && (
+                          <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(16,185,129,0.05)", borderRadius: 8, border: "1px solid rgba(16,185,129,0.15)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Nowe ID:</span>
+                              <input
+                                type="text"
+                                value={cloneNewId}
+                                onChange={e => setCloneNewId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, ""))}
+                                placeholder="nowe-id-akcji"
+                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12, width: 200 }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Docelowy klient:</span>
+                              <select
+                                value={cloneTargetClient}
+                                onChange={e => { setCloneTargetClient(e.target.value); setCloneTargetCampaign(""); }}
+                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
+                              >
+                                <option value="">(ten sam)</option>
+                                {clients.map(cl => (
+                                  <option key={cl.id} value={cl.id}>{cl.name}</option>
+                                ))}
+                              </select>
+                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Kampania:</span>
+                              <select
+                                value={cloneTargetCampaign}
+                                onChange={e => setCloneTargetCampaign(e.target.value)}
+                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
+                              >
+                                <option value="">(bez kampanii)</option>
+                                {campaigns
+                                  .filter(c => !cloneTargetClient || c.clientId === cloneTargetClient || (!cloneTargetClient && tag.clientId && c.clientId === tag.clientId))
+                                  .map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                  ))}
+                              </select>
+                            </div>
+                            <button
+                              onClick={handleCloneTag}
+                              disabled={manageLoading || !cloneNewId}
+                              style={{
+                                padding: "6px 16px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: !cloneNewId ? "#333" : "#10b981",
+                                color: !cloneNewId ? "#666" : "#fff",
+                                fontSize: 12,
+                                cursor: cloneNewId ? "pointer" : "not-allowed",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {manageLoading ? "Klonowanie..." : "Klonuj akcje"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
       </main>
 
       {/* ============================================================ */}
