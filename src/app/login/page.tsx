@@ -7,8 +7,8 @@ import { useSearchParams } from "next/navigation";
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center" style={{ background: "#080b14" }}>
-        <p style={{ color: "#94a3b8" }}>Ladowanie...</p>
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "#06080d" }}>
+        <p style={{ color: "#8b95a8" }}>Ladowanie...</p>
       </main>
     }>
       <LoginForm />
@@ -47,8 +47,6 @@ function LoginForm() {
         setError("Nieprawidlowy login lub haslo");
         setLoading(false);
       } else if (result?.ok) {
-        // Always redirect using relative path - never use result.url
-        // because Docker internal addresses leak into it (127.0.0.1:3000)
         window.location.replace("/dashboard");
       } else {
         setError("Wystapil blad logowania");
@@ -63,24 +61,24 @@ function LoginForm() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "linear-gradient(135deg, #080b14, #111827, #0f172a)" }}
+      style={{ background: "linear-gradient(135deg, #06080d, #0c1220, #0f172a)" }}
     >
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div
             className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #34d399)", boxShadow: "0 8px 32px rgba(139,92,246,0.25)" }}
+            style={{ background: "linear-gradient(135deg, #e69500, #f5b731)", boxShadow: "0 8px 32px rgba(230,149,0,0.2)" }}
           >
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            <svg className="w-8 h-8" fill="none" stroke="#06080d" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round"
                 d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
             </svg>
           </div>
           <h1 className="text-3xl font-bold">
             <span className="gradient-text">TwojeNFC</span>
           </h1>
-          <p className="text-sm mt-2" style={{ color: "#94a3b8" }}>
+          <p className="text-sm mt-2" style={{ color: "#8b95a8" }}>
             Panel administracyjny
           </p>
         </div>
@@ -91,7 +89,7 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
+              <label className="block text-sm font-medium mb-2" style={{ color: "#8b95a8" }}>
                 Login
               </label>
               <input
@@ -106,7 +104,7 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
+              <label className="block text-sm font-medium mb-2" style={{ color: "#8b95a8" }}>
                 Haslo
               </label>
               <input
@@ -135,7 +133,7 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-xs mt-6" style={{ color: "#64748b" }}>
+        <p className="text-center text-xs mt-6" style={{ color: "#5a6478" }}>
           Dostep tylko dla administratorow systemu
         </p>
       </div>

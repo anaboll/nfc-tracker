@@ -11,17 +11,30 @@ export async function GET(request: NextRequest) {
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
   const tagFilter = url.searchParams.get("tag");
+  const clientFilter = url.searchParams.get("clientId");
   const weekOffset = parseInt(url.searchParams.get("weekOffset") || "0");
 
   const fromDate = fromParam ? new Date(fromParam) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const toDate = toParam ? new Date(toParam) : new Date();
   toDate.setHours(23, 59, 59, 999);
 
+  // If clientId filter is set, get all tag IDs for that client
+  let clientTagIds: string[] | null = null;
+  if (clientFilter) {
+    const clientTags = await prisma.tag.findMany({
+      where: { clientId: clientFilter },
+      select: { id: true },
+    });
+    clientTagIds = clientTags.map(t => t.id);
+  }
+
   const whereBase: Record<string, unknown> = {
     timestamp: { gte: fromDate, lte: toDate },
   };
   if (tagFilter) {
     whereBase.tagId = tagFilter;
+  } else if (clientTagIds) {
+    whereBase.tagId = { in: clientTagIds };
   }
 
   const [totalScans, uniqueIps, lastScan, returningCount] = await Promise.all([
@@ -118,11 +131,17 @@ export async function GET(request: NextRequest) {
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
 
+  const weeklyWhere: Record<string, unknown> = {
+    timestamp: { gte: weekStart, lte: weekEnd },
+  };
+  if (tagFilter) {
+    weeklyWhere.tagId = tagFilter;
+  } else if (clientTagIds) {
+    weeklyWhere.tagId = { in: clientTagIds };
+  }
+
   const weeklyScans = await prisma.scan.findMany({
-    where: {
-      timestamp: { gte: weekStart, lte: weekEnd },
-      ...(tagFilter ? { tagId: tagFilter } : {}),
-    },
+    where: weeklyWhere,
     select: { timestamp: true },
   });
 
@@ -158,8 +177,9 @@ export async function GET(request: NextRequest) {
     }));
   } catch { /* nfcId column may not exist yet */ }
 
-  // All tags list (for filter dropdown)
+  // All tags list (for filter dropdown) - filtered by client if selected
   const allTags = await prisma.tag.findMany({
+    where: clientFilter ? { clientId: clientFilter } : {},
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });

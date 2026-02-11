@@ -29,7 +29,10 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const loginUrl = new URL("/login", request.url);
+    // Use real host to avoid Docker 0.0.0.0 leak
+    const proto = request.headers.get("x-forwarded-proto") || "https";
+    const host = request.headers.get("host") || request.headers.get("x-forwarded-host") || "twojenfc.pl";
+    const loginUrl = new URL("/login", `${proto}://${host}`);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }

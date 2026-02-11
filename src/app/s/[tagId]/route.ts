@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseUserAgent, hashIp, getGeoLocation, extractIp } from "@/lib/utils";
 
+function getRealBaseUrl(headers: Headers): string {
+  const proto = headers.get("x-forwarded-proto") || "https";
+  const host = headers.get("host") || headers.get("x-forwarded-host") || "twojenfc.pl";
+  return `${proto}://${host}`;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { tagId: string } }
@@ -14,7 +20,7 @@ export async function GET(
     });
 
     if (!tag) {
-      return NextResponse.redirect(new URL("/", request.url), { status: 302 });
+      return NextResponse.redirect(`${getRealBaseUrl(request.headers)}/`, { status: 302 });
     }
 
     // Collect data
@@ -87,14 +93,12 @@ export async function GET(
     }
 
     if (targetUrl.startsWith("/")) {
-      const proto = headers.get("x-forwarded-proto") || "https";
-      const host = headers.get("host") || headers.get("x-forwarded-host") || "twojenfc.pl";
-      targetUrl = `${proto}://${host}${targetUrl}`;
+      targetUrl = `${getRealBaseUrl(headers)}${targetUrl}`;
     }
 
     return NextResponse.redirect(targetUrl, { status: 302 });
   } catch (error) {
     console.error("Scan route error:", error);
-    return NextResponse.redirect(new URL("/", request.url), { status: 302 });
+    return NextResponse.redirect(`${getRealBaseUrl(request.headers)}/`, { status: 302 });
   }
 }
