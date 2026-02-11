@@ -3,17 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0f0f1a;
-  --surface: #16213e;
-  --surface-2: #1e1e3a;
-  --surface-3: #252547;
-  --border: #2a2a4a;
-  --accent: #7c3aed;
-  --accent-light: #9f67ff;
-  --green: #10b981;
-  --txt: #f0f0ff;
-  --txt-sec: #a0a0c0;
-  --txt-muted: #6060a0;
+  --bg: #080b14;
+  --surface: #111827;
+  --surface-2: #1a2035;
+  --surface-3: #232d42;
+  --border: #293548;
+  --border-hover: #3d4f6a;
+  --accent: #8b5cf6;
+  --accent-light: #a78bfa;
+  --green: #34d399;
+  --green-dark: #10b981;
+  --txt: #f1f5f9;
+  --txt-sec: #94a3b8;
+  --txt-muted: #64748b;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,31 +23,46 @@
 body {
   background: var(--bg);
   color: var(--txt);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
 }
 
-.card-hover { transition: border-color 0.2s, transform 0.2s; }
-.card-hover:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-hover {
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.08), 0 4px 10px rgba(0,0,0,0.3);
+}
 
 .gradient-text {
-  background: linear-gradient(135deg, #9f67ff, #10b981);
+  background: linear-gradient(135deg, #a78bfa, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.progress-bar { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
 .progress-fill {
   height: 100%;
   border-radius: 4px;
@@ -54,40 +71,60 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #7c3aed, #10b981);
+  background: linear-gradient(135deg, #8b5cf6, #34d399);
   color: white;
   font-weight: 600;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0.75rem 1.5rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
 }
-.btn-primary:hover { opacity: 0.9; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary:hover {
+  opacity: 0.92;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+  transform: translateY(-1px);
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
 .input-field {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--txt);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
   outline: none;
   width: 100%;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.input-field:focus { border-color: var(--accent); }
+.input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
 .input-field::placeholder { color: var(--txt-muted); }
 
 input[type="date"] {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--txt);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-input[type="date"]:focus { border-color: var(--accent); }
+input[type="date"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px !important;
+}

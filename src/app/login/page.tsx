@@ -7,8 +7,8 @@ import { useSearchParams } from "next/navigation";
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center" style={{ background: "#0f0f1a" }}>
-        <p style={{ color: "#a0a0c0" }}>Ladowanie...</p>
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "#080b14" }}>
+        <p style={{ color: "#94a3b8" }}>Ladowanie...</p>
       </main>
     }>
       <LoginForm />
@@ -63,14 +63,14 @@ function LoginForm() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "linear-gradient(135deg, #0f0f1a, #1a1a2e, #16213e)" }}
+      style={{ background: "linear-gradient(135deg, #080b14, #111827, #0f172a)" }}
     >
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div
             className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #10b981)" }}
+            style={{ background: "linear-gradient(135deg, #8b5cf6, #34d399)", boxShadow: "0 8px 32px rgba(139,92,246,0.25)" }}
           >
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -80,7 +80,7 @@ function LoginForm() {
           <h1 className="text-3xl font-bold">
             <span className="gradient-text">TwojeNFC</span>
           </h1>
-          <p className="text-sm mt-2" style={{ color: "#a0a0c0" }}>
+          <p className="text-sm mt-2" style={{ color: "#94a3b8" }}>
             Panel administracyjny
           </p>
         </div>
@@ -91,7 +91,7 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: "#a0a0c0" }}>
+              <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
                 Login
               </label>
               <input
@@ -106,7 +106,7 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: "#a0a0c0" }}>
+              <label className="block text-sm font-medium mb-2" style={{ color: "#94a3b8" }}>
                 Haslo
               </label>
               <input
@@ -135,7 +135,7 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-xs mt-6" style={{ color: "#6060a0" }}>
+        <p className="text-center text-xs mt-6" style={{ color: "#64748b" }}>
           Dostep tylko dla administratorow systemu
         </p>
       </div>

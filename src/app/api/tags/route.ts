@@ -38,8 +38,9 @@ export async function POST(request: NextRequest) {
   let finalUrl = targetUrl || "";
   if (type === "video") finalUrl = `/watch/${cleanId}`;
   if (type === "multilink") finalUrl = `/link/${cleanId}`;
-  if (type === "url" && !finalUrl) {
-    return NextResponse.json({ error: "targetUrl wymagane dla typu url" }, { status: 400 });
+  if (type === "vcard") finalUrl = `/vcard/${cleanId}`;
+  if ((type === "url" || type === "google-review") && !finalUrl) {
+    return NextResponse.json({ error: "targetUrl wymagane dla tego typu" }, { status: 400 });
   }
 
   const existing = await prisma.tag.findUnique({ where: { id: cleanId } });
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       tagType: type,
       targetUrl: finalUrl,
       description: description || null,
-      links: type === "multilink" && links ? links : undefined,
+      links: (type === "multilink" || type === "vcard") && links ? links : undefined,
       ...(clientId ? { clientId } : {}),
     },
   });

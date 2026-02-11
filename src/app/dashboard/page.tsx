@@ -83,6 +83,25 @@ interface TagLink {
   icon: string;
 }
 
+interface VCardData {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  jobTitle?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  tiktok?: string;
+  youtube?: string;
+  whatsapp?: string;
+  telegram?: string;
+  note?: string;
+}
+
 interface LinkClickStat {
   linkUrl: string;
   linkLabel: string | null;
@@ -145,8 +164,8 @@ interface TagFull {
 export default function DashboardWrapper() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0f0f1a" }}>
-        <p style={{ color: "#a0a0c0" }}>Ladowanie panelu...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#080b14" }}>
+        <p style={{ color: "#94a3b8" }}>Ladowanie panelu...</p>
       </div>
     }>
       <DashboardPage />
@@ -170,7 +189,7 @@ function DashboardPage() {
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientDesc, setNewClientDesc] = useState("");
-  const [newClientColor, setNewClientColor] = useState("#7c3aed");
+  const [newClientColor, setNewClientColor] = useState("#8b5cf6");
   const [clientCreating, setClientCreating] = useState(false);
 
   // filters
@@ -194,6 +213,7 @@ function DashboardPage() {
   const [newTagDesc, setNewTagDesc] = useState("");
   const [newTagType, setNewTagType] = useState("url");
   const [newTagLinks, setNewTagLinks] = useState<TagLink[]>([{ label: "", url: "", icon: "link" }]);
+  const [newVCard, setNewVCard] = useState<VCardData>({ firstName: "", lastName: "" });
   const [tagCreating, setTagCreating] = useState(false);
   const [tagCreateError, setTagCreateError] = useState("");
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
@@ -205,6 +225,7 @@ function DashboardPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editType, setEditType] = useState("url");
   const [editTagLinks, setEditTagLinks] = useState<TagLink[]>([]);
+  const [editVCard, setEditVCard] = useState<VCardData>({ firstName: "", lastName: "" });
 
   // inline link editing for multilink tags
   const [editingLinksTagId, setEditingLinksTagId] = useState<string | null>(null);
@@ -227,6 +248,9 @@ function DashboardPage() {
   // video stats
   const [videoStats, setVideoStats] = useState<Record<string, VideoStats>>({});
   const [expandedVideoStats, setExpandedVideoStats] = useState<string | null>(null);
+
+  // video retention chart (shown in analytics section when video campaign selected)
+  const [selectedVideoRetention, setSelectedVideoRetention] = useState<VideoStats | null>(null);
 
   /* ---- fetch helpers ---- */
 
@@ -337,6 +361,23 @@ function DashboardPage() {
     setLoading(false);
   }, [fetchStats, fetchTags, fetchClients]);
 
+  /* ---- auto-load video retention when video campaign selected ---- */
+  useEffect(() => {
+    if (tagFilter) {
+      const selectedTag = tags.find(t => t.id === tagFilter);
+      if (selectedTag?.tagType === "video") {
+        fetch(`/api/video-event?tagId=${encodeURIComponent(tagFilter)}`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => { if (data) setSelectedVideoRetention(data); })
+          .catch(() => {});
+      } else {
+        setSelectedVideoRetention(null);
+      }
+    } else {
+      setSelectedVideoRetention(null);
+    }
+  }, [tagFilter, tags]);
+
   /* ---- initial load ---- */
 
   useEffect(() => {
@@ -370,7 +411,7 @@ function DashboardPage() {
       if (res.ok) {
         setNewClientName("");
         setNewClientDesc("");
-        setNewClientColor("#7c3aed");
+        setNewClientColor("#8b5cf6");
         setShowAddClient(false);
         await fetchClients();
       }
@@ -473,8 +514,12 @@ function DashboardPage() {
       setTagCreateError("ID i nazwa kampanii sa wymagane");
       return;
     }
-    if (newTagType === "url" && !newTagUrl) {
+    if ((newTagType === "url" || newTagType === "google-review") && !newTagUrl) {
       setTagCreateError("Docelowy URL jest wymagany");
+      return;
+    }
+    if (newTagType === "vcard" && !newVCard.firstName && !newVCard.lastName) {
+      setTagCreateError("Imie lub nazwisko jest wymagane");
       return;
     }
     if (newTagType === "multilink" && newTagLinks.every(l => !l.url)) {
@@ -490,13 +535,16 @@ function DashboardPage() {
         tagType: newTagType,
         ...(newTagClient ? { clientId: newTagClient } : {}),
       };
-      if (newTagType === "url") {
+      if (newTagType === "url" || newTagType === "google-review") {
         body.targetUrl = newTagUrl;
       } else if (newTagType === "multilink") {
         body.targetUrl = "#multilink";
         body.links = newTagLinks.filter(l => l.url.trim() !== "");
       } else if (newTagType === "video") {
         body.targetUrl = "#video";
+      } else if (newTagType === "vcard") {
+        body.targetUrl = `/vcard/${newTagId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`;
+        body.links = newVCard;
       }
       const res = await fetch("/api/tags", {
         method: "POST",
@@ -515,6 +563,7 @@ function DashboardPage() {
         setNewTagType("url");
         setNewTagClient("");
         setNewTagLinks([{ label: "", url: "", icon: "link" }]);
+        setNewVCard({ firstName: "", lastName: "" });
         await fetchTags();
         await fetchStats();
       }
@@ -553,13 +602,16 @@ function DashboardPage() {
         description: editDesc,
         tagType: editType,
       };
-      if (editType === "url") {
+      if (editType === "url" || editType === "google-review") {
         body.targetUrl = editUrl;
       } else if (editType === "video") {
         body.targetUrl = `/watch/${id}`;
       } else if (editType === "multilink") {
         body.targetUrl = `/link/${id}`;
         body.links = editTagLinks.filter(l => l.url.trim() !== "");
+      } else if (editType === "vcard") {
+        body.targetUrl = `/vcard/${id}`;
+        body.links = editVCard;
       }
       await fetch("/api/tags", {
         method: "PUT",
@@ -577,7 +629,13 @@ function DashboardPage() {
     setEditUrl(tag.targetUrl);
     setEditDesc(tag.description || "");
     setEditType(tag.tagType);
-    setEditTagLinks(tag.links ? [...tag.links.map(l => ({ ...l }))] : [{ label: "", url: "", icon: "link" }]);
+    if (tag.tagType === "vcard" && tag.links) {
+      setEditVCard(tag.links as unknown as VCardData);
+      setEditTagLinks([{ label: "", url: "", icon: "link" }]);
+    } else {
+      setEditTagLinks(tag.links ? [...(tag.links as unknown as TagLink[]).map(l => ({ ...l }))] : [{ label: "", url: "", icon: "link" }]);
+      setEditVCard({ firstName: "", lastName: "" });
+    }
   };
 
   /* remove video from tag */
@@ -663,16 +721,20 @@ function DashboardPage() {
       case "url": return "URL";
       case "video": return "Video";
       case "multilink": return "Multi-link";
+      case "vcard": return "Wizytowka";
+      case "google-review": return "Google Review";
       default: return "URL";
     }
   };
 
   const getTagTypeColor = (type: string) => {
     switch (type) {
-      case "url": return { bg: "rgba(124,58,237,0.15)", color: "#9f67ff" };
+      case "url": return { bg: "rgba(124,58,237,0.15)", color: "#a78bfa" };
       case "video": return { bg: "rgba(16,185,129,0.15)", color: "#10b981" };
       case "multilink": return { bg: "rgba(59,130,246,0.15)", color: "#60a5fa" };
-      default: return { bg: "rgba(124,58,237,0.15)", color: "#9f67ff" };
+      case "vcard": return { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" };
+      case "google-review": return { bg: "rgba(234,67,53,0.15)", color: "#ea4335" };
+      default: return { bg: "rgba(124,58,237,0.15)", color: "#a78bfa" };
     }
   };
 
@@ -708,7 +770,7 @@ function DashboardPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0f0f1a",
+          background: "#080b14",
         }}
       >
         <div style={{ textAlign: "center" }}>
@@ -718,12 +780,12 @@ function DashboardPage() {
               height: 48,
               borderRadius: "50%",
               border: "3px solid #2a2a4a",
-              borderTopColor: "#7c3aed",
+              borderTopColor: "#8b5cf6",
               animation: "spin 0.8s linear infinite",
               margin: "0 auto 16px",
             }}
           />
-          <p style={{ color: "#a0a0c0" }}>Ladowanie...</p>
+          <p style={{ color: "#94a3b8" }}>Ladowanie...</p>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </div>
@@ -765,7 +827,7 @@ function DashboardPage() {
   /* ================================================================ */
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f0f1a" }}>
+    <div style={{ minHeight: "100vh", background: "#080b14" }}>
       {/* ---- Spinner keyframes ---- */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -782,7 +844,7 @@ function DashboardPage() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(15,15,26,0.85)",
+          background: "rgba(8,11,20,0.88)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid #2a2a4a",
           padding: "12px 24px",
@@ -804,7 +866,7 @@ function DashboardPage() {
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "linear-gradient(135deg, #7c3aed, #10b981)",
+                background: "linear-gradient(135deg, #8b5cf6, #34d399)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -835,9 +897,9 @@ function DashboardPage() {
               onClick={handleRefresh}
               disabled={refreshing}
               style={{
-                background: "#1e1e3a",
-                border: "1px solid #2a2a4a",
-                color: "#f0f0ff",
+                background: "#1a2035",
+                border: "1px solid #293548",
+                color: "#f1f5f9",
                 borderRadius: 8,
                 padding: "8px 16px",
                 fontSize: 13,
@@ -849,8 +911,8 @@ function DashboardPage() {
                 opacity: refreshing ? 0.6 : 1,
                 transition: "border-color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#8b5cf6")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
             >
               <svg
                 width="14"
@@ -876,8 +938,8 @@ function DashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
               style={{
                 background: "transparent",
-                border: "1px solid #2a2a4a",
-                color: "#a0a0c0",
+                border: "1px solid #293548",
+                color: "#94a3b8",
                 borderRadius: 8,
                 padding: "8px 16px",
                 fontSize: 13,
@@ -890,7 +952,7 @@ function DashboardPage() {
                 e.currentTarget.style.color = "#f87171";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#2a2a4a";
+                e.currentTarget.style.borderColor = "#293548";
                 e.currentTarget.style.color = "#a0a0c0";
               }}
             >
@@ -908,11 +970,11 @@ function DashboardPage() {
         {/* ---- Client Selector ---- */}
         <section style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: "#a0a0c0", marginRight: 8 }}>Klient:</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", marginRight: 8 }}>Klient:</h2>
             <button
               onClick={() => setSelectedClientId(null)}
               style={{
-                background: !selectedClientId ? "linear-gradient(135deg, #7c3aed, #10b981)" : "#1e1e3a",
+                background: !selectedClientId ? "linear-gradient(135deg, #8b5cf6, #10b981)" : "#1e1e3a",
                 border: !selectedClientId ? "none" : "1px solid #2a2a4a",
                 color: !selectedClientId ? "#fff" : "#a0a0c0",
                 borderRadius: 20,
@@ -931,7 +993,7 @@ function DashboardPage() {
                 onClick={() => setSelectedClientId(c.id)}
                 style={{
                   background: selectedClientId === c.id
-                    ? (c.color || "#7c3aed")
+                    ? (c.color || "#8b5cf6")
                     : "#1e1e3a",
                   border: selectedClientId === c.id ? "none" : "1px solid #2a2a4a",
                   color: selectedClientId === c.id ? "#fff" : "#a0a0c0",
@@ -968,16 +1030,16 @@ function DashboardPage() {
               onClick={() => setShowAddClient(!showAddClient)}
               style={{
                 background: "transparent",
-                border: "1px dashed #3a3a5a",
-                color: "#6060a0",
+                border: "1px dashed #3d4f6a",
+                color: "#64748b",
                 borderRadius: 20,
                 padding: "6px 14px",
                 fontSize: 13,
                 cursor: "pointer",
                 transition: "border-color 0.2s, color 0.2s",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#7c3aed"; e.currentTarget.style.color = "#9f67ff"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#3a3a5a"; e.currentTarget.style.color = "#6060a0"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#8b5cf6"; e.currentTarget.style.color = "#9f67ff"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#3d4f6a"; e.currentTarget.style.color = "#6060a0"; }}
             >
               + Dodaj klienta
             </button>
@@ -986,21 +1048,21 @@ function DashboardPage() {
           {showAddClient && (
             <div className="card" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap", padding: "14px 18px" }}>
               <div>
-                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Nazwa klienta</label>
+                <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Nazwa klienta</label>
                 <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="np. Bulderownia" style={{ fontSize: 13, padding: "7px 12px" }} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Opis</label>
+                <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Opis</label>
                 <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opcjonalny opis" style={{ fontSize: 13, padding: "7px 12px" }} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>Kolor</label>
-                <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 40, height: 34, border: "1px solid #2a2a4a", borderRadius: 6, background: "#1e1e3a", cursor: "pointer" }} />
+                <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Kolor</label>
+                <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 40, height: 34, border: "1px solid #293548", borderRadius: 6, background: "#1a2035", cursor: "pointer" }} />
               </div>
               <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ padding: "8px 18px", fontSize: 12 }}>
                 {clientCreating ? "..." : "Dodaj"}
               </button>
-              <button onClick={() => setShowAddClient(false)} style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
+              <button onClick={() => setShowAddClient(false)} style={{ background: "#232d42", border: "1px solid #293548", color: "#94a3b8", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
                 Anuluj
               </button>
             </div>
@@ -1019,7 +1081,7 @@ function DashboardPage() {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500 }}>
+            <label style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
               Od
             </label>
             <input
@@ -1030,7 +1092,7 @@ function DashboardPage() {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500 }}>
+            <label style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
               Do
             </label>
             <input
@@ -1041,7 +1103,7 @@ function DashboardPage() {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500 }}>
+            <label style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
               Kampania
             </label>
             <select
@@ -1065,9 +1127,9 @@ function DashboardPage() {
             <button
               onClick={handleResetFilters}
               style={{
-                background: "#252547",
-                border: "1px solid #2a2a4a",
-                color: "#a0a0c0",
+                background: "#232d42",
+                border: "1px solid #293548",
+                color: "#94a3b8",
                 borderRadius: 10,
                 padding: "9px 20px",
                 fontSize: 13,
@@ -1075,8 +1137,8 @@ function DashboardPage() {
                 cursor: "pointer",
                 transition: "border-color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#8b5cf6")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
             >
               Resetuj
             </button>
@@ -1099,12 +1161,12 @@ function DashboardPage() {
                 height: 40,
                 borderRadius: "50%",
                 border: "3px solid #2a2a4a",
-                borderTopColor: "#7c3aed",
+                borderTopColor: "#8b5cf6",
                 animation: "spin 0.8s linear infinite",
                 margin: "0 auto 12px",
               }}
             />
-            <p style={{ color: "#a0a0c0", fontSize: 14 }}>Ladowanie danych...</p>
+            <p style={{ color: "#94a3b8", fontSize: 14 }}>Ladowanie danych...</p>
           </div>
         )}
 
@@ -1132,10 +1194,10 @@ function DashboardPage() {
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    background: "rgba(124,58,237,0.08)",
+                    background: "rgba(139,92,246,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
                   Wszystkie skany
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
@@ -1153,10 +1215,10 @@ function DashboardPage() {
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    background: "rgba(16,185,129,0.08)",
+                    background: "rgba(52,211,153,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
                   Unikalni uzytkownicy
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
@@ -1174,13 +1236,13 @@ function DashboardPage() {
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    background: "rgba(124,58,237,0.08)",
+                    background: "rgba(139,92,246,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
                   Ostatni skan
                 </p>
-                <p style={{ fontSize: 18, fontWeight: 700, color: "#f0f0ff" }}>
+                <p style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9" }}>
                   {formatDate(kpi?.lastScan ?? null)}
                 </p>
               </div>
@@ -1195,10 +1257,10 @@ function DashboardPage() {
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    background: "rgba(16,185,129,0.08)",
+                    background: "rgba(52,211,153,0.08)",
                   }}
                 />
-                <p style={{ fontSize: 12, color: "#a0a0c0", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+                <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
                   Powracajacy
                 </p>
                 <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1, color: "#10b981" }}>
@@ -1206,6 +1268,138 @@ function DashboardPage() {
                 </p>
               </div>
             </section>
+
+            {/* ========================================================== */}
+            {/*  1b. VIDEO RETENTION CHART (when video campaign selected)  */}
+            {/* ========================================================== */}
+
+            {selectedVideoRetention && (
+              <section className="card" style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+                      Retencja video
+                    </h3>
+                    <p style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      Ile % widzow dotarlo do kazdego momentu
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: "#10b981" }}>{selectedVideoRetention.plays}</p>
+                      <p style={{ fontSize: 10, color: "#94a3b8" }}>Odtworzen</p>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: "#60a5fa" }}>{selectedVideoRetention.completions}</p>
+                      <p style={{ fontSize: 10, color: "#94a3b8" }}>Do konca</p>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: "#a78bfa" }}>{formatWatchTime(selectedVideoRetention.avgWatchTime)}</p>
+                      <p style={{ fontSize: 10, color: "#94a3b8" }}>Sred. czas</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SVG Area Chart - YouTube-style retention */}
+                {(() => {
+                  const plays = selectedVideoRetention.plays || 1;
+                  const points = [
+                    { label: "Start", pct: 100, count: plays },
+                    { label: "25%", pct: Math.round((selectedVideoRetention.progress25 / plays) * 100), count: selectedVideoRetention.progress25 },
+                    { label: "50%", pct: Math.round((selectedVideoRetention.progress50 / plays) * 100), count: selectedVideoRetention.progress50 },
+                    { label: "75%", pct: Math.round((selectedVideoRetention.progress75 / plays) * 100), count: selectedVideoRetention.progress75 },
+                    { label: "100%", pct: Math.round((selectedVideoRetention.progress100 / plays) * 100), count: selectedVideoRetention.progress100 },
+                  ];
+                  const chartW = 500;
+                  const chartH = 200;
+                  const padL = 40;
+                  const padR = 20;
+                  const padT = 10;
+                  const padB = 30;
+                  const innerW = chartW - padL - padR;
+                  const innerH = chartH - padT - padB;
+
+                  const xCoords = points.map((_, i) => padL + (i / (points.length - 1)) * innerW);
+                  const yCoords = points.map(p => padT + innerH - (p.pct / 100) * innerH);
+
+                  const linePath = points.map((_, i) => `${i === 0 ? "M" : "L"}${xCoords[i]},${yCoords[i]}`).join(" ");
+                  const areaPath = `${linePath} L${xCoords[xCoords.length - 1]},${padT + innerH} L${xCoords[0]},${padT + innerH} Z`;
+
+                  return (
+                    <div style={{ position: "relative" }}>
+                      <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", height: "auto", maxHeight: 220 }}>
+                        <defs>
+                          <linearGradient id="retentionGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Horizontal grid lines */}
+                        {[0, 25, 50, 75, 100].map(v => {
+                          const y = padT + innerH - (v / 100) * innerH;
+                          return (
+                            <g key={v}>
+                              <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke="#2a2a4a" strokeWidth="1" />
+                              <text x={padL - 6} y={y + 4} fill="#6060a0" fontSize="10" textAnchor="end">{v}%</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area fill */}
+                        <path d={areaPath} fill="url(#retentionGrad)" />
+
+                        {/* Line */}
+                        <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                        {/* Data points + labels */}
+                        {points.map((p, i) => (
+                          <g key={i}>
+                            <circle cx={xCoords[i]} cy={yCoords[i]} r="5" fill="#0f0f1a" stroke="#10b981" strokeWidth="2.5" />
+                            <text x={xCoords[i]} y={yCoords[i] - 12} fill="#f0f0ff" fontSize="11" fontWeight="700" textAnchor="middle">
+                              {p.pct}%
+                            </text>
+                            <text x={xCoords[i]} y={yCoords[i] - 24} fill="#6060a0" fontSize="9" textAnchor="middle">
+                              ({p.count})
+                            </text>
+                            {/* X-axis label */}
+                            <text x={xCoords[i]} y={chartH - 6} fill="#a0a0c0" fontSize="11" fontWeight="500" textAnchor="middle">
+                              {p.label}
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+
+                      {/* Completion rate highlight */}
+                      <div style={{
+                        marginTop: 12,
+                        display: "flex",
+                        gap: 12,
+                        justifyContent: "center",
+                        flexWrap: "wrap",
+                      }}>
+                        {points.slice(1).map((p, i) => (
+                          <div key={i} style={{
+                            background: p.pct >= 75 ? "rgba(16,185,129,0.12)" : p.pct >= 50 ? "rgba(96,165,250,0.12)" : p.pct >= 25 ? "rgba(245,158,11,0.12)" : "rgba(239,68,68,0.12)",
+                            border: `1px solid ${p.pct >= 75 ? "rgba(16,185,129,0.25)" : p.pct >= 50 ? "rgba(96,165,250,0.25)" : p.pct >= 25 ? "rgba(245,158,11,0.25)" : "rgba(239,68,68,0.25)"}`,
+                            borderRadius: 8,
+                            padding: "8px 16px",
+                            textAlign: "center",
+                          }}>
+                            <p style={{
+                              fontSize: 18,
+                              fontWeight: 800,
+                              color: p.pct >= 75 ? "#10b981" : p.pct >= 50 ? "#60a5fa" : p.pct >= 25 ? "#f59e0b" : "#f87171",
+                            }}>{p.pct}%</p>
+                            <p style={{ fontSize: 10, color: "#94a3b8" }}>dotarli do {p.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </section>
+            )}
 
             {/* ========================================================== */}
             {/*  2. DEVICES + TOP TAGS                                     */}
@@ -1221,14 +1415,14 @@ function DashboardPage() {
             >
               {/* Devices */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f1f5f9" }}>
                   Urzadzenia
                 </h3>
 
                 {[
-                  { label: "iOS", value: devices?.iOS ?? 0, percent: iosPercent, color: "#7c3aed" },
+                  { label: "iOS", value: devices?.iOS ?? 0, percent: iosPercent, color: "#8b5cf6" },
                   { label: "Android", value: devices?.Android ?? 0, percent: androidPercent, color: "#10b981" },
-                  { label: "Desktop", value: devices?.Desktop ?? 0, percent: desktopPercent, color: "#9f67ff" },
+                  { label: "Desktop", value: devices?.Desktop ?? 0, percent: desktopPercent, color: "#a78bfa" },
                 ].map((d) => (
                   <div key={d.label} style={{ marginBottom: 16 }}>
                     <div
@@ -1239,8 +1433,8 @@ function DashboardPage() {
                         fontSize: 13,
                       }}
                     >
-                      <span style={{ color: "#f0f0ff", fontWeight: 500 }}>{d.label}</span>
-                      <span style={{ color: "#a0a0c0" }}>
+                      <span style={{ color: "#f1f5f9", fontWeight: 500 }}>{d.label}</span>
+                      <span style={{ color: "#94a3b8" }}>
                         {d.value} ({d.percent}%)
                       </span>
                     </div>
@@ -1257,7 +1451,7 @@ function DashboardPage() {
                 ))}
 
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #2a2a4a" }}>
-                  <span style={{ fontSize: 12, color: "#6060a0" }}>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>
                     Razem: {devices?.total.toLocaleString("pl-PL") ?? 0}
                   </span>
                 </div>
@@ -1265,11 +1459,11 @@ function DashboardPage() {
 
               {/* Top Tags */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f1f5f9" }}>
                   Najczesciej skanowane kampanie
                 </h3>
                 {topTags.length === 0 && (
-                  <p style={{ color: "#6060a0", fontSize: 14 }}>Brak danych</p>
+                  <p style={{ color: "#64748b", fontSize: 14 }}>Brak danych</p>
                 )}
                 {topTags.map((t, i) => (
                   <div
@@ -1288,7 +1482,7 @@ function DashboardPage() {
                           width: 24,
                           height: 24,
                           borderRadius: 6,
-                          background: "linear-gradient(135deg, #7c3aed, #10b981)",
+                          background: "linear-gradient(135deg, #8b5cf6, #34d399)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1301,17 +1495,17 @@ function DashboardPage() {
                         {i + 1}
                       </span>
                       <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#f0f0ff" }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9" }}>
                           {t.tagName}
                         </p>
-                        <p style={{ fontSize: 11, color: "#6060a0" }}>{t.tagId}</p>
+                        <p style={{ fontSize: 11, color: "#64748b" }}>{t.tagId}</p>
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "#f0f0ff" }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>
                         {t.count}
                       </p>
-                      <p style={{ fontSize: 11, color: "#a0a0c0" }}>{t.percent}%</p>
+                      <p style={{ fontSize: 11, color: "#94a3b8" }}>{t.percent}%</p>
                     </div>
                   </div>
                 ))}
@@ -1332,11 +1526,11 @@ function DashboardPage() {
             >
               {/* Countries */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f1f5f9" }}>
                   Kraje
                 </h3>
                 {topCountries.length === 0 && (
-                  <p style={{ color: "#6060a0", fontSize: 14 }}>Brak danych</p>
+                  <p style={{ color: "#64748b", fontSize: 14 }}>Brak danych</p>
                 )}
                 {topCountries.map((c, i) => (
                   <div
@@ -1351,15 +1545,15 @@ function DashboardPage() {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 22 }}>{getCountryFlag(c.country)}</span>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: "#f0f0ff" }}>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: "#f1f5f9" }}>
                         {c.country}
                       </span>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f0f0ff" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>
                         {c.count}
                       </span>
-                      <span style={{ fontSize: 12, color: "#a0a0c0", marginLeft: 6 }}>
+                      <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 6 }}>
                         ({c.percent}%)
                       </span>
                     </div>
@@ -1369,11 +1563,11 @@ function DashboardPage() {
 
               {/* Cities */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f1f5f9" }}>
                   Miasta
                 </h3>
                 {topCities.length === 0 && (
-                  <p style={{ color: "#6060a0", fontSize: 14 }}>Brak danych</p>
+                  <p style={{ color: "#64748b", fontSize: 14 }}>Brak danych</p>
                 )}
                 {topCities.map((c, i) => (
                   <div
@@ -1387,12 +1581,12 @@ function DashboardPage() {
                     }}
                   >
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 500, color: "#f0f0ff" }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "#f1f5f9" }}>
                         {c.city}
                       </p>
-                      <p style={{ fontSize: 11, color: "#6060a0" }}>{c.country}</p>
+                      <p style={{ fontSize: 11, color: "#64748b" }}>{c.country}</p>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f0f0ff" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>
                       {c.count}
                     </span>
                   </div>
@@ -1422,16 +1616,16 @@ function DashboardPage() {
                     marginBottom: 20,
                   }}
                 >
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f0f0ff" }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
                     Trend tygodniowy
                   </h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <button
                       onClick={() => handleWeekChange(-1)}
                       style={{
-                        background: "#252547",
-                        border: "1px solid #2a2a4a",
-                        color: "#a0a0c0",
+                        background: "#232d42",
+                        border: "1px solid #293548",
+                        color: "#94a3b8",
                         borderRadius: 6,
                         width: 32,
                         height: 32,
@@ -1442,12 +1636,12 @@ function DashboardPage() {
                         fontSize: 16,
                         transition: "border-color 0.2s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
-                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#8b5cf6")}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
                     >
                       &#8249;
                     </button>
-                    <span style={{ fontSize: 12, color: "#a0a0c0", minWidth: 100, textAlign: "center" }}>
+                    <span style={{ fontSize: 12, color: "#94a3b8", minWidth: 100, textAlign: "center" }}>
                       {weekly
                         ? formatWeekRange(weekly.weekStart, weekly.weekEnd)
                         : "---"}
@@ -1456,9 +1650,9 @@ function DashboardPage() {
                       onClick={() => handleWeekChange(1)}
                       disabled={weekOffset >= 0}
                       style={{
-                        background: "#252547",
-                        border: "1px solid #2a2a4a",
-                        color: weekOffset >= 0 ? "#3a3a5a" : "#a0a0c0",
+                        background: "#232d42",
+                        border: "1px solid #293548",
+                        color: weekOffset >= 0 ? "#3d4f6a" : "#a0a0c0",
                         borderRadius: 6,
                         width: 32,
                         height: 32,
@@ -1470,9 +1664,9 @@ function DashboardPage() {
                         transition: "border-color 0.2s",
                       }}
                       onMouseEnter={(e) => {
-                        if (weekOffset < 0) e.currentTarget.style.borderColor = "#7c3aed";
+                        if (weekOffset < 0) e.currentTarget.style.borderColor = "#8b5cf6";
                       }}
-                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
                     >
                       &#8250;
                     </button>
@@ -1519,12 +1713,12 @@ function DashboardPage() {
                             borderRadius: "6px 6px 2px 2px",
                             background:
                               d.count > 0
-                                ? "linear-gradient(180deg, #7c3aed, #10b981)"
-                                : "#252547",
+                                ? "linear-gradient(180deg, #8b5cf6, #10b981)"
+                                : "#232d42",
                             transition: "height 0.4s ease",
                           }}
                         />
-                        <span style={{ fontSize: 11, color: "#a0a0c0", fontWeight: 500 }}>
+                        <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
                           {d.day}
                         </span>
                       </div>
@@ -1535,11 +1729,11 @@ function DashboardPage() {
 
               {/* Languages */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#f1f5f9" }}>
                   Jezyki przegladarek
                 </h3>
                 {topLanguages.length === 0 && (
-                  <p style={{ color: "#6060a0", fontSize: 14 }}>Brak danych</p>
+                  <p style={{ color: "#64748b", fontSize: 14 }}>Brak danych</p>
                 )}
                 {topLanguages.map((l, i) => (
                   <div
@@ -1558,10 +1752,10 @@ function DashboardPage() {
                           display: "inline-block",
                           padding: "2px 8px",
                           borderRadius: 4,
-                          background: "#252547",
+                          background: "#232d42",
                           fontSize: 12,
                           fontWeight: 600,
-                          color: "#9f67ff",
+                          color: "#a78bfa",
                           fontFamily: "monospace",
                         }}
                       >
@@ -1572,7 +1766,7 @@ function DashboardPage() {
                       <div className="progress-bar" style={{ width: 80 }}>
                         <div className="progress-fill" style={{ width: `${l.percent}%` }} />
                       </div>
-                      <span style={{ fontSize: 13, color: "#a0a0c0", minWidth: 50, textAlign: "right" }}>
+                      <span style={{ fontSize: 13, color: "#94a3b8", minWidth: 50, textAlign: "right" }}>
                         {l.count} ({l.percent}%)
                       </span>
                     </div>
@@ -1587,10 +1781,10 @@ function DashboardPage() {
 
             {stats.nfcChips && stats.nfcChips.length > 0 && (
               <section className="card" style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f0f0ff", marginBottom: 16 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 16 }}>
                   Fizyczne breloczki NFC
                 </h3>
-                <p style={{ fontSize: 12, color: "#6060a0", marginBottom: 16 }}>
+                <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
                   Statystyki per fizyczny breloczek (parametr ?nfc= w URL)
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
@@ -1598,20 +1792,20 @@ function DashboardPage() {
                     <div
                       key={chip.nfcId}
                       style={{
-                        background: "rgba(124,58,237,0.08)",
+                        background: "rgba(139,92,246,0.08)",
                         border: "1px solid rgba(124,58,237,0.2)",
                         borderRadius: 8,
                         padding: "10px 12px",
                         textAlign: "center",
                       }}
                     >
-                      <div style={{ fontSize: 11, color: "#9f67ff", fontFamily: "monospace", fontWeight: 600, marginBottom: 4 }}>
+                      <div style={{ fontSize: 11, color: "#a78bfa", fontFamily: "monospace", fontWeight: 600, marginBottom: 4 }}>
                         #{chip.nfcId}
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f0f0ff" }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9" }}>
                         {chip.count}
                       </div>
-                      <div style={{ fontSize: 10, color: "#6060a0" }}>
+                      <div style={{ fontSize: 10, color: "#64748b" }}>
                         {chip.count === 1 ? "skan" : chip.count < 5 ? "skany" : "skanow"}
                       </div>
                     </div>
@@ -1632,8 +1826,8 @@ function DashboardPage() {
                   </h2>
                   <span
                     style={{
-                      background: "#252547",
-                      color: "#a0a0c0",
+                      background: "#232d42",
+                      color: "#94a3b8",
                       fontSize: 12,
                       fontWeight: 600,
                       padding: "3px 10px",
@@ -1657,7 +1851,7 @@ function DashboardPage() {
                       </button>
                       <button
                         onClick={() => setResetAllConfirm(false)}
-                        style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer" }}
+                        style={{ background: "#232d42", border: "1px solid #293548", color: "#94a3b8", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer" }}
                       >
                         Anuluj
                       </button>
@@ -1665,9 +1859,9 @@ function DashboardPage() {
                   ) : (
                     <button
                       onClick={() => setResetAllConfirm(true)}
-                      style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                      style={{ background: "transparent", border: "1px solid #293548", color: "#94a3b8", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#a0a0c0"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#293548"; e.currentTarget.style.color = "#a0a0c0"; }}
                     >
                       Reset wszystkich statystyk
                     </button>
@@ -1677,7 +1871,7 @@ function DashboardPage() {
 
               {/* ---- Create Tag Form ---- */}
               <div className="card" style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#f0f0ff" }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#f1f5f9" }}>
                   Nowa kampania
                 </h3>
                 <form onSubmit={handleCreateTag}>
@@ -1690,7 +1884,7 @@ function DashboardPage() {
                     }}
                   >
                     <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                         ID kampanii
                       </label>
                       <input
@@ -1700,13 +1894,13 @@ function DashboardPage() {
                         placeholder="np. moja-wizytowka"
                       />
                       {newTagId && (
-                        <p style={{ fontSize: 10, color: "#6060a0", marginTop: 4, fontFamily: "monospace" }}>
+                        <p style={{ fontSize: 10, color: "#64748b", marginTop: 4, fontFamily: "monospace" }}>
                           URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}
                         </p>
                       )}
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                         Nazwa
                       </label>
                       <input
@@ -1717,7 +1911,7 @@ function DashboardPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                         Typ kampanii
                       </label>
                       <select
@@ -1729,23 +1923,30 @@ function DashboardPage() {
                         <option value="url">Przekierowanie URL</option>
                         <option value="video">Video player</option>
                         <option value="multilink">Multi-link</option>
+                        <option value="vcard">Wizytowka (vCard)</option>
+                        <option value="google-review">Recenzja Google</option>
                       </select>
                     </div>
-                    {newTagType === "url" && (
+                    {(newTagType === "url" || newTagType === "google-review") && (
                       <div>
-                        <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
-                          Docelowy URL
+                        <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
+                          {newTagType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
                         </label>
                         <input
                           className="input-field"
                           value={newTagUrl}
                           onChange={(e) => setNewTagUrl(e.target.value)}
-                          placeholder="https://example.com"
+                          placeholder={newTagType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"}
                         />
+                        {newTagType === "google-review" && (
+                          <p style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>
+                            Wklej link do opinii Google z Google Maps (Place ID lub bezposredni link)
+                          </p>
+                        )}
                       </div>
                     )}
                     <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                         Klient
                       </label>
                       <select
@@ -1761,7 +1962,7 @@ function DashboardPage() {
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                         Opis (opcjonalnie)
                       </label>
                       <input
@@ -1778,20 +1979,20 @@ function DashboardPage() {
                     <div style={{
                       marginBottom: 16,
                       padding: 16,
-                      background: "#1a1a2e",
+                      background: "#151c2c",
                       borderRadius: 10,
-                      border: "1px solid #2a2a4a",
+                      border: "1px solid #293548",
                     }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                        <h4 style={{ fontSize: 13, fontWeight: 600, color: "#f0f0ff" }}>
+                        <h4 style={{ fontSize: 13, fontWeight: 600, color: "#f1f5f9" }}>
                           Linki
                         </h4>
                         <button
                           type="button"
                           onClick={() => setNewTagLinks([...newTagLinks, { label: "", url: "", icon: "link" }])}
                           style={{
-                            background: "#252547",
-                            border: "1px solid #2a2a4a",
+                            background: "#232d42",
+                            border: "1px solid #293548",
                             color: "#10b981",
                             borderRadius: 6,
                             padding: "4px 12px",
@@ -1855,8 +2056,8 @@ function DashboardPage() {
                             }}
                             style={{
                               background: "transparent",
-                              border: "1px solid #2a2a4a",
-                              color: "#6060a0",
+                              border: "1px solid #293548",
+                              color: "#64748b",
                               borderRadius: 6,
                               width: 28,
                               height: 28,
@@ -1874,7 +2075,7 @@ function DashboardPage() {
                               e.currentTarget.style.color = "#f87171";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = "#2a2a4a";
+                              e.currentTarget.style.borderColor = "#293548";
                               e.currentTarget.style.color = "#6060a0";
                             }}
                           >
@@ -1882,6 +2083,90 @@ function DashboardPage() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* vCard editor */}
+                  {newTagType === "vcard" && (
+                    <div style={{
+                      marginBottom: 16,
+                      padding: 16,
+                      background: "#151c2c",
+                      borderRadius: 10,
+                      border: "1px solid #293548",
+                    }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 600, color: "#f1f5f9", marginBottom: 12 }}>
+                        Dane wizytowki
+                      </h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Imie *</label>
+                          <input className="input-field" value={newVCard.firstName} onChange={(e) => setNewVCard({ ...newVCard, firstName: e.target.value })} placeholder="Jan" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Nazwisko *</label>
+                          <input className="input-field" value={newVCard.lastName} onChange={(e) => setNewVCard({ ...newVCard, lastName: e.target.value })} placeholder="Kowalski" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Firma</label>
+                          <input className="input-field" value={newVCard.company || ""} onChange={(e) => setNewVCard({ ...newVCard, company: e.target.value })} placeholder="Nazwa firmy" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Stanowisko</label>
+                          <input className="input-field" value={newVCard.jobTitle || ""} onChange={(e) => setNewVCard({ ...newVCard, jobTitle: e.target.value })} placeholder="CEO / Manager" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Telefon</label>
+                          <input className="input-field" value={newVCard.phone || ""} onChange={(e) => setNewVCard({ ...newVCard, phone: e.target.value })} placeholder="+48 123 456 789" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Email</label>
+                          <input className="input-field" value={newVCard.email || ""} onChange={(e) => setNewVCard({ ...newVCard, email: e.target.value })} placeholder="jan@firma.pl" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Strona WWW</label>
+                          <input className="input-field" value={newVCard.website || ""} onChange={(e) => setNewVCard({ ...newVCard, website: e.target.value })} placeholder="https://firma.pl" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Adres</label>
+                          <input className="input-field" value={newVCard.address || ""} onChange={(e) => setNewVCard({ ...newVCard, address: e.target.value })} placeholder="ul. Przykladowa 1, Warszawa" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 11, color: "#64748b", marginTop: 10, marginBottom: 6, fontWeight: 500 }}>Media spolecznosciowe (opcjonalnie):</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Instagram</label>
+                          <input className="input-field" value={newVCard.instagram || ""} onChange={(e) => setNewVCard({ ...newVCard, instagram: e.target.value })} placeholder="@profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Facebook</label>
+                          <input className="input-field" value={newVCard.facebook || ""} onChange={(e) => setNewVCard({ ...newVCard, facebook: e.target.value })} placeholder="Profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>LinkedIn</label>
+                          <input className="input-field" value={newVCard.linkedin || ""} onChange={(e) => setNewVCard({ ...newVCard, linkedin: e.target.value })} placeholder="Profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>WhatsApp</label>
+                          <input className="input-field" value={newVCard.whatsapp || ""} onChange={(e) => setNewVCard({ ...newVCard, whatsapp: e.target.value })} placeholder="+48123456789" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>TikTok</label>
+                          <input className="input-field" value={newVCard.tiktok || ""} onChange={(e) => setNewVCard({ ...newVCard, tiktok: e.target.value })} placeholder="@profil" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>YouTube</label>
+                          <input className="input-field" value={newVCard.youtube || ""} onChange={(e) => setNewVCard({ ...newVCard, youtube: e.target.value })} placeholder="@kanal lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Telegram</label>
+                          <input className="input-field" value={newVCard.telegram || ""} onChange={(e) => setNewVCard({ ...newVCard, telegram: e.target.value })} placeholder="@profil" style={{ fontSize: 12, padding: "6px 10px" }} />
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+                        <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Notatka</label>
+                        <input className="input-field" value={newVCard.note || ""} onChange={(e) => setNewVCard({ ...newVCard, note: e.target.value })} placeholder="Dodatkowa informacja..." style={{ fontSize: 12, padding: "6px 10px" }} />
+                      </div>
                     </div>
                   )}
 
@@ -1908,7 +2193,7 @@ function DashboardPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {filteredTags.length === 0 && (
                   <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
-                    <p style={{ color: "#6060a0", fontSize: 14 }}>
+                    <p style={{ color: "#64748b", fontSize: 14 }}>
                       {selectedClientId ? "Brak kampanii dla tego klienta." : "Brak kampanii. Utworz pierwsza kampanie powyzej."}
                     </p>
                   </div>
@@ -1928,7 +2213,7 @@ function DashboardPage() {
                           }}
                         >
                           <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
+                            <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
                               Nazwa
                             </label>
                             <input
@@ -1938,7 +2223,7 @@ function DashboardPage() {
                             />
                           </div>
                           <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
+                            <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
                               Typ
                             </label>
                             <select
@@ -1952,20 +2237,21 @@ function DashboardPage() {
                               <option value="multilink">Multi-link</option>
                             </select>
                           </div>
-                          {editType === "url" && (
+                          {(editType === "url" || editType === "google-review") && (
                             <div>
-                              <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
-                                Docelowy URL
+                              <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
+                                {editType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
                               </label>
                               <input
                                 className="input-field"
                                 value={editUrl}
                                 onChange={(e) => setEditUrl(e.target.value)}
+                                placeholder={editType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"}
                               />
                             </div>
                           )}
                           <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#a0a0c0", marginBottom: 3 }}>
+                            <label style={{ display: "block", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
                               Opis
                             </label>
                             <input
@@ -1980,16 +2266,16 @@ function DashboardPage() {
                           <div style={{
                             marginBottom: 12,
                             padding: 14,
-                            background: "#1a1a2e",
+                            background: "#151c2c",
                             borderRadius: 10,
-                            border: "1px solid #2a2a4a",
+                            border: "1px solid #293548",
                           }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                              <h4 style={{ fontSize: 12, fontWeight: 600, color: "#f0f0ff" }}>Linki</h4>
+                              <h4 style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9" }}>Linki</h4>
                               <button
                                 type="button"
                                 onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
-                                style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                                style={{ background: "#232d42", border: "1px solid #293548", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
                               >
                                 + Dodaj link
                               </button>
@@ -2023,7 +2309,7 @@ function DashboardPage() {
                                 <button
                                   type="button"
                                   onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
-                                  style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
+                                  style={{ background: "transparent", border: "1px solid #293548", color: "#64748b", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
                                 >
                                   X
                                 </button>
@@ -2032,9 +2318,50 @@ function DashboardPage() {
                           </div>
                         )}
                         {editType === "video" && (
-                          <p style={{ fontSize: 11, color: "#6060a0", marginBottom: 12 }}>
+                          <p style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>
                             URL zostanie ustawiony automatycznie na /watch/{tag.id}. Wgraj video po zapisaniu.
                           </p>
+                        )}
+                        {editType === "vcard" && (
+                          <div style={{
+                            marginBottom: 12,
+                            padding: 14,
+                            background: "#151c2c",
+                            borderRadius: 10,
+                            border: "1px solid #293548",
+                          }}>
+                            <h4 style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", marginBottom: 10 }}>Dane wizytowki</h4>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                              {[
+                                { key: "firstName", label: "Imie" },
+                                { key: "lastName", label: "Nazwisko" },
+                                { key: "company", label: "Firma" },
+                                { key: "jobTitle", label: "Stanowisko" },
+                                { key: "phone", label: "Telefon" },
+                                { key: "email", label: "Email" },
+                                { key: "website", label: "Strona WWW" },
+                                { key: "address", label: "Adres" },
+                                { key: "instagram", label: "Instagram" },
+                                { key: "facebook", label: "Facebook" },
+                                { key: "linkedin", label: "LinkedIn" },
+                                { key: "whatsapp", label: "WhatsApp" },
+                                { key: "tiktok", label: "TikTok" },
+                                { key: "youtube", label: "YouTube" },
+                                { key: "telegram", label: "Telegram" },
+                                { key: "note", label: "Notatka" },
+                              ].map(field => (
+                                <div key={field.key}>
+                                  <label style={{ display: "block", fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>{field.label}</label>
+                                  <input
+                                    className="input-field"
+                                    value={(editVCard as Record<string, string>)[field.key] || ""}
+                                    onChange={(e) => setEditVCard({ ...editVCard, [field.key]: e.target.value })}
+                                    style={{ fontSize: 11, padding: "5px 8px" }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                         <div style={{ display: "flex", gap: 8 }}>
                           <button
@@ -2047,9 +2374,9 @@ function DashboardPage() {
                           <button
                             onClick={() => setEditingTagId(null)}
                             style={{
-                              background: "#252547",
-                              border: "1px solid #2a2a4a",
-                              color: "#a0a0c0",
+                              background: "#232d42",
+                              border: "1px solid #293548",
+                              color: "#94a3b8",
                               borderRadius: 8,
                               padding: "7px 18px",
                               fontSize: 12,
@@ -2076,7 +2403,7 @@ function DashboardPage() {
                         >
                           {/* Left: name + badges */}
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: "#f0f0ff" }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
                               {tag.name}
                             </span>
                             <span
@@ -2148,7 +2475,7 @@ function DashboardPage() {
                                 width: 44,
                                 height: 24,
                                 borderRadius: 12,
-                                background: tag.isActive ? "#10b981" : "#3a3a5a",
+                                background: tag.isActive ? "#10b981" : "#3d4f6a",
                                 border: "none",
                                 cursor: "pointer",
                                 position: "relative",
@@ -2170,17 +2497,17 @@ function DashboardPage() {
                             </button>
                             <button
                               onClick={() => startEdit(tag)}
-                              style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
-                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                              style={{ background: "#232d42", border: "1px solid #293548", color: "#94a3b8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#8b5cf6")}
+                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
                             >
                               Edytuj
                             </button>
                             {tag.tagType === "video" && (
                               <label
-                                style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
+                                style={{ background: "#232d42", border: "1px solid #293548", color: "#94a3b8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
                                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
-                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2a2a4a")}
+                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#293548")}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                   <polygon points="23 7 16 12 23 17 23 7" />
@@ -2194,9 +2521,9 @@ function DashboardPage() {
                               <button
                                 onClick={() => handleRemoveVideo(tag.id)}
                                 title="Usun video"
-                                style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                                style={{ background: "transparent", border: "1px solid #293548", color: "#64748b", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#293548"; e.currentTarget.style.color = "#6060a0"; }}
                               >
                                 Usun video
                               </button>
@@ -2212,7 +2539,7 @@ function DashboardPage() {
                                 </button>
                                 <button
                                   onClick={() => setResetTagConfirm(null)}
-                                  style={{ background: "#252547", border: "1px solid #2a2a4a", color: "#a0a0c0", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
+                                  style={{ background: "#232d42", border: "1px solid #293548", color: "#94a3b8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
                                 >
                                   Nie
                                 </button>
@@ -2221,18 +2548,18 @@ function DashboardPage() {
                               <button
                                 onClick={() => setResetTagConfirm(tag.id)}
                                 title="Resetuj statystyki kampanii"
-                                style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                                style={{ background: "transparent", border: "1px solid #293548", color: "#64748b", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#fbbf24"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#293548"; e.currentTarget.style.color = "#6060a0"; }}
                               >
                                 Reset stats
                               </button>
                             )}
                             <button
                               onClick={() => handleDeleteTag(tag.id)}
-                              style={{ background: "transparent", border: "1px solid #2a2a4a", color: "#6060a0", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                              style={{ background: "transparent", border: "1px solid #293548", color: "#64748b", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                               onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2a4a"; e.currentTarget.style.color = "#6060a0"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#293548"; e.currentTarget.style.color = "#6060a0"; }}
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="3 6 5 6 21 6" />
@@ -2243,29 +2570,29 @@ function DashboardPage() {
                         </div>
 
                         {/* Bottom row: details */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#a0a0c0" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#94a3b8" }}>
                           <span>
-                            <span style={{ color: "#6060a0" }}>ID:</span>{" "}
-                            <span style={{ fontFamily: "monospace", color: "#9f67ff" }}>{tag.id}</span>
+                            <span style={{ color: "#64748b" }}>ID:</span>{" "}
+                            <span style={{ fontFamily: "monospace", color: "#a78bfa" }}>{tag.id}</span>
                           </span>
                           <span>
-                            <span style={{ color: "#6060a0" }}>Skany:</span>{" "}
-                            <span style={{ fontWeight: 600, color: "#f0f0ff" }}>{tag._count.scans}</span>
+                            <span style={{ color: "#64748b" }}>Skany:</span>{" "}
+                            <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{tag._count.scans}</span>
                           </span>
                           <span>
-                            <span style={{ color: "#6060a0" }}>URL:</span>{" "}
+                            <span style={{ color: "#64748b" }}>URL:</span>{" "}
                             <a
                               href={`/s/${tag.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: "#9f67ff", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
+                              style={{ color: "#a78bfa", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
                             >
                               twojenfc.pl/s/{tag.id}
                             </a>
                           </span>
                           {tag.videoFile && (
                             <span>
-                              <span style={{ color: "#6060a0" }}>Video:</span>{" "}
+                              <span style={{ color: "#64748b" }}>Video:</span>{" "}
                               <a
                                 href={tag.videoFile.replace(/^\/uploads\//, "/api/video/")}
                                 target="_blank"
@@ -2278,7 +2605,7 @@ function DashboardPage() {
                           )}
                         </div>
                         {tag.description && (
-                          <p style={{ fontSize: 12, color: "#6060a0", marginTop: 4 }}>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                             {tag.description}
                           </p>
                         )}
@@ -2312,12 +2639,12 @@ function DashboardPage() {
                               <div style={{
                                 marginTop: 8,
                                 padding: 12,
-                                background: "#1a1a2e",
+                                background: "#151c2c",
                                 borderRadius: 8,
-                                border: "1px solid #2a2a4a",
+                                border: "1px solid #293548",
                               }}>
                                 {linkClickStats[tag.id].links.length === 0 ? (
-                                  <p style={{ fontSize: 12, color: "#6060a0" }}>Brak klikniec</p>
+                                  <p style={{ fontSize: 12, color: "#64748b" }}>Brak klikniec</p>
                                 ) : (
                                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                     {linkClickStats[tag.id].links.map((lc, idx) => (
@@ -2326,23 +2653,23 @@ function DashboardPage() {
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         padding: "6px 0",
-                                        borderBottom: idx < linkClickStats[tag.id].links.length - 1 ? "1px solid #252547" : "none",
+                                        borderBottom: idx < linkClickStats[tag.id].links.length - 1 ? "1px solid #232d42" : "none",
                                       }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                                          <span style={{ fontSize: 11, color: "#a0a0c0", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                          <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                             {lc.linkLabel || lc.linkUrl}
                                           </span>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                          <div style={{ width: 60, height: 4, background: "#252547", borderRadius: 2, overflow: "hidden" }}>
+                                          <div style={{ width: 60, height: 4, background: "#232d42", borderRadius: 2, overflow: "hidden" }}>
                                             <div style={{ width: `${lc.percent}%`, height: "100%", background: "linear-gradient(90deg, #60a5fa, #3b82f6)", borderRadius: 2 }} />
                                           </div>
-                                          <span style={{ fontSize: 12, fontWeight: 700, color: "#f0f0ff", minWidth: 24, textAlign: "right" }}>{lc.clicks}</span>
-                                          <span style={{ fontSize: 10, color: "#6060a0", minWidth: 28, textAlign: "right" }}>{lc.percent}%</span>
+                                          <span style={{ fontSize: 12, fontWeight: 700, color: "#f1f5f9", minWidth: 24, textAlign: "right" }}>{lc.clicks}</span>
+                                          <span style={{ fontSize: 10, color: "#64748b", minWidth: 28, textAlign: "right" }}>{lc.percent}%</span>
                                         </div>
                                       </div>
                                     ))}
-                                    <div style={{ fontSize: 11, color: "#6060a0", marginTop: 4, paddingTop: 6, borderTop: "1px solid #252547" }}>
+                                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 4, paddingTop: 6, borderTop: "1px solid #232d42" }}>
                                       Razem: {linkClickStats[tag.id].total} klikniec
                                     </div>
                                   </div>
@@ -2395,61 +2722,65 @@ function DashboardPage() {
                               <div style={{
                                 marginTop: 8,
                                 padding: 12,
-                                background: "#1a1a2e",
+                                background: "#151c2c",
                                 borderRadius: 8,
-                                border: "1px solid #2a2a4a",
+                                border: "1px solid #293548",
                               }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 10, marginBottom: 10 }}>
-                                  <div style={{ textAlign: "center" }}>
-                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#10b981" }}>{videoStats[tag.id].plays}</p>
-                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Odtworzen</p>
+                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>{videoStats[tag.id].plays}</span>
+                                    <span style={{ fontSize: 11, color: "#94a3b8" }}>odtworzen</span>
                                   </div>
-                                  <div style={{ textAlign: "center" }}>
-                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#60a5fa" }}>{videoStats[tag.id].completions}</p>
-                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Do konca</p>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa" }}>{videoStats[tag.id].completions}</span>
+                                    <span style={{ fontSize: 11, color: "#94a3b8" }}>do konca</span>
                                   </div>
-                                  <div style={{ textAlign: "center" }}>
-                                    <p style={{ fontSize: 20, fontWeight: 800, color: "#9f67ff" }}>{formatWatchTime(videoStats[tag.id].avgWatchTime)}</p>
-                                    <p style={{ fontSize: 10, color: "#a0a0c0" }}>Sred. czas</p>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontSize: 18, fontWeight: 800, color: "#a78bfa" }}>{formatWatchTime(videoStats[tag.id].avgWatchTime)}</span>
+                                    <span style={{ fontSize: 11, color: "#94a3b8" }}>sred. czas</span>
                                   </div>
+                                  {videoStats[tag.id].plays > 0 && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={{ fontSize: 18, fontWeight: 800, color: "#f59e0b" }}>
+                                        {Math.round((videoStats[tag.id].completions / videoStats[tag.id].plays) * 100)}%
+                                      </span>
+                                      <span style={{ fontSize: 11, color: "#94a3b8" }}>completion rate</span>
+                                    </div>
+                                  )}
                                 </div>
-                                {/* Progress funnel */}
-                                <div style={{ marginTop: 8 }}>
-                                  <p style={{ fontSize: 11, color: "#a0a0c0", marginBottom: 6, fontWeight: 500 }}>Retencja:</p>
-                                  {[
-                                    { label: "25%", value: videoStats[tag.id].progress25, color: "#10b981" },
-                                    { label: "50%", value: videoStats[tag.id].progress50, color: "#60a5fa" },
-                                    { label: "75%", value: videoStats[tag.id].progress75, color: "#9f67ff" },
-                                    { label: "100%", value: videoStats[tag.id].progress100, color: "#f59e0b" },
-                                  ].map((p) => {
-                                    const maxP = videoStats[tag.id].plays || 1;
-                                    const pct = Math.round((p.value / maxP) * 100);
-                                    return (
-                                      <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                        <span style={{ fontSize: 11, color: "#6060a0", width: 30, textAlign: "right" }}>{p.label}</span>
-                                        <div style={{ flex: 1, height: 6, background: "#252547", borderRadius: 3, overflow: "hidden" }}>
-                                          <div style={{ width: `${pct}%`, height: "100%", background: p.color, borderRadius: 3, transition: "width 0.3s" }} />
-                                        </div>
-                                        <span style={{ fontSize: 11, color: "#f0f0ff", width: 24, fontWeight: 600 }}>{p.value}</span>
-                                        <span style={{ fontSize: 10, color: "#6060a0", width: 30 }}>{pct}%</span>
-                                      </div>
-                                    );
-                                  })}
+                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                  <button
+                                    onClick={() => {
+                                      setTagFilter(tag.id);
+                                    }}
+                                    style={{
+                                      background: "rgba(16,185,129,0.12)",
+                                      border: "1px solid rgba(16,185,129,0.25)",
+                                      color: "#10b981",
+                                      fontSize: 11,
+                                      cursor: "pointer",
+                                      padding: "4px 12px",
+                                      borderRadius: 6,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Zobacz pelny wykres retencji
+                                  </button>
+                                  <button
+                                    onClick={() => fetchVideoStats(tag.id)}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      color: "#10b981",
+                                      fontSize: 11,
+                                      cursor: "pointer",
+                                      padding: "4px 0",
+                                      textDecoration: "underline",
+                                    }}
+                                  >
+                                    Odswiez
+                                  </button>
                                 </div>
-                                <button
-                                  onClick={() => fetchVideoStats(tag.id)}
-                                  style={{
-                                    background: "transparent",
-                                    border: "none",
-                                    color: "#10b981",
-                                    fontSize: 11,
-                                    cursor: "pointer",
-                                    padding: "4px 0 0 0",
-                                    textDecoration: "underline",
-                                  }}
-                                >
-                                  Odswiez
-                                </button>
                               </div>
                             )}
                           </div>
@@ -2498,19 +2829,19 @@ function DashboardPage() {
                 right: 0,
                 height: 3,
                 borderRadius: "12px 12px 0 0",
-                background: "linear-gradient(90deg, #7c3aed, #10b981)",
+                background: "linear-gradient(90deg, #8b5cf6, #10b981)",
               }}
             />
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "#f0f0ff" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "#f1f5f9" }}>
               Zmiana hasla
             </h2>
-            <p style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 20 }}>
               Ze wzgledow bezpieczenstwa musisz ustawic nowe haslo przy pierwszym logowaniu.
             </p>
 
             <form onSubmit={handlePasswordChange}>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                   Nowe haslo
                 </label>
                 <input
@@ -2523,7 +2854,7 @@ function DashboardPage() {
                 />
               </div>
               <div style={{ marginBottom: 18 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#a0a0c0", marginBottom: 4, fontWeight: 500 }}>
+                <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4, fontWeight: 500 }}>
                   Powtorz haslo
                 </label>
                 <input

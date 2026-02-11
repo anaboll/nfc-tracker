@@ -80,6 +80,12 @@ export async function GET(
 
     // Build redirect URL using the real host (not Docker 0.0.0.0)
     let targetUrl = tag.targetUrl;
+
+    // For vcard type, redirect to the vcard page
+    if (tag.tagType === "vcard") {
+      targetUrl = `/vcard/${tagId}`;
+    }
+
     if (targetUrl.startsWith("/")) {
       const proto = headers.get("x-forwarded-proto") || "https";
       const host = headers.get("host") || headers.get("x-forwarded-host") || "twojenfc.pl";

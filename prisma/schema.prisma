@@ -31,7 +31,7 @@ model Client {
   @@index([isActive])
 }
 
-// Tag types: "url" = simple redirect, "video" = video player, "multilink" = page with multiple links
+// Tag types: "url" = simple redirect, "video" = video player, "multilink" = page with multiple links, "vcard" = digital business card, "google-review" = google review redirect
 model Tag {
   id          String   @id
   name        String
