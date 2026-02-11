@@ -548,8 +548,12 @@ function DashboardPage() {
         setNewCampaignDesc("");
         setShowAddCampaign(false);
         await fetchCampaigns();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Blad tworzenia kampanii: ${errData.error || res.status}`);
+        console.error("Campaign create error:", res.status, errData);
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Campaign create fetch error:", e); alert("Blad polaczenia"); }
     finally { setCampaignCreating(false); }
   };
 
