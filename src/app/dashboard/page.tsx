@@ -319,6 +319,7 @@ function DashboardPage() {
   const [editType, setEditType] = useState("url");
   const [editTagLinks, setEditTagLinks] = useState<TagLink[]>([]);
   const [editVCard, setEditVCard] = useState<VCardData>({ firstName: "", lastName: "" });
+  const [editChannel, setEditChannel] = useState<"nfc" | "qr">("nfc");
 
   // inline link editing for multilink tags
   const [editingLinksTagId, setEditingLinksTagId] = useState<string | null>(null);
@@ -943,6 +944,7 @@ function DashboardPage() {
     setEditUrl(tag.targetUrl);
     setEditDesc(tag.description || "");
     setEditType(tag.tagType);
+    setEditChannel("nfc"); // default; channel is not persisted in DB
     if (tag.tagType === "vcard" && tag.links) {
       setEditVCard(tag.links as unknown as VCardData);
       setEditTagLinks([{ label: "", url: "", icon: "link" }]);
@@ -1207,8 +1209,8 @@ function DashboardPage() {
       case "url": return "URL";
       case "video": return "Video";
       case "multilink": return "Multi-link";
-      case "vcard": return "Wizytowka";
-      case "google-review": return "Google Review";
+      case "vcard": return "Wizytówka";
+      case "google-review": return "Recenzja Google";
       default: return "URL";
     }
   };
@@ -1738,34 +1740,41 @@ function DashboardPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
 
         {/* ---- Filter Bar (dates + akcja only) ---- */}
+        <style>{`
+          .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+          .filter-bar-action{display:flex;flex-direction:column;gap:4px}
+          @media(max-width:700px){
+            .filter-bar{flex-direction:column;align-items:stretch;gap:8px}
+            .filter-bar-row{display:flex;gap:8px;flex-wrap:wrap}
+            .filter-bar-action{display:none!important}
+            .filter-bar-buttons{align-self:stretch}
+            .filter-bar-buttons button{flex:1}
+          }
+        `}</style>
         <section
-          className="card"
-          style={{
-            marginBottom: 24,
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-end",
-            gap: 12,
-            padding: "12px 16px",
-          }}
+          className="card filter-bar"
+          style={{ marginBottom: 24, padding: "12px 16px" }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
-            <div style={{ display: "flex", gap: 4 }}>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ minWidth: 130 }} />
-              <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
-                style={{ minWidth: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.5rem", fontSize: "0.875rem", outline: "none" }} />
+          <div className="filter-bar-row" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
+              <div style={{ display: "flex", gap: 4 }}>
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ minWidth: 120 }} />
+                <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
+                  style={{ minWidth: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
+              <div style={{ display: "flex", gap: 4 }}>
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ minWidth: 120 }} />
+                <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
+                  style={{ minWidth: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
-            <div style={{ display: "flex", gap: 4 }}>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ minWidth: 130 }} />
-              <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
-                style={{ minWidth: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.5rem", fontSize: "0.875rem", outline: "none" }} />
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {/* Akcja dropdown — hidden on mobile (<700px); use sidebar chips instead */}
+          <div className="filter-bar-action">
             <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Akcja</label>
             <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="input-field" style={{ minWidth: 160, padding: "8px 10px" }}>
               <option value="">Wszystkie akcje</option>
@@ -1774,13 +1783,13 @@ function DashboardPage() {
               ))}
             </select>
           </div>
-          <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
-            <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaz</button>
+          <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
+            <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaż</button>
             <button onClick={handleResetFilters}
               style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 10, padding: "8px 18px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s" }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-            >Reset filtrow</button>
+            >Reset filtrów</button>
           </div>
         </section>
 
@@ -3144,6 +3153,8 @@ function DashboardPage() {
                               <option value="url">Przekierowanie URL</option>
                               <option value="video">Video player</option>
                               <option value="multilink">Multi-link</option>
+                              <option value="vcard">Wizytówka (vCard)</option>
+                              <option value="google-review">Recenzja Google</option>
                             </select>
                           </div>
                           {(editType === "url" || editType === "google-review") && (
@@ -3168,6 +3179,20 @@ function DashboardPage() {
                               value={editDesc}
                               onChange={(e) => setEditDesc(e.target.value)}
                             />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+                              Kanał
+                              <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(atrybucja)</span>
+                            </label>
+                            <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
+                              <button type="button" onClick={() => setEditChannel("nfc")}
+                                style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer", background: editChannel === "nfc" ? "#f5b731" : "#1a253a", color: editChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                              >NFC</button>
+                              <button type="button" onClick={() => setEditChannel("qr")}
+                                style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: editChannel === "qr" ? "#10b981" : "#1a253a", color: editChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                              >QR</button>
+                            </div>
                           </div>
                         </div>
                         {/* Multilink editor in edit mode */}
@@ -3272,7 +3297,7 @@ function DashboardPage() {
                             </div>
                           </div>
                         )}
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                           <button
                             className="btn-primary"
                             onClick={() => handleSaveEdit(tag.id)}
@@ -3295,6 +3320,46 @@ function DashboardPage() {
                             Anuluj
                           </button>
                         </div>
+                        {/* Advanced section */}
+                        <details style={{ marginTop: 4 }}>
+                          <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                            Zaawansowane (reset / usuń)
+                          </summary>
+                          <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                            <span style={{ fontSize: 10, color: "#5a6478", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
+                            {resetTagConfirm === tag.id ? (
+                              <>
+                                <button
+                                  onClick={() => handleResetStats(tag.id)}
+                                  disabled={resetting}
+                                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                                >
+                                  {resetting ? "..." : "Potwierdź reset"}
+                                </button>
+                                <button
+                                  onClick={() => setResetTagConfirm(null)}
+                                  style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
+                                >
+                                  Nie
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setResetTagConfirm(tag.id)}
+                                style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f59e0b", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
+                              >
+                                Reset statystyk
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteTag(tag.id)}
+                              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
+                            >
+                              Usuń akcję
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     ) : (
                       /* ---- View Mode ---- */
@@ -3432,29 +3497,33 @@ function DashboardPage() {
                             >
                               Edytuj
                             </button>
-                            <button
-                              title="Pobierz QR PNG"
-                              onClick={async () => {
-                                const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}`);
-                                if (!res.ok) return;
-                                const blob = await res.blob();
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = `qr-${tag.id}.png`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                              }}
-                              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#10b981"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; }}
-                            >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-                                <path d="M14 14h3v3m0 4h4v-4m-4 0h4" />
-                              </svg>
-                              QR
-                            </button>
+                            {/* QR download buttons: PNG, SVG, PDF-print */}
+                            {(["png","svg","pdf"] as const).map((fmt) => (
+                              <button
+                                key={fmt}
+                                title={fmt === "png" ? "Pobierz QR PNG 1024×1024" : fmt === "svg" ? "Pobierz QR SVG (do druku)" : "Otwórz kartę do druku A4"}
+                                onClick={async () => {
+                                  if (fmt === "pdf") {
+                                    window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank");
+                                    return;
+                                  }
+                                  const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=${fmt}`);
+                                  if (!res.ok) return;
+                                  const blob = await res.blob();
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `qr-${tag.id}.${fmt}`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: fmt === "pdf" ? "#f5b731" : "#10b981", borderRadius: 6, padding: "6px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", transition: "border-color 0.2s", letterSpacing: "0.03em" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = fmt === "pdf" ? "#f5b731" : "#10b981"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; }}
+                              >
+                                {fmt === "png" ? "QR" : fmt.toUpperCase()}
+                              </button>
+                            ))}
                             {tag.tagType === "video" && (
                               <label
                                 style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
@@ -4203,7 +4272,7 @@ function DashboardPage() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Nazwa</label>
-                    <input className="input-field" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Moja Wizytowka" />
+                    <input className="input-field" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Moja Wizytówka" />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Typ akcji</label>
@@ -4211,7 +4280,7 @@ function DashboardPage() {
                       <option value="url">Przekierowanie URL</option>
                       <option value="video">Video player</option>
                       <option value="multilink">Multi-link</option>
-                      <option value="vcard">Wizytowka (vCard)</option>
+                      <option value="vcard">Wizytówka (vCard)</option>
                       <option value="google-review">Recenzja Google</option>
                     </select>
                   </div>
@@ -4341,23 +4410,27 @@ function DashboardPage() {
                   {tagCreateError && <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>}
                   {tagCreateSuccess && <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>}
                   {tagCreateSuccess && lastCreatedId && (
-                    <button type="button"
-                      onClick={async () => {
-                        const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}`);
-                        if (!res.ok) return;
-                        const blob = await res.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url; a.download = `qr-${lastCreatedId}.png`; a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                      style={{ background: "#10b981", border: "none", color: "#06080d", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Pobierz QR ({lastCreatedId})
-                    </button>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "#8b95a8" }}>Pobierz QR:</span>
+                      {(["png","svg","pdf"] as const).map((fmt) => (
+                        <button key={fmt} type="button"
+                          onClick={async () => {
+                            if (!lastCreatedId) return;
+                            if (fmt === "pdf") { window.open(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}&format=pdf`, "_blank"); return; }
+                            const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}&format=${fmt}`);
+                            if (!res.ok) return;
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = `qr-${lastCreatedId}.${fmt}`; a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          style={{ background: fmt === "pdf" ? "#1a253a" : "#10b981", border: fmt === "pdf" ? "1px solid #f5b731" : "none", color: fmt === "pdf" ? "#f5b731" : "#06080d", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          {fmt === "png" ? "PNG 1024×1024" : fmt === "svg" ? "SVG (wektor)" : "Drukuj PDF"}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </form>
