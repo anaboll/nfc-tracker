@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { safeDeleteVideoFile } from "@/lib/video-utils";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -29,11 +30,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Max rozmiar pliku: ${process.env.MAX_FILE_SIZE_MB || 500}MB` }, { status: 400 });
     }
 
-    // Check tag exists
-    const tag = await prisma.tag.findUnique({ where: { id: tagId } });
+    // Check tag exists and capture current videoFile (for replace cleanup)
+    const tag = await prisma.tag.findUnique({ where: { id: tagId }, select: { id: true, videoFile: true } });
     if (!tag) return NextResponse.json({ error: "Tag nie istnieje" }, { status: 404 });
 
-    // Save file
+    // Remember old file path before overwriting
+    const previousVideoFile = tag.videoFile ?? null;
+
+    // Save new file to disk
     const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads");
     await mkdir(uploadDir, { recursive: true });
 
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     await writeFile(filepath, Buffer.from(bytes));
 
-    // Update tag
+    // Update tag in DB with new video path
     const videoUrl = `/uploads/${filename}`;
     await prisma.tag.update({
       where: { id: tagId },
@@ -53,6 +57,12 @@ export async function POST(request: NextRequest) {
         targetUrl: `/watch/${tagId}`,
       },
     });
+
+    // DB is now updated — safe to delete the old file.
+    // safeDeleteVideoFile will skip deletion if another tag still references it.
+    if (previousVideoFile && previousVideoFile !== videoUrl) {
+      await safeDeleteVideoFile(previousVideoFile);
+    }
 
     return NextResponse.json({ ok: true, videoUrl, filename });
   } catch (error) {
