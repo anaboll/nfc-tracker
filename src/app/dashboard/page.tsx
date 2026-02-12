@@ -682,6 +682,9 @@ function DashboardPage() {
   };
 
   const handleResetFilters = async () => {
+    // Reset all filter state first, then let fetchStats read the cleared values.
+    // Previously this called /api/stats directly and bypassed fetchStats(), causing
+    // stale clientId/campaignId params to leak into the reset request.
     setDateFrom("");
     setDateTo("");
     setTimeFrom("");
@@ -691,10 +694,11 @@ function DashboardPage() {
     setSelectedCampaignId(null);
     setWeekOffset(0);
     setLoading(true);
-    const params = new URLSearchParams();
-    params.set("weekOffset", "0");
     try {
-      const res = await fetch(`/api/stats?${params.toString()}`);
+      // Call the API directly with a clean slate (all filters cleared above).
+      // We cannot call fetchStats() here because React state updates are async
+      // and fetchStats reads from state — use a direct fetch with no params instead.
+      const res = await fetch("/api/stats?weekOffset=0");
       if (res.ok) setStats(await res.json());
     } catch { /* ignore */ }
     setLoading(false);
@@ -762,6 +766,10 @@ function DashboardPage() {
     setTagCreateSuccess("");
     if (!newTagId || !newTagName) {
       setTagCreateError("ID i nazwa akcji sa wymagane");
+      return;
+    }
+    if (!newTagClient) {
+      setTagCreateError("Wybor klienta jest wymagany przed utworzeniem akcji");
       return;
     }
     if ((newTagType === "url" || newTagType === "google-review") && !newTagUrl) {
@@ -3006,14 +3014,19 @@ function DashboardPage() {
                       <select
                         className="input-field"
                         value={newTagClient}
-                        onChange={(e) => setNewTagClient(e.target.value)}
-                        style={{ padding: "8px 12px" }}
+                        onChange={(e) => { setNewTagClient(e.target.value); setNewTagCampaign(""); }}
+                        style={{ padding: "8px 12px", borderColor: !newTagClient ? "#f87171" : undefined }}
                       >
-                        <option value="">-- brak klienta --</option>
+                        <option value="">-- wybierz klienta (wymagane) --</option>
                         {clients.map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </select>
+                      {!newTagClient && (
+                        <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>
+                          Klient jest wymagany
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
@@ -3244,7 +3257,7 @@ function DashboardPage() {
                     <button
                       type="submit"
                       className="btn-primary"
-                      disabled={tagCreating}
+                      disabled={tagCreating || !newTagClient}
                       style={{ padding: "10px 24px", fontSize: 13 }}
                     >
                       {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
@@ -4208,6 +4221,11 @@ function DashboardPage() {
                             >
                               {manageLoading ? "..." : "Przenies"}
                             </button>
+                            {manageMsg && reassignTagId === tag.id && (
+                              <span style={{ fontSize: 11, color: manageMsg.startsWith("Przeniesiono") ? "#10b981" : "#f87171" }}>
+                                {manageMsg}
+                              </span>
+                            )}
                           </div>
                         )}
 

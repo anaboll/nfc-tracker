@@ -29,7 +29,32 @@ export async function POST(request: NextRequest) {
   const { id, name, targetUrl, description, tagType, links, clientId, campaignId } = body;
 
   if (!id || !name) {
-    return NextResponse.json({ error: "id i name sa wymagane" }, { status: 400 });
+    return NextResponse.json({ error: "ID i nazwa akcji sa wymagane" }, { status: 400 });
+  }
+
+  // B1: clientId is mandatory
+  if (!clientId) {
+    return NextResponse.json({ error: "Wybor klienta jest wymagany przed utworzeniem akcji" }, { status: 400 });
+  }
+
+  // Verify client exists
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) {
+    return NextResponse.json({ error: "Wybrany klient nie istnieje" }, { status: 404 });
+  }
+
+  // B2: if campaignId provided, it must belong to the same client
+  if (campaignId) {
+    const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) {
+      return NextResponse.json({ error: "Wybrana kampania nie istnieje" }, { status: 404 });
+    }
+    if (campaign.clientId !== clientId) {
+      return NextResponse.json(
+        { error: "Kampania nie nalezy do wybranego klienta. Wybierz kampanie z tej samej firmy." },
+        { status: 400 }
+      );
+    }
   }
 
   const type = tagType || "url";
@@ -57,7 +82,7 @@ export async function POST(request: NextRequest) {
       targetUrl: finalUrl,
       description: description || null,
       links: (type === "multilink" || type === "vcard") && links ? links : undefined,
-      ...(clientId ? { clientId } : {}),
+      clientId,
       ...(campaignId ? { campaignId } : {}),
     },
   });
@@ -74,6 +99,25 @@ export async function PUT(request: NextRequest) {
   const { id, name, targetUrl, description, isActive, videoFile, tagType, links, clientId, campaignId } = body;
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
+
+  // B2: if campaignId is being set, verify it belongs to the resolved client
+  if (campaignId !== undefined && campaignId !== null) {
+    const existingTag = await prisma.tag.findUnique({ where: { id } });
+    if (!existingTag) return NextResponse.json({ error: "Tag nie istnieje" }, { status: 404 });
+
+    const resolvedClientId = clientId !== undefined ? (clientId || null) : existingTag.clientId;
+
+    const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) {
+      return NextResponse.json({ error: "Wybrana kampania nie istnieje" }, { status: 404 });
+    }
+    if (resolvedClientId && campaign.clientId !== resolvedClientId) {
+      return NextResponse.json(
+        { error: "Kampania nie nalezy do klienta tej akcji. Zmiana zablokowana." },
+        { status: 400 }
+      );
+    }
+  }
 
   const tag = await prisma.tag.update({
     where: { id },

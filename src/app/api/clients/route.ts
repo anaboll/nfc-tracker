@@ -10,16 +10,18 @@ export async function GET() {
 
   const clients = await prisma.client.findMany({
     include: {
+      // _count counts ALL tags (active + inactive) for the tagCount badge
       _count: { select: { tags: true } },
+      // Fetch ALL tag IDs — active AND inactive — so scanCount is never under-reported.
+      // Previously filtered to isActive:true, hiding scans from deactivated tags (Bug B3).
       tags: {
         select: { id: true },
-        where: { isActive: true },
       },
     },
     orderBy: { name: "asc" },
   });
 
-  // Enrich with total scan count per client
+  // Enrich with total scan count per client (all-time, all tags active + inactive)
   const enriched = await Promise.all(
     clients.map(async (client) => {
       const tagIds = client.tags.map((t) => t.id);

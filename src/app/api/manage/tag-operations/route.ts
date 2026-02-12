@@ -20,14 +20,25 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Tag not found" }, { status: 404 });
   }
 
-  // If newCampaignId is provided, verify it belongs to the same client
+  // B2: if assigning to a campaign, always enforce client consistency
   if (newCampaignId) {
     const campaign = await prisma.campaign.findUnique({ where: { id: newCampaignId } });
     if (!campaign) {
-      return NextResponse.json({ error: "Target campaign not found" }, { status: 404 });
+      return NextResponse.json({ error: "Wybrana kampania nie istnieje" }, { status: 404 });
     }
+    // Block if tag has a client and campaign belongs to a different client
     if (tag.clientId && campaign.clientId !== tag.clientId) {
-      return NextResponse.json({ error: "Cannot move tag to a campaign of a different client" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Nie mozna przenosic akcji do kampanii innego klienta. Zmiana zablokowana." },
+        { status: 400 }
+      );
+    }
+    // Block if tag has no client but campaign has one — would silently mis-assign
+    if (!tag.clientId && campaign.clientId) {
+      return NextResponse.json(
+        { error: "Akcja nie ma przypisanego klienta. Najpierw przypisz klienta do akcji." },
+        { status: 400 }
+      );
     }
   }
 
@@ -51,6 +62,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "sourceTagId and newId are required" }, { status: 400 });
   }
 
+  // B1: cloned tag must have a client
+  const resolvedClientId = targetClientId || null;
+  if (!resolvedClientId) {
+    return NextResponse.json(
+      { error: "Wybor klienta docelowego jest wymagany przy klonowaniu akcji" },
+      { status: 400 }
+    );
+  }
+
   // Validate new ID format
   const sanitized = newId.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "");
   if (sanitized !== newId) {
@@ -69,15 +89,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Source tag not found" }, { status: 404 });
   }
 
-  // Validate target campaign belongs to target client
+  // B2: validate target campaign belongs to target client
   if (targetCampaignId) {
     const campaign = await prisma.campaign.findUnique({ where: { id: targetCampaignId } });
     if (!campaign) {
-      return NextResponse.json({ error: "Target campaign not found" }, { status: 404 });
+      return NextResponse.json({ error: "Wybrana kampania docelowa nie istnieje" }, { status: 404 });
     }
-    if (targetClientId && campaign.clientId !== targetClientId) {
-      return NextResponse.json({ error: "Target campaign does not belong to target client" }, { status: 400 });
+    if (campaign.clientId !== resolvedClientId) {
+      return NextResponse.json(
+        { error: "Kampania docelowa nie nalezy do wybranego klienta. Zmiana zablokowana." },
+        { status: 400 }
+      );
     }
+  }
+
+  // Verify target client exists
+  const targetClient = await prisma.client.findUnique({ where: { id: resolvedClientId } });
+  if (!targetClient) {
+    return NextResponse.json({ error: "Docelowy klient nie istnieje" }, { status: 404 });
   }
 
   // Clone: copy config, no scan data
@@ -91,7 +120,7 @@ export async function POST(request: NextRequest) {
       videoFile: source.videoFile,
       links: source.links ?? undefined,
       isActive: true,
-      clientId: targetClientId || source.clientId,
+      clientId: resolvedClientId,
       campaignId: targetCampaignId || null,
     },
   });
