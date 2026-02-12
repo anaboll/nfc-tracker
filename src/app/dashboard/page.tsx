@@ -268,6 +268,9 @@ function DashboardPage() {
   const filtersRestoredRef = useRef(false);
   const scanTableRef = useRef<HTMLElement>(null);
 
+  // new-tag drawer
+  const [showNewTagDrawer, setShowNewTagDrawer] = useState(false);
+
   // change‑password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -822,6 +825,8 @@ function DashboardPage() {
         setTagCreateSuccess("Akcja utworzona pomyslnie!");
         setLastCreatedId(createdId);
         setLastCreatedChannel(createdChannel);
+        // keep drawer open briefly so user can grab QR if needed; auto-close after 2.5 s
+        setTimeout(() => setShowNewTagDrawer(false), 2500);
         setNewTagId("");
         setNewTagName("");
         setNewTagUrl("");
@@ -1448,239 +1453,185 @@ function DashboardPage() {
       {/* ============================================================ */}
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 24px 64px" }}>
-        {/* ---- Client Selector (dropdown) ---- */}
-        <section style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                <path d="M16 3.13a4 4 0 010 7.75" />
-              </svg>
-              <select
-                className="input-field"
-                value={selectedClientId || ""}
-                onChange={(e) => setSelectedClientId(e.target.value || null)}
-                style={{
-                  padding: "8px 14px",
-                  minWidth: 200,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  background: selectedClientId ? "#0c1220" : "#0c1220",
-                  borderColor: selectedClientId ? (clients.find(c => c.id === selectedClientId)?.color || "#e69500") : "#1e2d45",
-                }}
-              >
-                <option value="">Wszyscy klienci ({clients.reduce((s, c) => s + c.scanCount, 0)} skanow)</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.scanCount} skanow)
-                  </option>
-                ))}
-              </select>
-            </div>
-            {selectedClientId && (
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: 10,
-                background: `${clients.find(c => c.id === selectedClientId)?.color || "#e69500"}18`,
-                border: `1px solid ${clients.find(c => c.id === selectedClientId)?.color || "#e69500"}40`,
-              }}>
-                <span style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: clients.find(c => c.id === selectedClientId)?.color || "#e69500",
-                }} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: clients.find(c => c.id === selectedClientId)?.color || "#f5b731" }}>
-                  {clients.find(c => c.id === selectedClientId)?.name}
-                </span>
-                <button
-                  onClick={() => setSelectedClientId(null)}
-                  style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 16, padding: "0 2px", lineHeight: 1 }}
-                  title="Pokaz wszystkich"
-                >
-                  x
-                </button>
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                onClick={() => setShowAddClient(!showAddClient)}
-                style={{
-                  background: "transparent",
-                  border: "1px dashed #2a4060",
-                  color: "#5a6478",
-                  borderRadius: 10,
-                  padding: "8px 14px",
-                  fontSize: 13,
-                  cursor: "pointer",
-                  transition: "border-color 0.2s, color 0.2s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-              >
-                + Dodaj klienta
-              </button>
-              {selectedClientId && (
-                <button
-                  onClick={() => handleDeleteClient(selectedClientId)}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid #1e2d45",
-                    color: "#5a6478",
-                    borderRadius: 10,
-                    padding: "8px 12px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                    transition: "border-color 0.2s, color 0.2s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#5a6478"; }}
-                >
-                  Usun klienta
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Add client form */}
-          {showAddClient && (
-            <div className="card" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap", padding: "14px 18px", marginTop: 10 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Nazwa klienta</label>
-                <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="np. Bulderownia" style={{ fontSize: 13, padding: "7px 12px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Opis</label>
-                <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opcjonalny opis" style={{ fontSize: 13, padding: "7px 12px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Kolor</label>
-                <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 40, height: 34, border: "1px solid #1e2d45", borderRadius: 6, background: "#131b2e", cursor: "pointer" }} />
-              </div>
-              <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ padding: "8px 18px", fontSize: 12 }}>
-                {clientCreating ? "..." : "Dodaj"}
-              </button>
-              <button onClick={() => setShowAddClient(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
-                Anuluj
-              </button>
-            </div>
-          )}
-        </section>
+        {/* ================================================================ */}
+        {/*  TWO-COLUMN LAYOUT: sidebar (260px) + scrollable content        */}
+        {/* ================================================================ */}
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
-        {/* ---- Campaign Selector (shows when client selected) ---- */}
-        {selectedClientId && (
-          <section style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                </svg>
-                <select
-                  className="input-field"
-                  value={selectedCampaignId || ""}
-                  onChange={(e) => setSelectedCampaignId(e.target.value || null)}
-                  style={{
-                    padding: "8px 14px",
-                    minWidth: 200,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    borderColor: selectedCampaignId ? "#60a5fa" : "#1e2d45",
-                  }}
-                >
-                  <option value="">Wszystkie kampanie ({filteredCampaigns.length})</option>
-                  {filteredCampaigns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.scanCount} skanow, {c.tagCount} akcji)
-                    </option>
-                  ))}
-                </select>
+          {/* ============================================================ */}
+          {/*  LEFT SIDEBAR — Klienci & Kampanie                           */}
+          {/* ============================================================ */}
+          <aside style={{
+            width: 260,
+            flexShrink: 0,
+            position: "sticky",
+            top: 76,
+            maxHeight: "calc(100vh - 96px)",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}>
+            {/* -- Klienci block -- */}
+            <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klienci</span>
+                <button
+                  onClick={() => setShowAddClient(!showAddClient)}
+                  title="Dodaj klienta"
+                  style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                >+</button>
               </div>
-              {selectedCampaignId && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 14px", borderRadius: 10,
-                  background: "rgba(96,165,250,0.1)",
-                  border: "1px solid rgba(96,165,250,0.25)",
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2.5}>
-                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                  </svg>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#60a5fa" }}>
-                    {filteredCampaigns.find(c => c.id === selectedCampaignId)?.name}
-                  </span>
-                  <button
-                    onClick={() => setSelectedCampaignId(null)}
-                    style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 16, padding: "0 2px", lineHeight: 1 }}
-                    title="Pokaz wszystkie kampanie"
-                  >
-                    x
-                  </button>
+
+              {/* "Wszyscy" chip */}
+              <button
+                onClick={() => setSelectedClientId(null)}
+                style={{
+                  width: "100%", textAlign: "left", background: !selectedClientId ? "rgba(245,183,49,0.12)" : "transparent",
+                  border: `1px solid ${!selectedClientId ? "rgba(245,183,49,0.35)" : "transparent"}`,
+                  borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+                  transition: "background 0.15s",
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600, color: !selectedClientId ? "#f5b731" : "#8b95a8" }}>Wszyscy</span>
+                <span style={{ fontSize: 11, color: "#5a6478", fontWeight: 500 }}>{clients.reduce((s, c) => s + c.scanCount, 0)}</span>
+              </button>
+
+              {/* Client chips */}
+              {clients.map((c) => {
+                const active = selectedClientId === c.id;
+                return (
+                  <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
+                    <button
+                      onClick={() => setSelectedClientId(c.id)}
+                      style={{
+                        width: "100%", textAlign: "left",
+                        background: active ? `${c.color || "#e69500"}18` : "transparent",
+                        border: `1px solid ${active ? `${c.color || "#e69500"}50` : "transparent"}`,
+                        borderRadius: 8, padding: "7px 10px", cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 8,
+                        transition: "background 0.15s",
+                      }}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? (c.color || "#f5b731") : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                      <span style={{ fontSize: 11, color: "#5a6478", fontWeight: 500, flexShrink: 0 }}>{c.scanCount}</span>
+                    </button>
+                    {active && (
+                      <button
+                        onClick={() => handleDeleteClient(c.id)}
+                        title="Usun klienta"
+                        style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
+                      >×</button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Add client inline form */}
+              {showAddClient && (
+                <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid #1e2d45", borderRadius: 4, background: "#131b2e", cursor: "pointer", flexShrink: 0 }} />
+                    <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{clientCreating ? "..." : "Dodaj"}</button>
+                    <button onClick={() => setShowAddClient(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                  </div>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  onClick={() => setShowAddCampaign(!showAddCampaign)}
-                  style={{
-                    background: "transparent",
-                    border: "1px dashed #2a4060",
-                    color: "#5a6478",
-                    borderRadius: 10,
-                    padding: "8px 14px",
-                    fontSize: 13,
-                    cursor: "pointer",
-                    transition: "border-color 0.2s, color 0.2s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-                >
-                  + Dodaj kampanie
-                </button>
-                {selectedCampaignId && (
+            </div>
+
+            {/* -- Kampanie block (visible only when client selected) -- */}
+            {selectedClientId && (
+              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampanie</span>
                   <button
-                    onClick={() => handleDeleteCampaign(selectedCampaignId)}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid #1e2d45",
-                      color: "#5a6478",
-                      borderRadius: 10,
-                      padding: "8px 12px",
-                      fontSize: 12,
-                      cursor: "pointer",
-                      transition: "border-color 0.2s, color 0.2s",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#5a6478"; }}
-                  >
-                    Usun kampanie
-                  </button>
+                    onClick={() => setShowAddCampaign(!showAddCampaign)}
+                    title="Dodaj kampanie"
+                    style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                  >+</button>
+                </div>
+
+                {/* "Wszystkie kampanie" chip */}
+                <button
+                  onClick={() => setSelectedCampaignId(null)}
+                  style={{
+                    width: "100%", textAlign: "left", background: !selectedCampaignId ? "rgba(96,165,250,0.10)" : "transparent",
+                    border: `1px solid ${!selectedCampaignId ? "rgba(96,165,250,0.30)" : "transparent"}`,
+                    borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600, color: !selectedCampaignId ? "#60a5fa" : "#8b95a8" }}>Wszystkie</span>
+                  <span style={{ fontSize: 11, color: "#5a6478" }}>{filteredCampaigns.length}</span>
+                </button>
+
+                {/* Campaign chips */}
+                {filteredCampaigns.map((c) => {
+                  const active = selectedCampaignId === c.id;
+                  return (
+                    <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
+                      <button
+                        onClick={() => setSelectedCampaignId(c.id)}
+                        style={{
+                          width: "100%", textAlign: "left",
+                          background: active ? "rgba(96,165,250,0.10)" : "transparent",
+                          border: `1px solid ${active ? "rgba(96,165,250,0.30)" : "transparent"}`,
+                          borderRadius: 8, padding: "7px 10px", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 6,
+                          transition: "background 0.15s",
+                        }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={active ? "#60a5fa" : "#5a6478"} strokeWidth={2.5}>
+                          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                        </svg>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#60a5fa" : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                        <span style={{ fontSize: 11, color: "#5a6478", flexShrink: 0 }}>{c.scanCount}</span>
+                      </button>
+                      {active && (
+                        <button
+                          onClick={() => handleDeleteCampaign(c.id)}
+                          title="Usun kampanie"
+                          style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
+                        >×</button>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Add campaign inline form */}
+                {showAddCampaign && (
+                  <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <input className="input-field" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
+                    <input className="input-field" value={newCampaignDesc} onChange={(e) => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
+                      <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-            {/* Add campaign form */}
-            {showAddCampaign && (
-              <div className="card" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap", padding: "14px 18px", marginTop: 10 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Nazwa kampanii</label>
-                  <input className="input-field" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="np. Promocja letnia 2025" style={{ fontSize: 13, padding: "7px 12px" }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Opis</label>
-                  <input className="input-field" value={newCampaignDesc} onChange={(e) => setNewCampaignDesc(e.target.value)} placeholder="Opcjonalny opis" style={{ fontSize: 13, padding: "7px 12px" }} />
-                </div>
-                <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ padding: "8px 18px", fontSize: 12 }}>
-                  {campaignCreating ? "..." : "Dodaj"}
-                </button>
-                <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
-                  Anuluj
-                </button>
-              </div>
             )}
-          </section>
-        )}
+          </aside>
 
-        {/* ---- Filter Bar ---- */}
+          {/* ============================================================ */}
+          {/*  RIGHT CONTENT COLUMN                                        */}
+          {/* ============================================================ */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+
+        {/* ---- Filter Bar (dates + akcja only) ---- */}
         <section
           className="card"
           style={{
@@ -1688,107 +1639,42 @@ function DashboardPage() {
             display: "flex",
             flexWrap: "wrap",
             alignItems: "flex-end",
-            gap: 16,
+            gap: 12,
+            padding: "12px 16px",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
-              Od
-            </label>
+            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
             <div style={{ display: "flex", gap: 4 }}>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={{ minWidth: 140 }}
-              />
-              <input
-                type="time"
-                value={timeFrom}
-                onChange={(e) => setTimeFrom(e.target.value)}
-                placeholder="00:00"
-                style={{
-                  minWidth: 90,
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  color: "var(--txt)",
-                  borderRadius: 8,
-                  padding: "0.5rem 0.5rem",
-                  fontSize: "0.875rem",
-                  outline: "none",
-                }}
-              />
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ minWidth: 130 }} />
+              <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
+                style={{ minWidth: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.5rem", fontSize: "0.875rem", outline: "none" }} />
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
-              Do
-            </label>
+            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
             <div style={{ display: "flex", gap: 4 }}>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={{ minWidth: 140 }}
-              />
-              <input
-                type="time"
-                value={timeTo}
-                onChange={(e) => setTimeTo(e.target.value)}
-                placeholder="23:59"
-                style={{
-                  minWidth: 90,
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  color: "var(--txt)",
-                  borderRadius: 8,
-                  padding: "0.5rem 0.5rem",
-                  fontSize: "0.875rem",
-                  outline: "none",
-                }}
-              />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ minWidth: 130 }} />
+              <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
+                style={{ minWidth: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.5rem", fontSize: "0.875rem", outline: "none" }} />
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, color: "#8b95a8", fontWeight: 500 }}>
-              Akcja
-            </label>
-            <select
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              className="input-field"
-              style={{ minWidth: 180, padding: "8px 12px" }}
-            >
+            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Akcja</label>
+            <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="input-field" style={{ minWidth: 160, padding: "8px 10px" }}>
               <option value="">Wszystkie akcje</option>
               {allTagsFilter.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.id})
-                </option>
+                <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
               ))}
             </select>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-primary" onClick={handleFilter} style={{ padding: "9px 20px", fontSize: 13 }}>
-              Pokaz
-            </button>
-            <button
-              onClick={handleResetFilters}
-              style={{
-                background: "#1a253a",
-                border: "1px solid #1e2d45",
-                color: "#8b95a8",
-                borderRadius: 10,
-                padding: "9px 20px",
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "border-color 0.2s",
-              }}
+          <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
+            <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaz</button>
+            <button onClick={handleResetFilters}
+              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 10, padding: "8px 18px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s" }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-            >
-              Reset filtrow
-            </button>
+            >Reset filtrow</button>
           </div>
         </section>
 
@@ -2939,429 +2825,42 @@ function DashboardPage() {
                 </div>
               </div>
 
-              {/* ---- Create Tag Form ---- */}
-              <div className="card" style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "#e8ecf1" }}>
+              {/* ---- "+ Nowa akcja" button — opens drawer ---- */}
+              <div style={{ marginBottom: 20 }}>
+                <button
+                  onClick={() => { setShowNewTagDrawer(true); setTagCreateSuccess(""); setTagCreateError(""); }}
+                  style={{
+                    background: "linear-gradient(135deg, #e69500, #f5b731)",
+                    border: "none",
+                    color: "#06080d",
+                    borderRadius: 10,
+                    padding: "10px 22px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    boxShadow: "0 2px 12px rgba(230,149,0,0.25)",
+                    transition: "opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
                   Nowa akcja
-                </h3>
-                <form onSubmit={handleCreateTag}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                      gap: 12,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        ID akcji
-                      </label>
-                      <input
-                        className="input-field"
-                        value={newTagId}
-                        onChange={(e) => setNewTagId(e.target.value)}
-                        placeholder="np. moja-wizytowka"
-                      />
-                      {newTagId && (
-                        <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4, fontFamily: "monospace" }}>
-                          URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-")}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Nazwa
-                      </label>
-                      <input
-                        className="input-field"
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        placeholder="Moja Wizytowka"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Typ akcji
-                      </label>
-                      <select
-                        className="input-field"
-                        value={newTagType}
-                        onChange={(e) => setNewTagType(e.target.value)}
-                        style={{ padding: "8px 12px" }}
-                      >
-                        <option value="url">Przekierowanie URL</option>
-                        <option value="video">Video player</option>
-                        <option value="multilink">Multi-link</option>
-                        <option value="vcard">Wizytowka (vCard)</option>
-                        <option value="google-review">Recenzja Google</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Kanał
-                      </label>
-                      <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
-                        <button
-                          type="button"
-                          onClick={() => setNewTagChannel("nfc")}
-                          style={{
-                            padding: "8px 18px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            border: "none",
-                            cursor: "pointer",
-                            background: newTagChannel === "nfc" ? "#f5b731" : "#1a253a",
-                            color: newTagChannel === "nfc" ? "#06080d" : "#8b95a8",
-                            transition: "background 0.15s, color 0.15s",
-                          }}
-                        >
-                          NFC
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setNewTagChannel("qr")}
-                          style={{
-                            padding: "8px 18px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            border: "none",
-                            borderLeft: "1px solid #1e2d45",
-                            cursor: "pointer",
-                            background: newTagChannel === "qr" ? "#10b981" : "#1a253a",
-                            color: newTagChannel === "qr" ? "#06080d" : "#8b95a8",
-                            transition: "background 0.15s, color 0.15s",
-                          }}
-                        >
-                          QR
-                        </button>
-                      </div>
-                    </div>
-                    {(newTagType === "url" || newTagType === "google-review") && (
-                      <div>
-                        <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                          {newTagType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
-                        </label>
-                        <input
-                          className="input-field"
-                          value={newTagUrl}
-                          onChange={(e) => setNewTagUrl(e.target.value)}
-                          placeholder={newTagType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"}
-                        />
-                        {newTagType === "google-review" && (
-                          <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4 }}>
-                            Wklej link do opinii Google z Google Maps (Place ID lub bezposredni link)
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Klient
-                      </label>
-                      <select
-                        className="input-field"
-                        value={newTagClient}
-                        onChange={(e) => { setNewTagClient(e.target.value); setNewTagCampaign(""); }}
-                        style={{ padding: "8px 12px", borderColor: !newTagClient ? "#f87171" : undefined }}
-                      >
-                        <option value="">-- wybierz klienta (wymagane) --</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                      {!newTagClient && (
-                        <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>
-                          Klient jest wymagany
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Kampania
-                      </label>
-                      <select
-                        className="input-field"
-                        value={newTagCampaign}
-                        onChange={(e) => setNewTagCampaign(e.target.value)}
-                        style={{ padding: "8px 12px" }}
-                      >
-                        <option value="">-- brak kampanii --</option>
-                        {campaigns.filter(c => !newTagClient || c.clientId === newTagClient).map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        Opis (opcjonalnie)
-                      </label>
-                      <input
-                        className="input-field"
-                        value={newTagDesc}
-                        onChange={(e) => setNewTagDesc(e.target.value)}
-                        placeholder="Krotki opis..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Multilink links editor */}
-                  {newTagType === "multilink" && (
-                    <div style={{
-                      marginBottom: 16,
-                      padding: 16,
-                      background: "#0f1524",
-                      borderRadius: 10,
-                      border: "1px solid #1e2d45",
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                        <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1" }}>
-                          Linki
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setNewTagLinks([...newTagLinks, { label: "", url: "", icon: "link" }])}
-                          style={{
-                            background: "#1a253a",
-                            border: "1px solid #1e2d45",
-                            color: "#10b981",
-                            borderRadius: 6,
-                            padding: "4px 12px",
-                            fontSize: 12,
-                            cursor: "pointer",
-                            fontWeight: 600,
-                          }}
-                        >
-                          + Dodaj link
-                        </button>
-                      </div>
-                      {newTagLinks.map((link, idx) => (
-                        <div key={idx} style={{
-                          display: "flex",
-                          gap: 8,
-                          marginBottom: 8,
-                          alignItems: "center",
-                          flexWrap: "wrap",
-                        }}>
-                          <select
-                            className="input-field"
-                            value={link.icon}
-                            onChange={(e) => {
-                              const updated = [...newTagLinks];
-                              updated[idx] = { ...updated[idx], icon: e.target.value };
-                              setNewTagLinks(updated);
-                            }}
-                            style={{ padding: "6px 8px", width: 130, fontSize: 12 }}
-                          >
-                            {iconOptions.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
-                          <input
-                            className="input-field"
-                            placeholder="Etykieta"
-                            value={link.label}
-                            onChange={(e) => {
-                              const updated = [...newTagLinks];
-                              updated[idx] = { ...updated[idx], label: e.target.value };
-                              setNewTagLinks(updated);
-                            }}
-                            style={{ flex: "1 1 120px", minWidth: 100, fontSize: 12, padding: "6px 10px" }}
-                          />
-                          <input
-                            className="input-field"
-                            placeholder="https://..."
-                            value={link.url}
-                            onChange={(e) => {
-                              const updated = [...newTagLinks];
-                              updated[idx] = { ...updated[idx], url: e.target.value };
-                              setNewTagLinks(updated);
-                            }}
-                            style={{ flex: "2 1 180px", minWidth: 140, fontSize: 12, padding: "6px 10px" }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = newTagLinks.filter((_, i) => i !== idx);
-                              setNewTagLinks(updated.length ? updated : [{ label: "", url: "", icon: "link" }]);
-                            }}
-                            style={{
-                              background: "transparent",
-                              border: "1px solid #1e2d45",
-                              color: "#5a6478",
-                              borderRadius: 6,
-                              width: 28,
-                              height: 28,
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              flexShrink: 0,
-                              transition: "border-color 0.2s, color 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#ef4444";
-                              e.currentTarget.style.color = "#f87171";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = "#1e2d45";
-                              e.currentTarget.style.color = "#6060a0";
-                            }}
-                          >
-                            X
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* vCard editor */}
-                  {newTagType === "vcard" && (
-                    <div style={{
-                      marginBottom: 16,
-                      padding: 16,
-                      background: "#0f1524",
-                      borderRadius: 10,
-                      border: "1px solid #1e2d45",
-                    }}>
-                      <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1", marginBottom: 12 }}>
-                        Dane wizytowki
-                      </h4>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Imie *</label>
-                          <input className="input-field" value={newVCard.firstName} onChange={(e) => setNewVCard({ ...newVCard, firstName: e.target.value })} placeholder="Jan" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Nazwisko *</label>
-                          <input className="input-field" value={newVCard.lastName} onChange={(e) => setNewVCard({ ...newVCard, lastName: e.target.value })} placeholder="Kowalski" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Firma</label>
-                          <input className="input-field" value={newVCard.company || ""} onChange={(e) => setNewVCard({ ...newVCard, company: e.target.value })} placeholder="Nazwa firmy" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Stanowisko</label>
-                          <input className="input-field" value={newVCard.jobTitle || ""} onChange={(e) => setNewVCard({ ...newVCard, jobTitle: e.target.value })} placeholder="CEO / Manager" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Telefon</label>
-                          <input className="input-field" value={newVCard.phone || ""} onChange={(e) => setNewVCard({ ...newVCard, phone: e.target.value })} placeholder="+48 123 456 789" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Email</label>
-                          <input className="input-field" value={newVCard.email || ""} onChange={(e) => setNewVCard({ ...newVCard, email: e.target.value })} placeholder="jan@firma.pl" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Strona WWW</label>
-                          <input className="input-field" value={newVCard.website || ""} onChange={(e) => setNewVCard({ ...newVCard, website: e.target.value })} placeholder="https://firma.pl" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Adres</label>
-                          <input className="input-field" value={newVCard.address || ""} onChange={(e) => setNewVCard({ ...newVCard, address: e.target.value })} placeholder="ul. Przykladowa 1, Warszawa" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                      </div>
-                      <p style={{ fontSize: 11, color: "#5a6478", marginTop: 10, marginBottom: 6, fontWeight: 500 }}>Media spolecznosciowe (opcjonalnie):</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Instagram</label>
-                          <input className="input-field" value={newVCard.instagram || ""} onChange={(e) => setNewVCard({ ...newVCard, instagram: e.target.value })} placeholder="@profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Facebook</label>
-                          <input className="input-field" value={newVCard.facebook || ""} onChange={(e) => setNewVCard({ ...newVCard, facebook: e.target.value })} placeholder="Profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>LinkedIn</label>
-                          <input className="input-field" value={newVCard.linkedin || ""} onChange={(e) => setNewVCard({ ...newVCard, linkedin: e.target.value })} placeholder="Profil lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>WhatsApp</label>
-                          <input className="input-field" value={newVCard.whatsapp || ""} onChange={(e) => setNewVCard({ ...newVCard, whatsapp: e.target.value })} placeholder="+48123456789" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>TikTok</label>
-                          <input className="input-field" value={newVCard.tiktok || ""} onChange={(e) => setNewVCard({ ...newVCard, tiktok: e.target.value })} placeholder="@profil" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>YouTube</label>
-                          <input className="input-field" value={newVCard.youtube || ""} onChange={(e) => setNewVCard({ ...newVCard, youtube: e.target.value })} placeholder="@kanal lub URL" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Telegram</label>
-                          <input className="input-field" value={newVCard.telegram || ""} onChange={(e) => setNewVCard({ ...newVCard, telegram: e.target.value })} placeholder="@profil" style={{ fontSize: 12, padding: "6px 10px" }} />
-                        </div>
-                      </div>
-                      <div style={{ marginTop: 10 }}>
-                        <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>Notatka</label>
-                        <input className="input-field" value={newVCard.note || ""} onChange={(e) => setNewVCard({ ...newVCard, note: e.target.value })} placeholder="Dodatkowa informacja..." style={{ fontSize: 12, padding: "6px 10px" }} />
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <button
-                      type="submit"
-                      className="btn-primary"
-                      disabled={tagCreating || !newTagClient}
-                      style={{ padding: "10px 24px", fontSize: 13 }}
-                    >
-                      {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
-                    </button>
-                    {tagCreateError && (
-                      <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>
-                    )}
-                    {tagCreateSuccess && (
-                      <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>
-                    )}
-                    {tagCreateSuccess && lastCreatedId && lastCreatedChannel === "qr" && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}`);
-                          if (!res.ok) return;
-                          const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `qr-${lastCreatedId}.png`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
-                        style={{
-                          background: "#10b981",
-                          border: "none",
-                          color: "#06080d",
-                          borderRadius: 8,
-                          padding: "10px 20px",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                        Pobierz QR ({lastCreatedId})
-                      </button>
-                    )}
-                  </div>
-                </form>
+                </button>
               </div>
+              {/* ---- Nowa akcja DRAWER: the actual form JSX is rendered in the fixed overlay below the main layout ---- */}
 
               {/* ---- Tags List ---- */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {displayTags.length === 0 && (
                   <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
                     <p style={{ color: "#5a6478", fontSize: 14 }}>
-                      {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Utworz pierwsza akcje powyzej."}
+                      {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Kliknij \"+ Nowa akcja\" aby dodac pierwsza akcje."}
                     </p>
                   </div>
                 )}
@@ -4402,7 +3901,214 @@ function DashboardPage() {
           )}
         </section>
 
+          </div>{/* end right content column */}
+        </div>{/* end sidebar+content flex */}
       </main>
+
+      {/* ============================================================ */}
+      {/*  NOWA AKCJA DRAWER (right-side slide panel)                  */}
+      {/* ============================================================ */}
+
+      {showNewTagDrawer && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowNewTagDrawer(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
+          />
+          {/* Panel */}
+          <div style={{
+            position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 91,
+            width: "min(520px, 100vw)",
+            background: "#0c1220",
+            borderLeft: "1px solid #1e2d45",
+            display: "flex", flexDirection: "column",
+            boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
+            animation: "slideInRight 0.22s ease",
+          }}>
+            <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid #1e2d45", flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8ecf1", margin: 0 }}>
+                  <span className="gradient-text">Nowa akcja</span>
+                </h2>
+                <p style={{ fontSize: 12, color: "#5a6478", margin: "2px 0 0" }}>Uzupelnij dane i kliknij &quot;Utworz akcje&quot;</p>
+              </div>
+              <button
+                onClick={() => setShowNewTagDrawer(false)}
+                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
+              >✕</button>
+            </div>
+
+            {/* Scrollable form body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px" }}>
+              <form onSubmit={handleCreateTag}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>ID akcji</label>
+                    <input className="input-field" value={newTagId} onChange={(e) => setNewTagId(e.target.value)} placeholder="np. moja-wizytowka" />
+                    {newTagId && (
+                      <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4, fontFamily: "monospace" }}>
+                        URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-")}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Nazwa</label>
+                    <input className="input-field" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Moja Wizytowka" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Typ akcji</label>
+                    <select className="input-field" value={newTagType} onChange={(e) => setNewTagType(e.target.value)} style={{ padding: "8px 12px" }}>
+                      <option value="url">Przekierowanie URL</option>
+                      <option value="video">Video player</option>
+                      <option value="multilink">Multi-link</option>
+                      <option value="vcard">Wizytowka (vCard)</option>
+                      <option value="google-review">Recenzja Google</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Kanał</label>
+                    <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
+                      <button type="button" onClick={() => setNewTagChannel("nfc")}
+                        style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: newTagChannel === "nfc" ? "#f5b731" : "#1a253a", color: newTagChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                      >NFC</button>
+                      <button type="button" onClick={() => setNewTagChannel("qr")}
+                        style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: newTagChannel === "qr" ? "#10b981" : "#1a253a", color: newTagChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                      >QR</button>
+                    </div>
+                  </div>
+                  {(newTagType === "url" || newTagType === "google-review") && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
+                        {newTagType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
+                      </label>
+                      <input className="input-field" value={newTagUrl} onChange={(e) => setNewTagUrl(e.target.value)}
+                        placeholder={newTagType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"} />
+                      {newTagType === "google-review" && (
+                        <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4 }}>Wklej link do opinii Google z Google Maps</p>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Klient</label>
+                    <select className="input-field" value={newTagClient} onChange={(e) => { setNewTagClient(e.target.value); setNewTagCampaign(""); }}
+                      style={{ padding: "8px 12px", borderColor: !newTagClient ? "#f87171" : undefined }}>
+                      <option value="">-- wybierz klienta (wymagane) --</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    {!newTagClient && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Klient jest wymagany</p>}
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Kampania</label>
+                    <select className="input-field" value={newTagCampaign} onChange={(e) => setNewTagCampaign(e.target.value)} style={{ padding: "8px 12px" }}>
+                      <option value="">-- brak kampanii --</option>
+                      {campaigns.filter(c => !newTagClient || c.clientId === newTagClient).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Opis (opcjonalnie)</label>
+                    <input className="input-field" value={newTagDesc} onChange={(e) => setNewTagDesc(e.target.value)} placeholder="Krotki opis..." />
+                  </div>
+                </div>
+
+                {/* Multilink links editor */}
+                {newTagType === "multilink" && (
+                  <div style={{ marginBottom: 16, padding: 16, background: "#0f1524", borderRadius: 10, border: "1px solid #1e2d45" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1" }}>Linki</h4>
+                      <button type="button" onClick={() => setNewTagLinks([...newTagLinks, { label: "", url: "", icon: "link" }])}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                        + Dodaj link
+                      </button>
+                    </div>
+                    {newTagLinks.map((link, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <select className="input-field" value={link.icon} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],icon:e.target.value}; setNewTagLinks(u); }} style={{ padding: "6px 8px", width: 110, fontSize: 12 }}>
+                          {iconOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                        <input className="input-field" placeholder="Etykieta" value={link.label} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],label:e.target.value}; setNewTagLinks(u); }} style={{ flex:"1 1 100px", minWidth:90, fontSize:12, padding:"6px 10px" }} />
+                        <input className="input-field" placeholder="https://..." value={link.url} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],url:e.target.value}; setNewTagLinks(u); }} style={{ flex:"2 1 150px", minWidth:120, fontSize:12, padding:"6px 10px" }} />
+                        <button type="button" onClick={() => { const u=newTagLinks.filter((_,i)=>i!==idx); setNewTagLinks(u.length?u:[{label:"",url:"",icon:"link"}]); }}
+                          style={{ background:"transparent", border:"1px solid #1e2d45", color:"#5a6478", borderRadius:6, width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, flexShrink:0 }}
+                          onMouseEnter={(e)=>{e.currentTarget.style.borderColor="#ef4444";e.currentTarget.style.color="#f87171";}}
+                          onMouseLeave={(e)=>{e.currentTarget.style.borderColor="#1e2d45";e.currentTarget.style.color="#6060a0";}}>X</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* vCard editor */}
+                {newTagType === "vcard" && (
+                  <div style={{ marginBottom: 16, padding: 14, background: "#0f1524", borderRadius: 10, border: "1px solid #1e2d45" }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1", marginBottom: 10 }}>Dane wizytowki</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Imie *</label><input className="input-field" value={newVCard.firstName} onChange={(e)=>setNewVCard({...newVCard,firstName:e.target.value})} placeholder="Jan" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Nazwisko *</label><input className="input-field" value={newVCard.lastName} onChange={(e)=>setNewVCard({...newVCard,lastName:e.target.value})} placeholder="Kowalski" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Firma</label><input className="input-field" value={newVCard.company||""} onChange={(e)=>setNewVCard({...newVCard,company:e.target.value})} placeholder="Nazwa firmy" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Stanowisko</label><input className="input-field" value={newVCard.jobTitle||""} onChange={(e)=>setNewVCard({...newVCard,jobTitle:e.target.value})} placeholder="CEO / Manager" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Telefon</label><input className="input-field" value={newVCard.phone||""} onChange={(e)=>setNewVCard({...newVCard,phone:e.target.value})} placeholder="+48 123 456 789" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Email</label><input className="input-field" value={newVCard.email||""} onChange={(e)=>setNewVCard({...newVCard,email:e.target.value})} placeholder="jan@firma.pl" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Strona WWW</label><input className="input-field" value={newVCard.website||""} onChange={(e)=>setNewVCard({...newVCard,website:e.target.value})} placeholder="https://firma.pl" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Adres</label><input className="input-field" value={newVCard.address||""} onChange={(e)=>setNewVCard({...newVCard,address:e.target.value})} placeholder="ul. Przykladowa 1" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                    </div>
+                    <p style={{ fontSize:11, color:"#5a6478", margin:"10px 0 6px", fontWeight:500 }}>Media spolecznosciowe (opcjonalnie):</p>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Instagram</label><input className="input-field" value={newVCard.instagram||""} onChange={(e)=>setNewVCard({...newVCard,instagram:e.target.value})} placeholder="@profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Facebook</label><input className="input-field" value={newVCard.facebook||""} onChange={(e)=>setNewVCard({...newVCard,facebook:e.target.value})} placeholder="Profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>LinkedIn</label><input className="input-field" value={newVCard.linkedin||""} onChange={(e)=>setNewVCard({...newVCard,linkedin:e.target.value})} placeholder="Profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>WhatsApp</label><input className="input-field" value={newVCard.whatsapp||""} onChange={(e)=>setNewVCard({...newVCard,whatsapp:e.target.value})} placeholder="+48123456789" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>TikTok</label><input className="input-field" value={newVCard.tiktok||""} onChange={(e)=>setNewVCard({...newVCard,tiktok:e.target.value})} placeholder="@profil" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>YouTube</label><input className="input-field" value={newVCard.youtube||""} onChange={(e)=>setNewVCard({...newVCard,youtube:e.target.value})} placeholder="@kanal lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Telegram</label><input className="input-field" value={newVCard.telegram||""} onChange={(e)=>setNewVCard({...newVCard,telegram:e.target.value})} placeholder="@profil" style={{fontSize:12,padding:"6px 10px"}} /></div>
+                    </div>
+                    <div style={{ marginTop:8 }}>
+                      <label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Notatka</label>
+                      <input className="input-field" value={newVCard.note||""} onChange={(e)=>setNewVCard({...newVCard,note:e.target.value})} placeholder="Dodatkowa informacja..." style={{fontSize:12,padding:"6px 10px"}} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", paddingTop: 4 }}>
+                  <button type="submit" className="btn-primary" disabled={tagCreating || !newTagClient} style={{ padding: "10px 24px", fontSize: 13 }}>
+                    {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
+                  </button>
+                  <button type="button" onClick={() => setShowNewTagDrawer(false)}
+                    style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "10px 18px", fontSize: 13, cursor: "pointer" }}>
+                    Anuluj
+                  </button>
+                  {tagCreateError && <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>}
+                  {tagCreateSuccess && <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>}
+                  {tagCreateSuccess && lastCreatedId && lastCreatedChannel === "qr" && (
+                    <button type="button"
+                      onClick={async () => {
+                        const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}`);
+                        if (!res.ok) return;
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url; a.download = `qr-${lastCreatedId}.png`; a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      style={{ background: "#10b981", border: "none", color: "#06080d", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Pobierz QR ({lastCreatedId})
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ============================================================ */}
       {/*  CHANGE PASSWORD MODAL                                       */}
