@@ -538,22 +538,27 @@ function DashboardPage() {
     setLoading(false);
   }, [fetchStats, fetchTags, fetchClients, fetchCampaigns]);
 
-  /* ---- auto-load video retention when video campaign selected ---- */
+  /* ---- auto-load video retention when a single video tag is active ---- */
   useEffect(() => {
+    // Determine the single active video tag:
+    // priority 1 — tagFilter (dropdown), priority 2 — exactly 1 selectedTagId that is video
+    let videoTagId: string | null = null;
     if (tagFilter) {
-      const selectedTag = tags.find(t => t.id === tagFilter);
-      if (selectedTag?.tagType === "video") {
-        fetch(`/api/video-event?tagId=${encodeURIComponent(tagFilter)}`)
-          .then(res => res.ok ? res.json() : null)
-          .then(data => { if (data) setSelectedVideoRetention(data); })
-          .catch(() => {});
-      } else {
-        setSelectedVideoRetention(null);
-      }
+      const t = tags.find(x => x.id === tagFilter);
+      if (t?.tagType === "video") videoTagId = tagFilter;
+    } else if (selectedTagIds.length === 1) {
+      const t = tags.find(x => x.id === selectedTagIds[0]);
+      if (t?.tagType === "video") videoTagId = selectedTagIds[0];
+    }
+    if (videoTagId) {
+      fetch(`/api/video-event?tagId=${encodeURIComponent(videoTagId)}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data) setSelectedVideoRetention(data); })
+        .catch(() => {});
     } else {
       setSelectedVideoRetention(null);
     }
-  }, [tagFilter, tags]);
+  }, [tagFilter, selectedTagIds, tags]);
 
   /* ---- restore filters from localStorage on mount ---- */
   useEffect(() => {
@@ -1588,6 +1593,10 @@ function DashboardPage() {
                   </div>
                 </div>
               )}
+              {/* Legend */}
+              <p style={{ fontSize: 9, color: "#2a3550", marginTop: 6, textAlign: "right" }}>
+                <span title="liczba skanów">sk = skany</span>
+              </p>
             </div>
 
             {/* -- Kampanie block (visible only when client selected) -- */}
@@ -2759,6 +2768,49 @@ function DashboardPage() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              </section>
+            )}
+
+            {/* ========================================================== */}
+            {/*  4b2. QR SCANS SUMMARY (visible when source=qr or all)    */}
+            {/* ========================================================== */}
+            {(scanSourceFilter === "qr" || scanSourceFilter === "all") && topTags.length > 0 && (
+              <section className="card" style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e8ecf1", marginBottom: 2 }}>
+                      <span style={{ marginRight: 8 }}>📱</span>Skanowania QR
+                    </h3>
+                    <p style={{ fontSize: 12, color: "#5a6478" }}>
+                      {scanSourceFilter === "qr"
+                        ? `Skany wyłącznie ze źródła QR — ${stats.kpi.totalScans} łącznie`
+                        : "Statystyki akcji (wszystkie źródła). Filtruj QR aby zobaczyć tylko skany z kodów QR."}
+                    </p>
+                  </div>
+                  {scanSourceFilter !== "qr" && (
+                    <button
+                      onClick={() => { setScanSourceFilter("qr"); fetchStats({ source: "qr" }); fetchScans({ source: "qr", page: 1 }); }}
+                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", borderRadius: 8, padding: "5px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                    >Filtruj QR</button>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {topTags.slice(0, 5).map((t, idx) => (
+                    <div key={t.tagId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 10, color: "#3a4460", minWidth: 16, textAlign: "right" }}>{idx + 1}</span>
+                      <button
+                        onClick={() => setTagFilter(t.tagId)}
+                        style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0, textAlign: "left", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        title={t.tagId}
+                      >{t.tagName}</button>
+                      <span style={{ fontSize: 11, color: "#e8ecf1", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{t.count}</span>
+                      <div style={{ width: 60, height: 4, background: "#1a253a", borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
+                        <div style={{ width: `${t.percent}%`, height: "100%", background: "linear-gradient(90deg, #10b981, #34d399)", borderRadius: 2 }} />
+                      </div>
+                      <span style={{ fontSize: 10, color: "#5a6478", minWidth: 28 }}>{t.percent}%</span>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
@@ -4110,12 +4162,13 @@ function DashboardPage() {
           {/* Panel */}
           <div style={{
             position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 91,
-            width: "min(520px, 100vw)",
+            width: "min(520px, 92vw)",
             background: "#0c1220",
             borderLeft: "1px solid #1e2d45",
             display: "flex", flexDirection: "column",
             boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
             animation: "slideInRight 0.22s ease",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}>
             <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
 
@@ -4163,15 +4216,25 @@ function DashboardPage() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Kanał</label>
+                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
+                      Kanał
+                      <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(do atrybucji skanów)</span>
+                    </label>
                     <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
                       <button type="button" onClick={() => setNewTagChannel("nfc")}
                         style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: newTagChannel === "nfc" ? "#f5b731" : "#1a253a", color: newTagChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                        title="Breloczek / naklejka NFC — skany przez NFC chip"
                       >NFC</button>
                       <button type="button" onClick={() => setNewTagChannel("qr")}
                         style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: newTagChannel === "qr" ? "#10b981" : "#1a253a", color: newTagChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+                        title="Kod QR — skany przez aparat"
                       >QR</button>
                     </div>
+                    <p style={{ fontSize: 10, color: "#3a4460", marginTop: 3 }}>
+                      {newTagChannel === "nfc"
+                        ? "Kanał główny: NFC · QR dostępne do druku/testów"
+                        : "Kanał główny: QR · skany śledzone jako źródło QR"}
+                    </p>
                   </div>
                   {(newTagType === "url" || newTagType === "google-review") && (
                     <div style={{ gridColumn: "1 / -1" }}>
