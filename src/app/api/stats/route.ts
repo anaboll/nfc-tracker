@@ -15,9 +15,13 @@ export async function GET(request: NextRequest) {
   const campaignFilter = url.searchParams.get("campaignId");
   const weekOffset = parseInt(url.searchParams.get("weekOffset") || "0");
 
-  const fromDate = fromParam ? new Date(fromParam) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Default: all-time when no date range is provided (consistent with clients/campaigns
+  // badge counts which never apply a date filter). The UI date-filter is opt-in;
+  // absence of from/to params means "show everything". Previously defaulted to last 30
+  // days, causing the KPI card to diverge from the client-dropdown scan badges (Bug B3).
+  const fromDate = fromParam ? new Date(fromParam) : new Date(0);
   const toDate = toParam ? new Date(toParam) : new Date();
-  // Only set to end-of-day if no time was specified (date-only format: "2025-01-15")
+  // Only normalise to end-of-day when caller sent a date-only string (no "T" separator)
   if (!toParam || !toParam.includes("T")) {
     toDate.setHours(23, 59, 59, 999);
   }
@@ -38,12 +42,14 @@ export async function GET(request: NextRequest) {
     filteredTagIds = clientTags.map(t => t.id);
   }
 
-  const whereBase: Record<string, unknown> = {
-    timestamp: { gte: fromDate, lte: toDate },
-  };
+  // Base where clause — only include timestamp constraint when caller explicitly provided dates
+  const whereBase: Record<string, unknown> = {};
+  if (fromParam || toParam) {
+    whereBase.timestamp = { gte: fromDate, lte: toDate };
+  }
   if (tagFilter) {
     whereBase.tagId = tagFilter;
-  } else if (filteredTagIds) {
+  } else if (filteredTagIds !== null) {
     whereBase.tagId = { in: filteredTagIds };
   }
 
@@ -178,7 +184,7 @@ export async function GET(request: NextRequest) {
     percent: totalLangs > 0 ? Math.round((l._count.browserLang / totalLangs) * 100) : 0,
   }));
 
-  // Weekly trend
+  // Weekly trend (always scoped to the specific calendar week, independent of main filter)
   const now = new Date();
   const dow = now.getDay();
   const diff = now.getDate() - dow + (dow === 0 ? -6 : 1);
@@ -189,12 +195,13 @@ export async function GET(request: NextRequest) {
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
 
+  // Weekly where always uses its own explicit date range
   const weeklyWhere: Record<string, unknown> = {
     timestamp: { gte: weekStart, lte: weekEnd },
   };
   if (tagFilter) {
     weeklyWhere.tagId = tagFilter;
-  } else if (filteredTagIds) {
+  } else if (filteredTagIds !== null) {
     weeklyWhere.tagId = { in: filteredTagIds };
   }
 

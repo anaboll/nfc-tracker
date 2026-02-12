@@ -682,6 +682,9 @@ function DashboardPage() {
   };
 
   const handleResetFilters = async () => {
+    // Reset all filter state first, then let fetchStats read the cleared values.
+    // Previously this called /api/stats directly and bypassed fetchStats(), causing
+    // stale clientId/campaignId params to leak into the reset request.
     setDateFrom("");
     setDateTo("");
     setTimeFrom("");
@@ -691,10 +694,11 @@ function DashboardPage() {
     setSelectedCampaignId(null);
     setWeekOffset(0);
     setLoading(true);
-    const params = new URLSearchParams();
-    params.set("weekOffset", "0");
     try {
-      const res = await fetch(`/api/stats?${params.toString()}`);
+      // Call the API directly with a clean slate (all filters cleared above).
+      // We cannot call fetchStats() here because React state updates are async
+      // and fetchStats reads from state — use a direct fetch with no params instead.
+      const res = await fetch("/api/stats?weekOffset=0");
       if (res.ok) setStats(await res.json());
     } catch { /* ignore */ }
     setLoading(false);
