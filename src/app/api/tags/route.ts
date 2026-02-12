@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { safeDeleteVideoFile } from "@/lib/video-utils";
 
 // GET all tags
 export async function GET() {
@@ -119,6 +120,14 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  // Video lifecycle: if caller is explicitly clearing videoFile (null), capture the old
+  // path before the update so we can delete it from disk afterward.
+  let oldVideoFile: string | null = null;
+  if (videoFile === null) {
+    const current = await prisma.tag.findUnique({ where: { id }, select: { videoFile: true } });
+    oldVideoFile = current?.videoFile ?? null;
+  }
+
   const tag = await prisma.tag.update({
     where: { id },
     data: {
@@ -126,13 +135,19 @@ export async function PUT(request: NextRequest) {
       ...(targetUrl !== undefined && { targetUrl }),
       ...(description !== undefined && { description }),
       ...(isActive !== undefined && { isActive }),
-      ...(videoFile !== undefined && { videoFile }),
+      ...(videoFile !== undefined && { videoFile: videoFile ?? null }),
       ...(tagType !== undefined && { tagType }),
       ...(links !== undefined && { links }),
       ...(clientId !== undefined && { clientId: clientId || null }),
       ...(campaignId !== undefined && { campaignId: campaignId || null }),
     },
   });
+
+  // Delete old file from disk only after DB is updated (DB is source of truth).
+  // safeDeleteVideoFile re-checks refCount so it only deletes if no tag references it.
+  if (videoFile === null && oldVideoFile) {
+    await safeDeleteVideoFile(oldVideoFile);
+  }
 
   return NextResponse.json(tag);
 }
@@ -146,6 +161,10 @@ export async function DELETE(request: NextRequest) {
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
+  // Capture videoFile before deleting the row — needed for disk cleanup below.
+  const tag = await prisma.tag.findUnique({ where: { id }, select: { videoFile: true } });
+  const videoFileToDelete = tag?.videoFile ?? null;
+
   // Delete related records first
   await Promise.all([
     prisma.scan.deleteMany({ where: { tagId: id } }),
@@ -153,6 +172,12 @@ export async function DELETE(request: NextRequest) {
     prisma.videoEvent.deleteMany({ where: { tagId: id } }),
   ]);
   await prisma.tag.delete({ where: { id } });
+
+  // Now the DB row is gone, safeDeleteVideoFile's refCount check will return 0
+  // (unless another tag shares the same file), so the file is safe to remove.
+  if (videoFileToDelete) {
+    await safeDeleteVideoFile(videoFileToDelete);
+  }
 
   return NextResponse.json({ ok: true });
 }
