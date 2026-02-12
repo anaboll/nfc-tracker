@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
   const clientFilter = url.searchParams.get("clientId") || null;
   const campaignFilter = url.searchParams.get("campaignId") || null;
   const nfcFilter = url.searchParams.get("nfcId") || null;
+  const sourceFilter = url.searchParams.get("source") || null;
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
 
@@ -55,6 +56,13 @@ export async function GET(request: NextRequest) {
 
   if (nfcFilter) {
     where.nfcId = nfcFilter;
+  }
+
+  // source filter: QR = eventSource="qr", NFC = eventSource != "qr" (includes null)
+  if (sourceFilter === "qr") {
+    where.eventSource = "qr";
+  } else if (sourceFilter === "nfc") {
+    where.eventSource = { not: "qr" };
   }
 
   // Build orderBy

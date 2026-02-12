@@ -270,6 +270,7 @@ function DashboardPage() {
 
   // new-tag drawer
   const [showNewTagDrawer, setShowNewTagDrawer] = useState(false);
+  const [drawerIsClosing, setDrawerIsClosing] = useState(false);
 
   // change‑password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -304,6 +305,7 @@ function DashboardPage() {
   const [scanSortBy, setScanSortBy] = useState("timestamp");
   const [scanSortDir, setScanSortDir] = useState<"asc" | "desc">("desc");
   const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
+  const [scanSourceFilter, setScanSourceFilter] = useState<"all" | "nfc" | "qr">("all");
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
 
@@ -380,6 +382,7 @@ function DashboardPage() {
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       params.set("weekOffset", String(opts?.wo ?? weekOffset));
+      if (scanSourceFilter !== "all") params.set("source", scanSourceFilter);
       const res = await fetch(`/api/stats?${params.toString()}`);
       if (res.ok) {
         const data: StatsData = await res.json();
@@ -393,15 +396,16 @@ function DashboardPage() {
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId]);
+  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter]);
 
-  const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null }) => {
+  const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null; source?: "all" | "nfc" | "qr" }) => {
     setScanLoading(true);
     try {
       const p = opts?.page ?? scanPage;
       const sb = opts?.sortBy ?? scanSortBy;
       const sd = opts?.sortDir ?? scanSortDir;
       const nfc = opts?.nfcId !== undefined ? opts.nfcId : scanNfcFilter;
+      const src = opts?.source !== undefined ? opts.source : scanSourceFilter;
       const params = new URLSearchParams();
       params.set("page", String(p));
       params.set("limit", "50");
@@ -411,6 +415,7 @@ function DashboardPage() {
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (nfc) params.set("nfcId", nfc);
+      if (src !== "all") params.set("source", src);
       if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
       if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
       const res = await fetch(`/api/scans?${params.toString()}`);
@@ -419,7 +424,7 @@ function DashboardPage() {
       }
     } catch (e) { console.error("Scans fetch failed:", e); }
     finally { setScanLoading(false); }
-  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo, timeFrom, timeTo]);
+  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, scanSourceFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo, timeFrom, timeTo]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -699,6 +704,7 @@ function DashboardPage() {
     setSelectedClientId(null);
     setSelectedCampaignId(null);
     setWeekOffset(0);
+    setScanSourceFilter("all");
     setLoading(true);
     try {
       // Call the API directly with a clean slate (all filters cleared above).
@@ -778,6 +784,10 @@ function DashboardPage() {
       setTagCreateError("Wybor klienta jest wymagany przed utworzeniem akcji");
       return;
     }
+    if (!newTagCampaign) {
+      setTagCreateError("Wybor kampanii jest wymagany przed utworzeniem akcji");
+      return;
+    }
     if ((newTagType === "url" || newTagType === "google-review") && !newTagUrl) {
       setTagCreateError("Docelowy URL jest wymagany");
       return;
@@ -825,20 +835,29 @@ function DashboardPage() {
         setTagCreateSuccess("Akcja utworzona pomyslnie!");
         setLastCreatedId(createdId);
         setLastCreatedChannel(createdChannel);
-        // keep drawer open briefly so user can grab QR if needed; auto-close after 2.5 s
-        setTimeout(() => setShowNewTagDrawer(false), 2500);
-        setNewTagId("");
-        setNewTagName("");
-        setNewTagUrl("");
-        setNewTagDesc("");
-        setNewTagType("url");
-        setNewTagChannel("nfc");
-        setNewTagClient("");
-        setNewTagCampaign("");
-        setNewTagLinks([{ label: "", url: "", icon: "link" }]);
-        setNewVCard({ firstName: "", lastName: "" });
         await fetchTags();
         await fetchStats();
+        // Close drawer first, reset form state after the drawer is gone to avoid
+        // validation messages flashing before unmount.
+        setDrawerIsClosing(true);
+        setTimeout(() => {
+          setShowNewTagDrawer(false);
+          setDrawerIsClosing(false);
+          setTimeout(() => {
+            setNewTagId("");
+            setNewTagName("");
+            setNewTagUrl("");
+            setNewTagDesc("");
+            setNewTagType("url");
+            setNewTagChannel("nfc");
+            setNewTagClient("");
+            setNewTagCampaign("");
+            setNewTagLinks([{ label: "", url: "", icon: "link" }]);
+            setNewVCard({ firstName: "", lastName: "" });
+            setTagCreateSuccess("");
+            setTagCreateError("");
+          }, 300);
+        }, 2500);
       }
     } catch {
       setTagCreateError("Blad polaczenia");
@@ -2609,7 +2628,7 @@ function DashboardPage() {
 
             <section ref={scanTableRef} className="card" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e8ecf1" }}>
                     Lista skanow
                   </h3>
@@ -2624,6 +2643,31 @@ function DashboardPage() {
                   >
                     {showScanTable ? "Ukryj" : "Pokaz"} {scanData ? `(${scanData.total})` : ""}
                   </button>
+                  {/* Source filter */}
+                  <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                    {(["all", "nfc", "qr"] as const).map(src => (
+                      <button key={src} type="button"
+                        onClick={() => {
+                          setScanSourceFilter(src);
+                          fetchScans({ source: src, page: 1 });
+                          fetchStats();
+                        }}
+                        style={{
+                          padding: "3px 10px", fontSize: 11, fontWeight: 600, border: "none",
+                          borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
+                          cursor: "pointer",
+                          background: scanSourceFilter === src
+                            ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.2)")
+                            : "#1a253a",
+                          color: scanSourceFilter === src
+                            ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
+                            : "#5a6478",
+                        }}
+                      >
+                        {src === "all" ? "Wszystkie" : src.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {showScanTable && scanNfcFilter && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
@@ -2646,7 +2690,7 @@ function DashboardPage() {
                                 { key: "seq", label: "#", w: 40 },
                                 { key: "timestamp", label: "Data/Czas", w: 140 },
                                 { key: "tagId", label: "Akcja", w: 140 },
-                                { key: "nfcId", label: "NFC Chip", w: 120 },
+                                { key: "nfcId", label: "Źródło / ID", w: 130 },
                                 { key: "deviceType", label: "Urzadzenie", w: 80 },
                                 { key: "country", label: "Kraj", w: 60 },
                                 { key: "city", label: "Miasto", w: 100 },
@@ -2704,16 +2748,21 @@ function DashboardPage() {
                                   <span style={{ fontSize: 9, color: "#5a6478", marginLeft: 4 }}>{scan.tagId}</span>
                                 </td>
                                 <td style={{ padding: "6px 8px" }}>
-                                  {scan.nfcId ? (
-                                    <button
-                                      onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
-                                      style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "monospace", padding: 0, textDecoration: "underline" }}
-                                    >
-                                      {scan.nfcId}
-                                    </button>
-                                  ) : (
-                                    <span style={{ color: "#2a4060" }}>—</span>
-                                  )}
+                                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                                    {scan.eventSource === "qr" ? (
+                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
+                                    ) : (
+                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(245,183,49,0.12)", color: "#f5b731", border: "1px solid rgba(245,183,49,0.25)", letterSpacing: 0.5 }}>{scan.nfcId ? "NFC" : "NFC/?"}</span>
+                                    )}
+                                    {scan.nfcId && (
+                                      <button
+                                        onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
+                                        style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "monospace", padding: 0, textDecoration: "underline" }}
+                                      >
+                                        {scan.nfcId}
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                                 <td style={{ padding: "6px 8px", color: "#8b95a8" }}>
                                   <span style={{
@@ -3997,18 +4046,20 @@ function DashboardPage() {
                   <div>
                     <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Klient</label>
                     <select className="input-field" value={newTagClient} onChange={(e) => { setNewTagClient(e.target.value); setNewTagCampaign(""); }}
-                      style={{ padding: "8px 12px", borderColor: !newTagClient ? "#f87171" : undefined }}>
+                      style={{ padding: "8px 12px", borderColor: (!newTagClient && !drawerIsClosing) ? "#f87171" : undefined }}>
                       <option value="">-- wybierz klienta (wymagane) --</option>
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    {!newTagClient && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Klient jest wymagany</p>}
+                    {!newTagClient && !drawerIsClosing && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Klient jest wymagany</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Kampania</label>
-                    <select className="input-field" value={newTagCampaign} onChange={(e) => setNewTagCampaign(e.target.value)} style={{ padding: "8px 12px" }}>
-                      <option value="">-- brak kampanii --</option>
+                    <select className="input-field" value={newTagCampaign} onChange={(e) => setNewTagCampaign(e.target.value)}
+                      style={{ padding: "8px 12px", borderColor: (!newTagCampaign && !drawerIsClosing) ? "#f87171" : undefined }}>
+                      <option value="">-- wybierz kampanię (wymagane) --</option>
                       {campaigns.filter(c => !newTagClient || c.clientId === newTagClient).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+                    {!newTagCampaign && !drawerIsClosing && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Kampania jest wymagana</p>}
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Opis (opcjonalnie)</label>
@@ -4075,7 +4126,7 @@ function DashboardPage() {
 
                 {/* Submit row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", paddingTop: 4 }}>
-                  <button type="submit" className="btn-primary" disabled={tagCreating || !newTagClient} style={{ padding: "10px 24px", fontSize: 13 }}>
+                  <button type="submit" className="btn-primary" disabled={tagCreating || !newTagClient || !newTagCampaign} style={{ padding: "10px 24px", fontSize: 13 }}>
                     {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
                   </button>
                   <button type="button" onClick={() => setShowNewTagDrawer(false)}
@@ -4084,7 +4135,7 @@ function DashboardPage() {
                   </button>
                   {tagCreateError && <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>}
                   {tagCreateSuccess && <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>}
-                  {tagCreateSuccess && lastCreatedId && lastCreatedChannel === "qr" && (
+                  {tagCreateSuccess && lastCreatedId && (
                     <button type="button"
                       onClick={async () => {
                         const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}`);

@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   const clientFilter = url.searchParams.get("clientId");
   const campaignFilter = url.searchParams.get("campaignId");
   const weekOffset = parseInt(url.searchParams.get("weekOffset") || "0");
+  // source filter: "qr" | "nfc" | null (null = all)
+  const sourceFilter = url.searchParams.get("source") || null;
 
   // Default: all-time when no date range is provided (consistent with clients/campaigns
   // badge counts which never apply a date filter). The UI date-filter is opt-in;
@@ -51,6 +53,12 @@ export async function GET(request: NextRequest) {
     whereBase.tagId = tagFilter;
   } else if (filteredTagIds !== null) {
     whereBase.tagId = { in: filteredTagIds };
+  }
+  // source filter: QR scans have eventSource="qr", NFC scans have eventSource="nfc" or null
+  if (sourceFilter === "qr") {
+    whereBase.eventSource = "qr";
+  } else if (sourceFilter === "nfc") {
+    whereBase.eventSource = { not: "qr" };
   }
 
   const [totalScans, uniqueIps, lastScan] = await Promise.all([
@@ -203,6 +211,11 @@ export async function GET(request: NextRequest) {
     weeklyWhere.tagId = tagFilter;
   } else if (filteredTagIds !== null) {
     weeklyWhere.tagId = { in: filteredTagIds };
+  }
+  if (sourceFilter === "qr") {
+    weeklyWhere.eventSource = "qr";
+  } else if (sourceFilter === "nfc") {
+    weeklyWhere.eventSource = { not: "qr" };
   }
 
   // Weekly: fetch timestamp + ipHash for unique counting on client
