@@ -1739,50 +1739,47 @@ function DashboardPage() {
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        {/* ---- Filter Bar (dates + akcja only) ---- */}
+        {/* ---- Filter Bar (dates + buttons only — Akcja filter is in sidebar chips) ---- */}
         <style>{`
-          .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
-          .filter-bar-action{display:flex;flex-direction:column;gap:4px}
+          .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;box-sizing:border-box;width:100%}
           @media(max-width:700px){
-            .filter-bar{flex-direction:column;align-items:stretch;gap:8px}
-            .filter-bar-row{display:flex;gap:8px;flex-wrap:wrap}
-            .filter-bar-action{display:none!important}
-            .filter-bar-buttons{align-self:stretch}
+            .filter-bar{flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px!important}
+            .filter-bar-dates{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+            .filter-bar-dates>div{flex:1;min-width:0}
+            .filter-bar-dates input[type=date]{width:100%;min-width:0;box-sizing:border-box}
+            .filter-bar-dates input[type=time]{width:62px;min-width:0;flex-shrink:0}
+            .filter-bar-buttons{display:flex;gap:8px;width:100%}
             .filter-bar-buttons button{flex:1}
           }
+          details[open]>summary .adv-arrow{transform:rotate(90deg)}
+          .adv-arrow{transition:transform .15s;display:inline-block}
         `}</style>
         <section
           className="card filter-bar"
           style={{ marginBottom: 24, padding: "12px 16px" }}
         >
-          <div className="filter-bar-row" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {/* Row 1 (desktop inline, mobile stacked): Od / Do date+time */}
+          <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
               <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ minWidth: 120 }} />
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                  style={{ minWidth: 0, width: 130 }} />
                 <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
-                  style={{ minWidth: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
               <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ minWidth: 120 }} />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                  style={{ minWidth: 0, width: 130 }} />
                 <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
-                  style={{ minWidth: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
               </div>
             </div>
           </div>
-          {/* Akcja dropdown — hidden on mobile (<700px); use sidebar chips instead */}
-          <div className="filter-bar-action">
-            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Akcja</label>
-            <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="input-field" style={{ minWidth: 160, padding: "8px 10px" }}>
-              <option value="">Wszystkie akcje</option>
-              {allTagsFilter.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
-              ))}
-            </select>
-          </div>
+          {/* Row 2 (desktop inline, mobile full-width): Pokaż / Reset */}
           <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
             <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaż</button>
             <button onClick={handleResetFilters}
@@ -3143,12 +3140,13 @@ function DashboardPage() {
                           <div>
                             <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
                               Typ
+                              <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(zablokowany)</span>
                             </label>
                             <select
                               className="input-field"
                               value={editType}
-                              onChange={(e) => setEditType(e.target.value)}
-                              style={{ padding: "8px 12px" }}
+                              disabled
+                              style={{ padding: "8px 12px", opacity: 0.55, cursor: "not-allowed" }}
                             >
                               <option value="url">Przekierowanie URL</option>
                               <option value="video">Video player</option>
@@ -3323,7 +3321,9 @@ function DashboardPage() {
                         {/* Advanced section */}
                         <details style={{ marginTop: 4 }}>
                           <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                            <span className="adv-arrow">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                            </span>
                             Zaawansowane (reset / usuń)
                           </summary>
                           <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3549,44 +3549,7 @@ function DashboardPage() {
                                 Usun video
                               </button>
                             )}
-                            {resetTagConfirm === tag.id ? (
-                              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                                <button
-                                  onClick={() => handleResetStats(tag.id)}
-                                  disabled={resetting}
-                                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
-                                >
-                                  {resetting ? "..." : "Potwierdz"}
-                                </button>
-                                <button
-                                  onClick={() => setResetTagConfirm(null)}
-                                  style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
-                                >
-                                  Nie
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setResetTagConfirm(tag.id)}
-                                title="Resetuj statystyki akcji"
-                                style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#fbbf24"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#6060a0"; }}
-                              >
-                                Reset stats
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteTag(tag.id)}
-                              style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#6060a0"; }}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                              </svg>
-                            </button>
+                            {/* Reset stats / Delete moved to edit mode → Zaawansowane section */}
                           </div>
                         </div>
 
