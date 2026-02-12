@@ -283,11 +283,14 @@ function DashboardPage() {
   const [newTagUrl, setNewTagUrl] = useState("");
   const [newTagDesc, setNewTagDesc] = useState("");
   const [newTagType, setNewTagType] = useState("url");
+  const [newTagChannel, setNewTagChannel] = useState<"nfc" | "qr">("nfc");
   const [newTagLinks, setNewTagLinks] = useState<TagLink[]>([{ label: "", url: "", icon: "link" }]);
   const [newVCard, setNewVCard] = useState<VCardData>({ firstName: "", lastName: "" });
   const [tagCreating, setTagCreating] = useState(false);
   const [tagCreateError, setTagCreateError] = useState("");
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
+  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
+  const [lastCreatedChannel, setLastCreatedChannel] = useState<"nfc" | "qr">("nfc");
 
   // hourly chart mode
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
@@ -814,12 +817,17 @@ function DashboardPage() {
         const data = await res.json();
         setTagCreateError(data.error || "Blad tworzenia akcji");
       } else {
+        const createdId = newTagId;
+        const createdChannel = newTagChannel;
         setTagCreateSuccess("Akcja utworzona pomyslnie!");
+        setLastCreatedId(createdId);
+        setLastCreatedChannel(createdChannel);
         setNewTagId("");
         setNewTagName("");
         setNewTagUrl("");
         setNewTagDesc("");
         setNewTagType("url");
+        setNewTagChannel("nfc");
         setNewTagClient("");
         setNewTagCampaign("");
         setNewTagLinks([{ label: "", url: "", icon: "link" }]);
@@ -2989,6 +2997,46 @@ function DashboardPage() {
                         <option value="google-review">Recenzja Google</option>
                       </select>
                     </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
+                        Kanał
+                      </label>
+                      <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
+                        <button
+                          type="button"
+                          onClick={() => setNewTagChannel("nfc")}
+                          style={{
+                            padding: "8px 18px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            border: "none",
+                            cursor: "pointer",
+                            background: newTagChannel === "nfc" ? "#f5b731" : "#1a253a",
+                            color: newTagChannel === "nfc" ? "#06080d" : "#8b95a8",
+                            transition: "background 0.15s, color 0.15s",
+                          }}
+                        >
+                          NFC
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewTagChannel("qr")}
+                          style={{
+                            padding: "8px 18px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            border: "none",
+                            borderLeft: "1px solid #1e2d45",
+                            cursor: "pointer",
+                            background: newTagChannel === "qr" ? "#10b981" : "#1a253a",
+                            color: newTagChannel === "qr" ? "#06080d" : "#8b95a8",
+                            transition: "background 0.15s, color 0.15s",
+                          }}
+                        >
+                          QR
+                        </button>
+                      </div>
+                    </div>
                     {(newTagType === "url" || newTagType === "google-review") && (
                       <div>
                         <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
@@ -3267,6 +3315,42 @@ function DashboardPage() {
                     )}
                     {tagCreateSuccess && (
                       <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>
+                    )}
+                    {tagCreateSuccess && lastCreatedId && lastCreatedChannel === "qr" && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}`);
+                          if (!res.ok) return;
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `qr-${lastCreatedId}.png`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        style={{
+                          background: "#10b981",
+                          border: "none",
+                          color: "#06080d",
+                          borderRadius: 8,
+                          padding: "10px 20px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Pobierz QR ({lastCreatedId})
+                      </button>
                     )}
                   </div>
                 </form>
@@ -3605,6 +3689,29 @@ function DashboardPage() {
                               onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
                             >
                               Edytuj
+                            </button>
+                            <button
+                              title="Pobierz QR PNG"
+                              onClick={async () => {
+                                const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}`);
+                                if (!res.ok) return;
+                                const blob = await res.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = `qr-${tag.id}.png`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#10b981"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                                <path d="M14 14h3v3m0 4h4v-4m-4 0h4" />
+                              </svg>
+                              QR
                             </button>
                             {tag.tagType === "video" && (
                               <label
