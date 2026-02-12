@@ -306,6 +306,8 @@ function DashboardPage() {
   const [scanSortDir, setScanSortDir] = useState<"asc" | "desc">("desc");
   const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
   const [scanSourceFilter, setScanSourceFilter] = useState<"all" | "nfc" | "qr">("all");
+  // Multi-select tag filter (empty = all tags in current campaign/client scope)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
 
@@ -367,7 +369,7 @@ function DashboardPage() {
 
   /* ---- fetch helpers ---- */
 
-  const fetchStats = useCallback(async (opts?: { wo?: number }) => {
+  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[] }) => {
     try {
       setFetchError("");
       const params = new URLSearchParams();
@@ -378,11 +380,19 @@ function DashboardPage() {
       if (dateTo) {
         params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
       }
-      if (tagFilter) params.set("tag", tagFilter);
+      // Multi-tag filter takes precedence over single tagFilter
+      const effectiveTagIds = opts?.tagIds !== undefined ? opts.tagIds : selectedTagIds;
+      if (effectiveTagIds.length > 0) {
+        params.set("tags", effectiveTagIds.join(","));
+      } else if (tagFilter) {
+        params.set("tag", tagFilter);
+      }
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       params.set("weekOffset", String(opts?.wo ?? weekOffset));
-      if (scanSourceFilter !== "all") params.set("source", scanSourceFilter);
+      // Use opts.source if provided (avoids stale closure after setScanSourceFilter)
+      const effectiveSource = opts?.source !== undefined ? opts.source : scanSourceFilter;
+      if (effectiveSource !== "all") params.set("source", effectiveSource);
       const res = await fetch(`/api/stats?${params.toString()}`);
       if (res.ok) {
         const data: StatsData = await res.json();
@@ -396,7 +406,7 @@ function DashboardPage() {
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter]);
+  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter, selectedTagIds]);
 
   const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null; source?: "all" | "nfc" | "qr" }) => {
     setScanLoading(true);
@@ -411,7 +421,11 @@ function DashboardPage() {
       params.set("limit", "50");
       params.set("sortBy", sb);
       params.set("sortDir", sd);
-      if (tagFilter) params.set("tagId", tagFilter);
+      if (selectedTagIds.length > 0) {
+        params.set("tags", selectedTagIds.join(","));
+      } else if (tagFilter) {
+        params.set("tagId", tagFilter);
+      }
       if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
       if (selectedClientId) params.set("clientId", selectedClientId);
       if (nfc) params.set("nfcId", nfc);
@@ -424,7 +438,7 @@ function DashboardPage() {
       }
     } catch (e) { console.error("Scans fetch failed:", e); }
     finally { setScanLoading(false); }
-  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, scanSourceFilter, tagFilter, selectedClientId, selectedCampaignId, dateFrom, dateTo, timeFrom, timeTo]);
+  }, [scanPage, scanSortBy, scanSortDir, scanNfcFilter, scanSourceFilter, tagFilter, selectedTagIds, selectedClientId, selectedCampaignId, dateFrom, dateTo, timeFrom, timeTo]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -595,6 +609,7 @@ function DashboardPage() {
     if (status === "authenticated") {
       setSelectedCampaignId(null); // reset campaign when client changes
       setTagFilter(""); // reset tag filter when client changes
+      setSelectedTagIds([]); // reset multi-tag filter
       fetchCampaigns();
       fetchStats();
     }
@@ -607,6 +622,7 @@ function DashboardPage() {
     if (!campaignInitRef.current) { campaignInitRef.current = true; return; }
     if (status === "authenticated") {
       setTagFilter(""); // reset tag filter when campaign changes
+      setSelectedTagIds([]); // reset multi-tag filter
       fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -705,6 +721,7 @@ function DashboardPage() {
     setSelectedCampaignId(null);
     setWeekOffset(0);
     setScanSourceFilter("all");
+    setSelectedTagIds([]);
     setLoading(true);
     try {
       // Call the API directly with a clean slate (all filters cleared above).
@@ -1475,12 +1492,19 @@ function DashboardPage() {
         {/* ================================================================ */}
         {/*  TWO-COLUMN LAYOUT: sidebar (260px) + scrollable content        */}
         {/* ================================================================ */}
-        <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+        <style>{`
+          @media (max-width: 700px) {
+            .nfc-layout { flex-direction: column !important; }
+            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; flex-direction: row !important; flex-wrap: wrap !important; }
+            .nfc-sidebar > div { flex: 1 1 calc(50% - 6px); min-width: 140px; }
+          }
+        `}</style>
+        <div className="nfc-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
           {/* ============================================================ */}
           {/*  LEFT SIDEBAR — Klienci & Kampanie                           */}
           {/* ============================================================ */}
-          <aside style={{
+          <aside className="nfc-sidebar" style={{
             width: 260,
             flexShrink: 0,
             position: "sticky",
@@ -1516,7 +1540,7 @@ function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 600, color: !selectedClientId ? "#f5b731" : "#8b95a8" }}>Wszyscy</span>
-                <span style={{ fontSize: 11, color: "#5a6478", fontWeight: 500 }}>{clients.reduce((s, c) => s + c.scanCount, 0)}</span>
+                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500 }} title="Łączna liczba skanów">{clients.reduce((s, c) => s + c.scanCount, 0)}<span style={{ marginLeft: 2, color: "#3a4460" }}>sk</span></span>
               </button>
 
               {/* Client chips */}
@@ -1537,7 +1561,7 @@ function DashboardPage() {
                     >
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
                       <span style={{ fontSize: 13, fontWeight: 600, color: active ? (c.color || "#f5b731") : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                      <span style={{ fontSize: 11, color: "#5a6478", fontWeight: 500, flexShrink: 0 }}>{c.scanCount}</span>
+                      <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500, flexShrink: 0 }} title={`${c.scanCount} skanów / ${c.tagCount} akcji`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
                     </button>
                     {active && (
                       <button
@@ -1592,7 +1616,7 @@ function DashboardPage() {
                   }}
                 >
                   <span style={{ fontSize: 13, fontWeight: 600, color: !selectedCampaignId ? "#60a5fa" : "#8b95a8" }}>Wszystkie</span>
-                  <span style={{ fontSize: 11, color: "#5a6478" }}>{filteredCampaigns.length}</span>
+                  <span style={{ fontSize: 10, color: "#5a6478" }} title={`${filteredCampaigns.length} kampanii`}>{filteredCampaigns.length}<span style={{ color: "#3a4460" }}>kmp</span></span>
                 </button>
 
                 {/* Campaign chips */}
@@ -1615,7 +1639,7 @@ function DashboardPage() {
                           <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
                         </svg>
                         <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#60a5fa" : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                        <span style={{ fontSize: 11, color: "#5a6478", flexShrink: 0 }}>{c.scanCount}</span>
+                        <span style={{ fontSize: 10, color: "#5a6478", flexShrink: 0 }} title={`${c.scanCount} skanów`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
                       </button>
                       {active && (
                         <button
@@ -1641,6 +1665,60 @@ function DashboardPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* -- Akcje multi-select (visible when campaign selected) -- */}
+            {selectedCampaignId && filteredTags.length > 0 && (
+              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
+                  {selectedTagIds.length > 0 && (
+                    <button onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                      style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px" }}
+                      title="Odznacz wszystkie akcje">Wyczyść</button>
+                  )}
+                </div>
+                {/* "Wszystkie" chip */}
+                <button
+                  onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                    border: `1px solid ${selectedTagIds.length === 0 ? "rgba(96,165,250,0.4)" : "#1e2d45"}`,
+                    background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.12)" : "transparent",
+                    color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
+                    marginBottom: 4, marginRight: 4,
+                  }}
+                >Wszystkie</button>
+                {/* Individual tag chips */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {filteredTags.map(t => {
+                    const sel = selectedTagIds.includes(t.id);
+                    return (
+                      <button key={t.id}
+                        onClick={() => {
+                          const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
+                          setSelectedTagIds(next);
+                          fetchStats({ tagIds: next });
+                          if (showScanTable) fetchScans();
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "4px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                          border: `1px solid ${sel ? "rgba(245,183,49,0.4)" : "#1e2d45"}`,
+                          background: sel ? "rgba(245,183,49,0.12)" : "transparent",
+                          color: sel ? "#f5b731" : "#8b95a8",
+                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}
+                        title={`${t.name} — ${t._count.scans} skanów`}
+                      >
+                        {t.name}
+                        {sel && <span style={{ fontSize: 9, marginLeft: 2, color: "#f5b731" }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </aside>
@@ -1724,6 +1802,69 @@ function DashboardPage() {
 
         {!loading && stats && (
           <div className="anim-fade">
+
+            {/* ========================================================== */}
+            {/*  0. ACTIVE FILTERS BAR                                     */}
+            {/* ========================================================== */}
+            {(selectedClientId || selectedCampaignId || selectedTagIds.length > 0 || scanSourceFilter !== "all" || scanNfcFilter || tagFilter) && (
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
+                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2 }}>Filtry:</span>
+                {selectedClientId && (() => {
+                  const cl = clients.find(c => c.id === selectedClientId);
+                  return cl ? (
+                    <span key="cl" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: `${cl.color || "#e69500"}18`, border: `1px solid ${cl.color || "#e69500"}40`, fontSize: 11, color: cl.color || "#f5b731", fontWeight: 600 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block" }} />
+                      {cl.name}
+                      <button onClick={() => setSelectedClientId(null)} style={{ background: "none", border: "none", color: cl.color || "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                    </span>
+                  ) : null;
+                })()}
+                {selectedCampaignId && (() => {
+                  const cp = campaigns.find(c => c.id === selectedCampaignId);
+                  return cp ? (
+                    <span key="cp" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.3)", fontSize: 11, color: "#60a5fa", fontWeight: 600 }}>
+                      📁 {cp.name}
+                      <button onClick={() => setSelectedCampaignId(null)} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                    </span>
+                  ) : null;
+                })()}
+                {selectedTagIds.map(tid => {
+                  const t = tags.find(x => x.id === tid);
+                  return t ? (
+                    <span key={`t-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                      {t.name}
+                      <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                    </span>
+                  ) : null;
+                })}
+                {tagFilter && (() => {
+                  const t = tags.find(x => x.id === tagFilter);
+                  return (
+                    <span key="tf" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                      Akcja: {t?.name ?? tagFilter}
+                      <button onClick={() => setTagFilter("")} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                    </span>
+                  );
+                })()}
+                {scanSourceFilter !== "all" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)", border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)"}`, fontSize: 11, color: scanSourceFilter === "qr" ? "#10b981" : "#f5b731", fontWeight: 600 }}>
+                    Źródło: {scanSourceFilter.toUpperCase()}
+                    <button onClick={() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                  </span>
+                )}
+                {scanNfcFilter && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)", fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>
+                    NFC: {scanNfcFilter}
+                    <button onClick={() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }} style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                  </span>
+                )}
+                <button onClick={handleResetFilters} style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
+                  onMouseEnter={e => e.currentTarget.style.color = "#f87171"} onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}>
+                  Wyczyść wszystkie ×
+                </button>
+              </div>
+            )}
+
             {/* ========================================================== */}
             {/*  1. KPI CARDS                                              */}
             {/* ========================================================== */}
@@ -2650,7 +2791,7 @@ function DashboardPage() {
                         onClick={() => {
                           setScanSourceFilter(src);
                           fetchScans({ source: src, page: 1 });
-                          fetchStats();
+                          fetchStats({ source: src });
                         }}
                         style={{
                           padding: "3px 10px", fontSize: 11, fontWeight: 600, border: "none",
@@ -2748,21 +2889,22 @@ function DashboardPage() {
                                   <span style={{ fontSize: 9, color: "#5a6478", marginLeft: 4 }}>{scan.tagId}</span>
                                 </td>
                                 <td style={{ padding: "6px 8px" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-                                    {scan.eventSource === "qr" ? (
-                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
-                                    ) : (
-                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(245,183,49,0.12)", color: "#f5b731", border: "1px solid rgba(245,183,49,0.25)", letterSpacing: 0.5 }}>{scan.nfcId ? "NFC" : "NFC/?"}</span>
-                                    )}
-                                    {scan.nfcId && (
+                                  {scan.eventSource === "qr" ? (
+                                    // QR scan — confirmed source
+                                    <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
+                                  ) : scan.nfcId ? (
+                                    // NFC scan with known chip ID
+                                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(245,183,49,0.12)", color: "#f5b731", border: "1px solid rgba(245,183,49,0.25)", letterSpacing: 0.5 }}>NFC</span>
                                       <button
                                         onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
                                         style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "monospace", padding: 0, textDecoration: "underline" }}
-                                      >
-                                        {scan.nfcId}
-                                      </button>
-                                    )}
-                                  </div>
+                                      >{scan.nfcId}</button>
+                                    </div>
+                                  ) : (
+                                    // Unknown source — just dash
+                                    <span style={{ color: "#2a4060" }}>—</span>
+                                  )}
                                 </td>
                                 <td style={{ padding: "6px 8px", color: "#8b95a8" }}>
                                   <span style={{

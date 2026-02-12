@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   const sortBy = url.searchParams.get("sortBy") || "timestamp";
   const sortDir = url.searchParams.get("sortDir") === "asc" ? "asc" : "desc";
   const tagFilter = url.searchParams.get("tagId") || null;
+  const tagsParam = url.searchParams.get("tags");
+  const tagIdsFilter: string[] | null = tagsParam ? tagsParam.split(",").filter(Boolean) : null;
   const clientFilter = url.searchParams.get("clientId") || null;
   const campaignFilter = url.searchParams.get("campaignId") || null;
   const nfcFilter = url.searchParams.get("nfcId") || null;
@@ -38,7 +40,9 @@ export async function GET(request: NextRequest) {
     where.timestamp = ts;
   }
 
-  if (tagFilter) {
+  if (tagIdsFilter && tagIdsFilter.length > 0) {
+    where.tagId = tagIdsFilter.length === 1 ? tagIdsFilter[0] : { in: tagIdsFilter };
+  } else if (tagFilter) {
     where.tagId = tagFilter;
   } else if (campaignFilter) {
     const campaignTags = await prisma.tag.findMany({

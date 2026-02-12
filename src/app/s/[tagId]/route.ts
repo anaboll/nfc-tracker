@@ -46,7 +46,9 @@ export async function GET(
     const browserLang = headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
     const referrer = headers.get("referer") || null;
     const url = new URL(request.url);
-    const eventSource = url.searchParams.get("event") || null;
+    // Accept ?source=qr (QR code scans) or ?event=... (legacy). ?source takes precedence.
+    const sourceParam = url.searchParams.get("source"); // "qr" from QR code links
+    const eventSource = sourceParam || url.searchParams.get("event") || null;
     // NFC chip ID: from :: separator in URL or ?nfc= query param
     const nfcId = chipId || url.searchParams.get("nfc") || null;
 

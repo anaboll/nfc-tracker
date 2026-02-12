@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
   const tagFilter = url.searchParams.get("tag");
+  // Multi-tag filter: ?tags=id1,id2,id3 — takes precedence over single ?tag=
+  const tagsParam = url.searchParams.get("tags");
+  const tagIdsFilter: string[] | null = tagsParam ? tagsParam.split(",").filter(Boolean) : null;
   const clientFilter = url.searchParams.get("clientId");
   const campaignFilter = url.searchParams.get("campaignId");
   const weekOffset = parseInt(url.searchParams.get("weekOffset") || "0");
@@ -49,7 +52,10 @@ export async function GET(request: NextRequest) {
   if (fromParam || toParam) {
     whereBase.timestamp = { gte: fromDate, lte: toDate };
   }
-  if (tagFilter) {
+  if (tagIdsFilter && tagIdsFilter.length > 0) {
+    // Multi-tag filter: explicitly selected tags
+    whereBase.tagId = tagIdsFilter.length === 1 ? tagIdsFilter[0] : { in: tagIdsFilter };
+  } else if (tagFilter) {
     whereBase.tagId = tagFilter;
   } else if (filteredTagIds !== null) {
     whereBase.tagId = { in: filteredTagIds };
@@ -207,7 +213,9 @@ export async function GET(request: NextRequest) {
   const weeklyWhere: Record<string, unknown> = {
     timestamp: { gte: weekStart, lte: weekEnd },
   };
-  if (tagFilter) {
+  if (tagIdsFilter && tagIdsFilter.length > 0) {
+    weeklyWhere.tagId = tagIdsFilter.length === 1 ? tagIdsFilter[0] : { in: tagIdsFilter };
+  } else if (tagFilter) {
     weeklyWhere.tagId = tagFilter;
   } else if (filteredTagIds !== null) {
     weeklyWhere.tagId = { in: filteredTagIds };
