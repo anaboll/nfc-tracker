@@ -313,7 +313,7 @@ function DashboardPage() {
   const [showScanTable, setShowScanTable] = useState(false);
 
   // editing
-  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editingAction, setEditingAction] = useState<TagFull | null>(null);
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -905,6 +905,7 @@ function DashboardPage() {
     if (!confirm(`Czy na pewno chcesz usunac akcje "${id}" i wszystkie jej skany?`)) return;
     try {
       await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      setEditingAction(null);
       await fetchTags();
       await fetchStats();
     } catch { /* ignore */ }
@@ -934,13 +935,13 @@ function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      setEditingTagId(null);
+      setEditingAction(null);
       await fetchTags();
     } catch { /* ignore */ }
   };
 
   const startEdit = (tag: TagFull) => {
-    setEditingTagId(tag.id);
+    setEditingAction(tag);
     setEditName(tag.name);
     setEditUrl(tag.targetUrl);
     setEditDesc(tag.description || "");
@@ -1363,6 +1364,8 @@ function DashboardPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .anim-fade { animation: fadeIn 0.35s ease forwards; }
+        @keyframes drawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .drawer-panel { animation: drawerIn 0.25s cubic-bezier(0.32,0,0.67,0) forwards; }
       `}</style>
 
       {/* ============================================================ */}
@@ -3117,34 +3120,7 @@ function DashboardPage() {
 
                 {displayTags.map((tag) => (
                   <div key={tag.id} className="card card-hover" style={{ padding: "16px 20px" }}>
-                    {editingTagId === tag.id ? (
-                      /* ---- Edit Mode ---- */
-                      <ActionEditor
-                        tagId={tag.id}
-                        editName={editName}
-                        setEditName={setEditName}
-                        editType={editType}
-                        editUrl={editUrl}
-                        setEditUrl={setEditUrl}
-                        editDesc={editDesc}
-                        setEditDesc={setEditDesc}
-                        editChannel={editChannel}
-                        setEditChannel={setEditChannel}
-                        editTagLinks={editTagLinks}
-                        setEditTagLinks={setEditTagLinks}
-                        editVCard={editVCard}
-                        setEditVCard={setEditVCard}
-                        resetTagConfirm={resetTagConfirm}
-                        setResetTagConfirm={setResetTagConfirm}
-                        resetting={resetting}
-                        onSave={handleSaveEdit}
-                        onCancel={() => setEditingTagId(null)}
-                        onResetStats={handleResetStats}
-                        onDeleteTag={handleDeleteTag}
-                      />
-                    ) : (
-                      /* ---- View Mode ---- */
-                      <div>
+                    <div>
                         {/* Top row: name + badges + actions */}
                         <div
                           style={{
@@ -3550,8 +3526,7 @@ function DashboardPage() {
                             )}
                           </div>
                         )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -4281,6 +4256,106 @@ function DashboardPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ============================================================ */}
+      {/*  EDIT ACTION DRAWER                                          */}
+      {/* ============================================================ */}
+      {editingAction && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setEditingAction(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              zIndex: 1000,
+            }}
+          />
+          {/* Panel */}
+          <div
+            className="drawer-panel"
+            style={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: "min(520px, 100vw)",
+              background: "#0d1526",
+              borderLeft: "1px solid #1e2d45",
+              zIndex: 1001,
+              display: "flex",
+              flexDirection: "column",
+              overflowY: "auto",
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 20px",
+              borderBottom: "1px solid #1e2d45",
+              position: "sticky",
+              top: 0,
+              background: "#0d1526",
+              zIndex: 1,
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#5a6478", marginBottom: 2 }}>Edycja akcji</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#e8ecf1" }}>{editingAction.name}</div>
+              </div>
+              <button
+                onClick={() => setEditingAction(null)}
+                title="Zamknij"
+                style={{
+                  background: "transparent",
+                  border: "1px solid #1e2d45",
+                  color: "#8b95a8",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "20px 20px 32px" }}>
+              <ActionEditor
+                tagId={editingAction.id}
+                editName={editName}
+                setEditName={setEditName}
+                editType={editType}
+                editUrl={editUrl}
+                setEditUrl={setEditUrl}
+                editDesc={editDesc}
+                setEditDesc={setEditDesc}
+                editChannel={editChannel}
+                setEditChannel={setEditChannel}
+                editTagLinks={editTagLinks}
+                setEditTagLinks={setEditTagLinks}
+                editVCard={editVCard}
+                setEditVCard={setEditVCard}
+                resetTagConfirm={resetTagConfirm}
+                setResetTagConfirm={setResetTagConfirm}
+                resetting={resetting}
+                onSave={handleSaveEdit}
+                onCancel={() => setEditingAction(null)}
+                onResetStats={handleResetStats}
+                onDeleteTag={handleDeleteTag}
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
