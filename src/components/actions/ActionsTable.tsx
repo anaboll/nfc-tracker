@@ -49,7 +49,7 @@ export interface ActionsTableProps {
 
   openMenuId: string | null;
   setOpenMenuId: (id: string | null) => void;
-  menuRef: React.RefObject<HTMLDivElement | null>;
+  menuRef: React.RefObject<HTMLDivElement>;
 
   uploadingTagId: string | null;
   uploadProgress: string;
