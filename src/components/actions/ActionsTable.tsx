@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 
 /* ------------------------------------------------------------------ */
 /*  Types (mirror dashboard — consider extracting to shared/types.ts)  */
@@ -61,6 +61,15 @@ export interface ActionsTableProps {
   onVideoUpload: (tagId: string, file: File) => void;
   onRemoveVideo: (tagId: string) => void;
   onSetResetTagConfirm: (id: string) => void;
+
+  // bulk selection
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+  onBulkDelete: () => void;
+  onBulkClone: () => void;
+  onBulkMoveRequest: () => void;
+  bulkLoading: boolean;
+  bulkMsg: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +110,26 @@ export function ActionsTable({
   onVideoUpload,
   onRemoveVideo,
   onSetResetTagConfirm,
+  selectedIds,
+  setSelectedIds,
+  onBulkDelete,
+  onBulkClone,
+  onBulkMoveRequest,
+  bulkLoading,
+  bulkMsg,
 }: ActionsTableProps) {
+  const allSelected = tags.length > 0 && tags.every((t) => selectedIds.includes(t.id));
+  const someSelected = selectedIds.length > 0;
+
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds([]);
+    else setSelectedIds(tags.map((t) => t.id));
+  };
+
+  const toggleOne = (id: string) => {
+    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter((x) => x !== id));
+    else setSelectedIds([...selectedIds, id]);
+  };
   /* shared menu item style helpers */
   const menuItem = (color: string) => ({
     display: "flex" as const,
@@ -125,7 +153,72 @@ export function ActionsTable({
   };
 
   return (
-    <div style={{ overflowX: "auto" }}>
+    <div>
+      {/* ---- Bulk Action Bar ---- */}
+      {someSelected && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 16px",
+          borderBottom: "1px solid #1e2d45",
+          background: "rgba(59,130,246,0.06)",
+          flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa" }}>
+            Zaznaczono: {selectedIds.length}
+          </span>
+          <div style={{ width: 1, height: 16, background: "#1e2d45" }} />
+          {/* Przenieś */}
+          <button
+            onClick={onBulkMoveRequest}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)", color: "#60a5fa", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+            Przenieś
+          </button>
+          {/* Duplikuj */}
+          <button
+            onClick={onBulkClone}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10b981", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Duplikuj
+          </button>
+          {/* Usuń */}
+          <button
+            onClick={onBulkDelete}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" />
+            </svg>
+            Usuń
+          </button>
+          {bulkLoading && (
+            <span style={{ fontSize: 11, color: "#5a6478" }}>Trwa operacja...</span>
+          )}
+          {bulkMsg && !bulkLoading && (
+            <span style={{ fontSize: 11, color: "#10b981" }}>{bulkMsg}</span>
+          )}
+          <button
+            onClick={() => setSelectedIds([])}
+            style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 6, border: "1px solid #1e2d45", background: "transparent", color: "#5a6478", fontSize: 11, cursor: "pointer" }}
+          >
+            Odznacz wszystkie
+          </button>
+        </div>
+      )}
+
+      {/* ---- Table ---- */}
+      <div style={{ overflowX: "auto" }}>
       <table
         style={{
           width: "100%",
@@ -137,6 +230,19 @@ export function ActionsTable({
         {/* ---- HEAD ---- */}
         <thead>
           <tr style={{ borderBottom: "1px solid #1e2d45" }}>
+            {/* Checkbox header */}
+            <th
+              style={{ padding: "8px 8px 8px 16px", width: 32 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                title="Zaznacz wszystkie"
+                style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+              />
+            </th>
             {["Nazwa", "Typ", "Status", "Skany", "URL / ID", "Akcje"].map((h) => (
               <th
                 key={h}
@@ -163,6 +269,8 @@ export function ActionsTable({
             const typeStyle = TYPE_COLORS[tag.tagType] ?? { bg: "rgba(139,149,168,0.12)", color: "#8b95a8" };
             const isLast = idx === tags.length - 1;
 
+            const isSelected = selectedIds.includes(tag.id);
+
             return (
               <tr
                 key={tag.id}
@@ -171,10 +279,24 @@ export function ActionsTable({
                   borderBottom: isLast ? "none" : "1px solid #1a253a",
                   cursor: "pointer",
                   transition: "background 0.12s",
+                  background: isSelected ? "rgba(59,130,246,0.06)" : "transparent",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#0f1a2e"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#0f1a2e"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isSelected ? "rgba(59,130,246,0.06)" : "transparent"; }}
               >
+                {/* Checkbox */}
+                <td
+                  style={{ padding: "10px 8px 10px 16px", width: 32 }}
+                  onClick={(e) => { e.stopPropagation(); toggleOne(tag.id); }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleOne(tag.id)}
+                    style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+                  />
+                </td>
+
                 {/* Nazwa */}
                 <td style={{ padding: "10px 12px", fontWeight: 600 }}>
                   {tag.name}
@@ -484,6 +606,7 @@ export function ActionsTable({
           })}
         </tbody>
       </table>
+      </div>{/* end overflowX */}
     </div>
   );
 }
