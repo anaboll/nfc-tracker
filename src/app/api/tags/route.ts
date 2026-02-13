@@ -38,13 +38,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Wybor klienta jest wymagany przed utworzeniem akcji" }, { status: 400 });
   }
 
+  // B1b: campaignId is mandatory
+  if (!campaignId) {
+    return NextResponse.json({ error: "Wybor kampanii jest wymagany przed utworzeniem akcji" }, { status: 400 });
+  }
+
   // Verify client exists
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) {
     return NextResponse.json({ error: "Wybrany klient nie istnieje" }, { status: 404 });
   }
 
-  // B2: if campaignId provided, it must belong to the same client
+  // B2: campaignId must belong to the same client
   if (campaignId) {
     const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
     if (!campaign) {
