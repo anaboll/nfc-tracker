@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
+import { ActionsTable } from "@/components/actions/ActionsTable";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -340,6 +341,15 @@ function DashboardPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // view mode: cards | table
+  const [viewMode, setViewMode] = useState<"cards" | "table">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("actionsViewMode");
+      if (saved === "cards" || saved === "table") return saved;
+    }
+    return "cards";
+  });
+
   // link click stats
   const [linkClickStats, setLinkClickStats] = useState<Record<string, LinkClickData>>({});
   const [expandedLinkStats, setExpandedLinkStats] = useState<string | null>(null);
@@ -638,6 +648,11 @@ function DashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCampaignId]);
+
+  /* ---- persist view mode ---- */
+  useEffect(() => {
+    localStorage.setItem("actionsViewMode", viewMode);
+  }, [viewMode]);
 
   /* ---- close context menu on outside click ---- */
   useEffect(() => {
@@ -3064,8 +3079,50 @@ function DashboardPage() {
                     {displayTags.length}
                   </span>
                 </div>
-                {/* Global reset stats */}
+                {/* View mode toggle + Global reset stats */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {/* Cards / Table toggle */}
+                  <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                    {(["cards", "table"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        title={mode === "cards" ? "Widok kart" : "Widok tabeli"}
+                        style={{
+                          padding: "6px 12px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          background: viewMode === mode ? "#1e2d45" : "transparent",
+                          color: viewMode === mode ? "#e8ecf1" : "#5a6478",
+                          transition: "background 0.15s, color 0.15s",
+                        }}
+                      >
+                        {mode === "cards" ? (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                            Karty
+                          </>
+                        ) : (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                            Tabela
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ width: 1, height: 24, background: "#1e2d45" }} />
                   {resetAllConfirm ? (
                     <>
                       <span style={{ fontSize: 12, color: "#f87171", fontWeight: 600 }}>Na pewno usunac WSZYSTKIE statystyki?</span>
@@ -3127,14 +3184,40 @@ function DashboardPage() {
               {/* ---- Nowa akcja DRAWER: the actual form JSX is rendered in the fixed overlay below the main layout ---- */}
 
               {/* ---- Tags List ---- */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {displayTags.length === 0 && (
-                  <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
-                    <p style={{ color: "#5a6478", fontSize: 14 }}>
-                      {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Kliknij \"+ Nowa akcja\" aby dodac pierwsza akcje."}
-                    </p>
-                  </div>
-                )}
+
+              {/* empty state */}
+              {displayTags.length === 0 && (
+                <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
+                  <p style={{ color: "#5a6478", fontSize: 14 }}>
+                    {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Kliknij \"+ Nowa akcja\" aby dodac pierwsza akcje."}
+                  </p>
+                </div>
+              )}
+
+              {/* TABLE view */}
+              {viewMode === "table" && displayTags.length > 0 && (
+                <div className="card" style={{ padding: "4px 0" }}>
+                  <ActionsTable
+                    tags={displayTags}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    menuRef={menuRef}
+                    uploadingTagId={uploadingTagId}
+                    uploadProgress={uploadProgress}
+                    onToggleActive={handleToggleActive}
+                    onStartEdit={startEdit}
+                    onDeleteTag={handleDeleteTag}
+                    onResetStats={handleResetStats}
+                    onVideoUpload={handleVideoUpload}
+                    onRemoveVideo={handleRemoveVideo}
+                    onSetResetTagConfirm={setResetTagConfirm}
+                  />
+                </div>
+              )}
+
+              {/* CARDS view */}
+              <div style={{ display: viewMode === "cards" ? "flex" : "none", flexDirection: "column", gap: 12 }}>
+                {/* placeholder so the empty state above handles it */}
 
                 {displayTags.map((tag) => (
                   <div key={tag.id} className="card card-hover" style={{ padding: "16px 20px" }}>
