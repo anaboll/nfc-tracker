@@ -336,6 +336,10 @@ function DashboardPage() {
   const [uploadingTagId, setUploadingTagId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState("");
 
+  // context menu
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   // link click stats
   const [linkClickStats, setLinkClickStats] = useState<Record<string, LinkClickData>>({});
   const [expandedLinkStats, setExpandedLinkStats] = useState<string | null>(null);
@@ -634,6 +638,18 @@ function DashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCampaignId]);
+
+  /* ---- close context menu on outside click ---- */
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
 
   /* ---- handlers ---- */
 
@@ -1366,6 +1382,8 @@ function DashboardPage() {
         .anim-fade { animation: fadeIn 0.35s ease forwards; }
         @keyframes drawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         .drawer-panel { animation: drawerIn 0.25s cubic-bezier(0.32,0,0.67,0) forwards; }
+        @keyframes menuIn { from { opacity: 0; transform: scale(0.95) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .ctx-menu { animation: menuIn 0.12s ease forwards; transform-origin: top right; }
       `}</style>
 
       {/* ============================================================ */}
@@ -3218,7 +3236,8 @@ function DashboardPage() {
                           </div>
 
                           {/* Right: actions */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {/* Active toggle */}
                             <button
                               onClick={() => handleToggleActive(tag)}
                               title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
@@ -3231,6 +3250,7 @@ function DashboardPage() {
                                 cursor: "pointer",
                                 position: "relative",
                                 transition: "background 0.2s",
+                                flexShrink: 0,
                               }}
                             >
                               <span
@@ -3246,67 +3266,186 @@ function DashboardPage() {
                                 }}
                               />
                             </button>
-                            <button
-                              onClick={() => startEdit(tag)}
-                              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
-                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-                            >
-                              Edytuj
-                            </button>
-                            {/* QR download buttons: PNG, SVG, PDF-print */}
-                            {(["png","svg","pdf"] as const).map((fmt) => (
+
+                            {/* ⋯ menu */}
+                            <div style={{ position: "relative" }} ref={openMenuId === tag.id ? menuRef : undefined}>
                               <button
-                                key={fmt}
-                                title={fmt === "png" ? "Pobierz QR PNG 1024×1024" : fmt === "svg" ? "Pobierz QR SVG (do druku)" : "Otwórz kartę do druku A4"}
-                                onClick={async () => {
-                                  if (fmt === "pdf") {
-                                    window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank");
-                                    return;
-                                  }
-                                  const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=${fmt}`);
-                                  if (!res.ok) return;
-                                  const blob = await res.blob();
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = `qr-${tag.id}.${fmt}`;
-                                  a.click();
-                                  URL.revokeObjectURL(url);
+                                onClick={() => setOpenMenuId(openMenuId === tag.id ? null : tag.id)}
+                                title="Więcej opcji"
+                                style={{
+                                  background: "#1a253a",
+                                  border: "1px solid #1e2d45",
+                                  color: "#8b95a8",
+                                  borderRadius: 6,
+                                  width: 32,
+                                  height: 32,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 18,
+                                  lineHeight: 1,
+                                  letterSpacing: "0.05em",
+                                  flexShrink: 0,
+                                  transition: "border-color 0.15s, color 0.15s",
                                 }}
-                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: fmt === "pdf" ? "#f5b731" : "#10b981", borderRadius: 6, padding: "6px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", transition: "border-color 0.2s", letterSpacing: "0.03em" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = fmt === "pdf" ? "#f5b731" : "#10b981"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#e8ecf1"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
                               >
-                                {fmt === "png" ? "QR" : fmt.toUpperCase()}
+                                ⋯
                               </button>
-                            ))}
-                            {tag.tagType === "video" && (
-                              <label
-                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
-                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                  <polygon points="23 7 16 12 23 17 23 7" />
-                                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                                </svg>
-                                {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmien video" : "Wgraj video")}
-                                <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tag.id, f); e.target.value = ""; }} />
-                              </label>
-                            )}
-                            {tag.tagType === "video" && tag.videoFile && (
-                              <button
-                                onClick={() => handleRemoveVideo(tag.id)}
-                                title="Usun video"
-                                style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#6060a0"; }}
-                              >
-                                Usun video
-                              </button>
-                            )}
-                            {/* Reset stats / Delete moved to edit mode → Zaawansowane section */}
+
+                              {openMenuId === tag.id && (
+                                <div
+                                  className="ctx-menu"
+                                  style={{
+                                    position: "absolute",
+                                    top: "calc(100% + 6px)",
+                                    right: 0,
+                                    minWidth: 200,
+                                    background: "#0d1526",
+                                    border: "1px solid #1e2d45",
+                                    borderRadius: 10,
+                                    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                                    zIndex: 500,
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {/* Edytuj */}
+                                  <button
+                                    onClick={() => { setOpenMenuId(null); startEdit(tag); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#e8ecf1", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                    Edytuj
+                                  </button>
+
+                                  <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+
+                                  {/* Pobierz QR PNG */}
+                                  <button
+                                    onClick={async () => {
+                                      setOpenMenuId(null);
+                                      const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=png`);
+                                      if (!res.ok) return;
+                                      const blob = await res.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url; a.download = `qr-${tag.id}.png`; a.click();
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#10b981", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                                      <path d="M14 14h3v3m0 4h4v-4m-4 0h4" />
+                                    </svg>
+                                    Pobierz QR (PNG)
+                                  </button>
+
+                                  {/* Pobierz SVG */}
+                                  <button
+                                    onClick={async () => {
+                                      setOpenMenuId(null);
+                                      const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=svg`);
+                                      if (!res.ok) return;
+                                      const blob = await res.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url; a.download = `qr-${tag.id}.svg`; a.click();
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#10b981", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                                    </svg>
+                                    Pobierz SVG
+                                  </button>
+
+                                  {/* Pobierz PDF */}
+                                  <button
+                                    onClick={() => { setOpenMenuId(null); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f5b731", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                                    </svg>
+                                    Pobierz PDF (druk A4)
+                                  </button>
+
+                                  {/* Video items */}
+                                  {tag.tagType === "video" && (
+                                    <>
+                                      <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+                                      <label
+                                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", color: "#9f67ff", fontSize: 13, cursor: "pointer" }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                      >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                          <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                        </svg>
+                                        {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmień video" : "Wgraj video")}
+                                        <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { setOpenMenuId(null); handleVideoUpload(tag.id, f); } e.target.value = ""; }} />
+                                      </label>
+                                      {tag.videoFile && (
+                                        <button
+                                          onClick={() => { setOpenMenuId(null); handleRemoveVideo(tag.id); }}
+                                          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                        >
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                                          </svg>
+                                          Usuń video
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+
+                                  <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+
+                                  {/* Reset statystyk */}
+                                  <button
+                                    onClick={() => { setOpenMenuId(null); setResetTagConfirm(tag.id); startEdit(tag); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f59e0b", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                                    </svg>
+                                    Reset statystyk
+                                  </button>
+
+                                  {/* Usuń akcję */}
+                                  <button
+                                    onClick={() => { setOpenMenuId(null); handleDeleteTag(tag.id); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                                    </svg>
+                                    Usuń akcję
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
