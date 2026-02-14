@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
@@ -236,6 +237,8 @@ export default function DashboardWrapper() {
 
 function DashboardPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   /* ---- state ---- */
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -599,28 +602,61 @@ function DashboardPage() {
     }
   }, [tagFilter, selectedTagIds, tags]);
 
-  /* ---- restore filters from localStorage on mount ---- */
+  /* ---- restore filters from URL params (priority) or localStorage on mount ---- */
   useEffect(() => {
     if (filtersRestoredRef.current) return;
     filtersRestoredRef.current = true;
-    try {
-      const saved = localStorage.getItem("nfc_filters");
-      if (saved) {
-        const f = JSON.parse(saved);
-        if (f.clientId) setSelectedClientId(f.clientId);
-        if (f.campaignId) setSelectedCampaignId(f.campaignId);
-        if (f.tagFilter) setTagFilter(f.tagFilter);
-        if (f.dateFrom) setDateFrom(f.dateFrom);
-        if (f.dateTo) setDateTo(f.dateTo);
-        if (f.timeFrom) setTimeFrom(f.timeFrom);
-        if (f.timeTo) setTimeTo(f.timeTo);
+    const urlClient = searchParams.get("client");
+    const urlCampaign = searchParams.get("campaign");
+    const urlFrom = searchParams.get("from");
+    const urlTo = searchParams.get("to");
+    const urlTag = searchParams.get("tag");
+    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag;
+    if (hasUrlParams) {
+      if (urlClient) setSelectedClientId(urlClient);
+      if (urlCampaign) setSelectedCampaignId(urlCampaign);
+      if (urlTag) setTagFilter(urlTag);
+      if (urlFrom) {
+        const [d, t] = urlFrom.split("T");
+        setDateFrom(d || "");
+        if (t) setTimeFrom(t);
       }
-    } catch { /* ignore */ }
+      if (urlTo) {
+        const [d, t] = urlTo.split("T");
+        setDateTo(d || "");
+        if (t) setTimeTo(t);
+      }
+    } else {
+      try {
+        const saved = localStorage.getItem("nfc_filters");
+        if (saved) {
+          const f = JSON.parse(saved);
+          if (f.clientId) setSelectedClientId(f.clientId);
+          if (f.campaignId) setSelectedCampaignId(f.campaignId);
+          if (f.tagFilter) setTagFilter(f.tagFilter);
+          if (f.dateFrom) setDateFrom(f.dateFrom);
+          if (f.dateTo) setDateTo(f.dateTo);
+          if (f.timeFrom) setTimeFrom(f.timeFrom);
+          if (f.timeTo) setTimeTo(f.timeTo);
+        }
+      } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ---- save filters to localStorage when they change ---- */
+  /* ---- sync filters to URL params and localStorage when they change ---- */
   useEffect(() => {
     if (!filtersRestoredRef.current) return;
+    // Build new URL query string
+    const params = new URLSearchParams();
+    if (selectedClientId) params.set("client", selectedClientId);
+    if (selectedCampaignId) params.set("campaign", selectedCampaignId);
+    if (tagFilter) params.set("tag", tagFilter);
+    if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+    if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+    // Also keep localStorage in sync
     try {
       localStorage.setItem("nfc_filters", JSON.stringify({
         clientId: selectedClientId,
@@ -632,7 +668,7 @@ function DashboardPage() {
         timeTo,
       }));
     } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo, timeFrom, timeTo]);
+  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo, timeFrom, timeTo, router]);
 
   /* ---- initial load ---- */
 
@@ -783,6 +819,8 @@ function DashboardPage() {
     setWeekOffset(0);
     setScanSourceFilter("all");
     setSelectedTagIds([]);
+    // Clear URL params
+    router.replace("/dashboard", { scroll: false });
     setLoading(true);
     try {
       // Call the API directly with a clean slate (all filters cleared above).
