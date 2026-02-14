@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import ReactDOM from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
@@ -328,7 +329,9 @@ function DashboardPage() {
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showTagsOverflow, setShowTagsOverflow] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const tagDropdownPortalRef = useRef<HTMLDivElement>(null);
   const tagOverflowRef = useRef<HTMLDivElement>(null);
+  const [tagDropdownPos, setTagDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // editing
   const [editingAction, setEditingAction] = useState<TagFull | null>(null);
@@ -777,7 +780,9 @@ function DashboardPage() {
   useEffect(() => {
     if (!showTagDropdown) return;
     const handler = (e: MouseEvent) => {
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+      const inTrigger = tagDropdownRef.current?.contains(e.target as Node);
+      const inPortal = tagDropdownPortalRef.current?.contains(e.target as Node);
+      if (!inTrigger && !inPortal) {
         setShowTagDropdown(false);
         setTagSearch("");
       }
@@ -797,6 +802,23 @@ function DashboardPage() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showTagsOverflow]);
+
+  /* ---- reposition tag dropdown portal on scroll/resize ---- */
+  useEffect(() => {
+    if (!showTagDropdown) return;
+    const update = () => {
+      if (tagDropdownRef.current) {
+        const r = tagDropdownRef.current.getBoundingClientRect();
+        setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    };
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [showTagDropdown]);
 
   /* ---- handlers ---- */
 
@@ -1767,9 +1789,15 @@ function DashboardPage() {
         <style>{`
           @media (max-width: 700px) {
             .nfc-layout { flex-direction: column !important; }
-            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; flex-direction: row !important; flex-wrap: wrap !important; }
+            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; overflow: visible !important; flex-direction: row !important; flex-wrap: wrap !important; }
             .nfc-sidebar > div { flex: 1 1 calc(50% - 6px); min-width: 140px; }
           }
+          /* Sidebar scrollbar — only appears when content overflows; thin and unobtrusive */
+          .nfc-sidebar { scrollbar-width: thin; scrollbar-color: #1e2d45 transparent; }
+          .nfc-sidebar::-webkit-scrollbar { width: 4px; }
+          .nfc-sidebar::-webkit-scrollbar-track { background: transparent; }
+          .nfc-sidebar::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 4px; }
+          .nfc-sidebar::-webkit-scrollbar-thumb:hover { background: #2a3d5a; }
         `}</style>
         <div className="nfc-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
@@ -1968,9 +1996,15 @@ function DashboardPage() {
                 </div>
 
                 {/* Search combobox trigger */}
-                <div ref={tagDropdownRef} style={{ position: "relative" }}>
+                <div ref={tagDropdownRef}>
                   <div
-                    onClick={() => { setShowTagDropdown(true); }}
+                    onClick={() => {
+                      if (tagDropdownRef.current) {
+                        const r = tagDropdownRef.current.getBoundingClientRect();
+                        setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                      }
+                      setShowTagDropdown(true);
+                    }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
                       background: "#131b2e", border: `1px solid ${showTagDropdown ? "#3a5a80" : "#1e2d45"}`,
@@ -1983,8 +2017,21 @@ function DashboardPage() {
                     </svg>
                     <input
                       value={tagSearch}
-                      onChange={e => { setTagSearch(e.target.value); setShowTagDropdown(true); }}
-                      onFocus={() => setShowTagDropdown(true)}
+                      onChange={e => {
+                        setTagSearch(e.target.value);
+                        if (!showTagDropdown && tagDropdownRef.current) {
+                          const r = tagDropdownRef.current.getBoundingClientRect();
+                          setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                        }
+                        setShowTagDropdown(true);
+                      }}
+                      onFocus={() => {
+                        if (tagDropdownRef.current) {
+                          const r = tagDropdownRef.current.getBoundingClientRect();
+                          setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                        }
+                        setShowTagDropdown(true);
+                      }}
                       placeholder={selectedTagIds.length === 0 ? "Szukaj akcji…" : `${selectedTagIds.length} wybranych`}
                       style={{
                         flex: 1, background: "transparent", border: "none", outline: "none",
@@ -1999,74 +2046,84 @@ function DashboardPage() {
                       >×</button>
                     )}
                   </div>
+                  {/* Dropdown rendered via portal — see below aside, escapes overflow:auto clipping */}
+                </div>
 
-                  {/* Dropdown list */}
-                  {showTagDropdown && (
-                    <div style={{
-                      position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 300,
+                {/* Portal dropdown — rendered outside sidebar overflow container */}
+                {showTagDropdown && tagDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
+                  <div
+                    ref={tagDropdownPortalRef}
+                    style={{
+                      position: "fixed",
+                      top: tagDropdownPos.top,
+                      left: tagDropdownPos.left,
+                      width: tagDropdownPos.width,
+                      zIndex: 9999,
                       background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
                       boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                      maxHeight: 220, display: "flex", flexDirection: "column",
-                    }}>
-                      {/* "Wszystkie" / clear option */}
-                      <button
-                        onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
-                        style={{
-                          padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
-                          background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.1)" : "transparent",
-                          color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
-                          border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {selectedTagIds.length === 0 ? "✓ " : ""}Wszystkie akcje
-                      </button>
-                      {/* Scrollable list */}
-                      <div style={{ overflowY: "auto", flex: 1 }}>
-                        {filteredTags
-                          .filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase()))
-                          .map(t => {
-                            const sel = selectedTagIds.includes(t.id);
-                            return (
-                              <button
-                                key={t.id}
-                                onMouseDown={e => {
-                                  e.preventDefault();
-                                  const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
-                                  setSelectedTagIds(next);
-                                  fetchStats({ tagIds: next });
-                                  if (showScanTable) fetchScans();
-                                  // keep dropdown open for multi-select
-                                }}
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 8, width: "100%",
-                                  padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
-                                  background: sel ? "rgba(245,183,49,0.08)" : "transparent",
-                                  color: sel ? "#f5b731" : "#c8d0de",
-                                  border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer",
-                                  textAlign: "left",
-                                }}
-                              >
-                                <span style={{
-                                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                                  border: `1.5px solid ${sel ? "#f5b731" : "#2a3d5a"}`,
-                                  background: sel ? "rgba(245,183,49,0.2)" : "transparent",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
-                                  {sel && <span style={{ fontSize: 9, color: "#f5b731", lineHeight: 1 }}>✓</span>}
-                                </span>
-                                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                                <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{t._count.scans}sk</span>
-                              </button>
-                            );
+                      maxHeight: "min(220px, calc(100vh - " + (tagDropdownPos.top + 8) + "px))",
+                      display: "flex", flexDirection: "column",
+                    }}
+                  >
+                    {/* "Wszystkie" / clear option */}
+                    <button
+                      onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
+                      style={{
+                        padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
+                        background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.1)" : "transparent",
+                        color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
+                        border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {selectedTagIds.length === 0 ? "✓ " : ""}Wszystkie akcje
+                    </button>
+                    {/* Scrollable list */}
+                    <div style={{ overflowY: "auto", flex: 1 }}>
+                      {filteredTags
+                        .filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase()))
+                        .map(t => {
+                          const sel = selectedTagIds.includes(t.id);
+                          return (
+                            <button
+                              key={t.id}
+                              onMouseDown={e => {
+                                e.preventDefault();
+                                const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
+                                setSelectedTagIds(next);
+                                fetchStats({ tagIds: next });
+                                if (showScanTable) fetchScans();
+                                // keep dropdown open for multi-select
+                              }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
+                                background: sel ? "rgba(245,183,49,0.08)" : "transparent",
+                                color: sel ? "#f5b731" : "#c8d0de",
+                                border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer",
+                                textAlign: "left",
+                              }}
+                            >
+                              <span style={{
+                                width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                border: `1.5px solid ${sel ? "#f5b731" : "#2a3d5a"}`,
+                                background: sel ? "rgba(245,183,49,0.2)" : "transparent",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                {sel && <span style={{ fontSize: 9, color: "#f5b731", lineHeight: 1 }}>✓</span>}
+                              </span>
+                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                              <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{t._count.scans}sk</span>
+                            </button>
+                          );
                           })}
                         {filteredTags.filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
                           <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak wyników</div>
                         )}
                       </div>
-                    </div>
-                  )}
-                </div>
+                  </div>,
+                  document.body
+                )}
               </div>
             )}
           </aside>
