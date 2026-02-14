@@ -2038,13 +2038,10 @@ function DashboardPage() {
               gap: 12,
             }}
           >
-            {/* -- Klienci block — single-select combobox (wybór jednego) -- */}
+            {/* -- Klienci block -- */}
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
-                  <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>single</span>
-                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   {selectedClientId && (
                     <button
@@ -2198,10 +2195,7 @@ function DashboardPage() {
             {selectedClientId && (
               <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
-                    <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>single</span>
-                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {selectedCampaignId && (
                       <button
@@ -2355,14 +2349,13 @@ function DashboardPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
-                    <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>multi</span>
-                    {selectedTagIds.length > 0 && (
+                    {selectedCampaignId && selectedTagIds.length > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
                         {selectedTagIds.length}
                       </span>
                     )}
                   </div>
-                  {selectedTagIds.length > 0 && (
+                  {selectedCampaignId && selectedTagIds.length > 0 && (
                     <button
                       onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
                       style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
