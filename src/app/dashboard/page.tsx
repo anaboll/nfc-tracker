@@ -7,7 +7,6 @@ import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
-import { TopContextFilters } from "@/components/dashboard/TopContextFilters";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -863,6 +862,7 @@ function DashboardPage() {
     setSelectedCampaignId(null);
     setWeekOffset(0);
     setScanSourceFilter("all");
+    setScanNfcFilter(null);
     setSelectedTagIds([]);
     setRangePreset("custom");
     // Clear URL params
@@ -1718,7 +1718,7 @@ function DashboardPage() {
         <div className="nfc-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
           {/* ============================================================ */}
-          {/*  LEFT SIDEBAR — Klienci & Kampanie                           */}
+          {/*  LEFT SIDEBAR — Filtry: Klienci, Kampanie, Akcje             */}
           {/* ============================================================ */}
           <aside className="nfc-sidebar" style={{
             width: 260,
@@ -1948,7 +1948,7 @@ function DashboardPage() {
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        {/* ---- Filter Bar (dates + buttons only — Akcja filter is in sidebar chips) ---- */}
+        {/* ---- Filter Bar — zakres czasu (klient/kampania/akcje zarządzane przez lewy sidebar) ---- */}
         <style>{`
           .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;box-sizing:border-box;width:100%}
           @media(max-width:700px){
@@ -1967,16 +1967,6 @@ function DashboardPage() {
           className="card filter-bar"
           style={{ marginBottom: 24, padding: "12px 16px" }}
         >
-          {/* Context selectors: Klient + Kampania */}
-          <TopContextFilters
-            clients={clients}
-            campaigns={filteredCampaigns}
-            selectedClientId={selectedClientId}
-            selectedCampaignId={selectedCampaignId}
-            onClientChange={(id) => { setSelectedClientId(id); setSelectedCampaignId(null); }}
-            onCampaignChange={setSelectedCampaignId}
-          />
-
           {/* Range preset pills + Od/Do inputs */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {/* Preset pills row */}
@@ -2021,7 +2011,32 @@ function DashboardPage() {
               </div>
             )}
           </div>
-          {/* Row 2 (desktop inline, mobile full-width): Pokaż / Reset */}
+          {/* Source filter — Wszystkie / NFC / QR */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignSelf: "flex-end" }}>
+            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Źródło</label>
+            <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
+              {(["all", "nfc", "qr"] as const).map(src => (
+                <button key={src} type="button"
+                  onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
+                  style={{
+                    padding: "5px 12px", fontSize: 11, fontWeight: 600, border: "none",
+                    borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
+                    cursor: "pointer",
+                    background: scanSourceFilter === src
+                      ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.2)")
+                      : "#1a253a",
+                    color: scanSourceFilter === src
+                      ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
+                      : "#5a6478",
+                  }}
+                >
+                  {src === "all" ? "Wszystkie" : src.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pokaż / Reset */}
           <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
             <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaż</button>
             <button onClick={handleResetFilters}
@@ -3049,12 +3064,6 @@ function DashboardPage() {
                         : "Statystyki akcji (wszystkie źródła). Filtruj QR aby zobaczyć tylko skany z kodów QR."}
                     </p>
                   </div>
-                  {scanSourceFilter !== "qr" && (
-                    <button
-                      onClick={() => { setScanSourceFilter("qr"); fetchStats({ source: "qr" }); fetchScans({ source: "qr", page: 1 }); }}
-                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", borderRadius: 8, padding: "5px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-                    >Filtruj QR</button>
-                  )}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {topTags.slice(0, 5).map((t, idx) => (
@@ -3097,31 +3106,17 @@ function DashboardPage() {
                   >
                     {showScanTable ? "Ukryj" : "Pokaz"} {scanData ? `(${scanData.total})` : ""}
                   </button>
-                  {/* Source filter */}
-                  <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
-                    {(["all", "nfc", "qr"] as const).map(src => (
-                      <button key={src} type="button"
-                        onClick={() => {
-                          setScanSourceFilter(src);
-                          fetchScans({ source: src, page: 1 });
-                          fetchStats({ source: src });
-                        }}
-                        style={{
-                          padding: "3px 10px", fontSize: 11, fontWeight: 600, border: "none",
-                          borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
-                          cursor: "pointer",
-                          background: scanSourceFilter === src
-                            ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.2)")
-                            : "#1a253a",
-                          color: scanSourceFilter === src
-                            ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
-                            : "#5a6478",
-                        }}
-                      >
-                        {src === "all" ? "Wszystkie" : src.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Source badge — read-only, control is in FilterBar above */}
+                  {scanSourceFilter !== "all" && (
+                    <span style={{
+                      padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6,
+                      background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.15)" : "rgba(245,183,49,0.15)",
+                      color: scanSourceFilter === "qr" ? "#10b981" : "#f5b731",
+                      border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)"}`,
+                    }}>
+                      {scanSourceFilter.toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 {showScanTable && scanNfcFilter && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
