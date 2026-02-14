@@ -1988,7 +1988,6 @@ function DashboardPage() {
             className="nfc-sidebar"
             onScroll={() => {
               setShowClientDropdown(false);
-              setShowTagDropdown(false);
             }}
             style={{
               width: 260,
