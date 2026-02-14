@@ -2076,28 +2076,14 @@ function DashboardPage() {
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        {/* ---- Filter Bar — zakres czasu (klient/kampania/akcje zarządzane przez lewy sidebar) ---- */}
-        <style>{`
-          .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;box-sizing:border-box;width:100%}
-          @media(max-width:700px){
-            .filter-bar{flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px!important}
-            .filter-bar-dates{display:flex;gap:8px;flex-wrap:wrap;width:100%}
-            .filter-bar-dates>div{flex:1;min-width:0}
-            .filter-bar-dates input[type=date]{width:100%;min-width:0;box-sizing:border-box}
-            .filter-bar-dates input[type=time]{width:62px;min-width:0;flex-shrink:0}
-            .filter-bar-buttons{display:flex;gap:8px;width:100%}
-            .filter-bar-buttons button{flex:1}
-          }
-          details[open]>summary .adv-arrow{transform:rotate(90deg)}
-          .adv-arrow{transition:transform .15s;display:inline-block}
-        `}</style>
+        {/* ---- Filter Bar — stała wysokość niezależna od trybu ---- */}
         <section
-          className="card filter-bar"
-          style={{ marginBottom: 24, padding: "12px 16px" }}
+          className="card"
+          style={{ marginBottom: 16, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
         >
-          {/* Range preset pills — fixed height, popover floats below */}
+          {/* Time range preset pills — popover floats, bar height never changes */}
           <div style={{ position: "relative" }}>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
               {(["24h", "7d", "30d", "month", "custom"] as const).map((p) => {
                 const labels: Record<string, string> = { "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
                 const active = rangePreset === p;
@@ -2105,7 +2091,6 @@ function DashboardPage() {
                   <button key={p}
                     onClick={() => {
                       if (p === "custom") {
-                        // Open popover, initialise drafts from current committed values
                         setDraftFrom(dateFrom);
                         setDraftTimeFrom(timeFrom);
                         setDraftTo(dateTo);
@@ -2125,16 +2110,12 @@ function DashboardPage() {
                       color: active ? "#e69500" : "#8b95a8",
                       transition: "border-color 0.15s, color 0.15s, background 0.15s",
                     }}
-                  >{labels[p]}{p === "custom" && active && (dateFrom || dateTo) && (
-                    <span style={{ marginLeft: 4, fontSize: 10, opacity: 0.7 }}>
-                      {dateFrom ? dateFrom.slice(5) : "…"} → {dateTo ? dateTo.slice(5) : "…"}
-                    </span>
-                  )}</button>
+                  >{labels[p]}</button>
                 );
               })}
             </div>
 
-            {/* Custom range popover — floats out of flow, doesn't affect FilterBar height */}
+            {/* Custom range popover — position:absolute, zero impact on bar height */}
             {showCustomPopover && (
               <div ref={customPopoverRef} style={{
                 position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
@@ -2143,86 +2124,65 @@ function DashboardPage() {
                 display: "flex", flexDirection: "column", gap: 12, minWidth: 320,
               }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
-                {/* Od */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)}
-                      style={{ flex: 1, minWidth: 0 }} />
+                    <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
                     <input type="time" value={draftTimeFrom} onChange={(e) => setDraftTimeFrom(e.target.value)} placeholder="00:00"
                       style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
                   </div>
                 </div>
-                {/* Do */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)}
-                      style={{ flex: 1, minWidth: 0 }} />
+                    <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
                     <input type="time" value={draftTimeTo} onChange={(e) => setDraftTimeTo(e.target.value)} placeholder="23:59"
                       style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
                   </div>
                 </div>
-                {/* Actions */}
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button
-                    onClick={() => setShowCustomPopover(false)}
+                  <button onClick={() => setShowCustomPopover(false)}
                     style={{ background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
                   >Anuluj</button>
                   <button
                     onClick={async () => {
-                      setDateFrom(draftFrom);
-                      setTimeFrom(draftTimeFrom);
-                      setDateTo(draftTo);
-                      setTimeTo(draftTimeTo);
+                      setDateFrom(draftFrom); setTimeFrom(draftTimeFrom);
+                      setDateTo(draftTo); setTimeTo(draftTimeTo);
                       setShowCustomPopover(false);
-                      // fetchStats reads dateFrom/dateTo from closure — pass overrides via opts
                       const fromStr = draftTimeFrom ? `${draftFrom}T${draftTimeFrom}` : draftFrom;
                       const toStr = draftTimeTo ? `${draftTo}T${draftTimeTo}` : draftTo;
                       setLoading(true);
                       await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
                       setLoading(false);
                     }}
-                    className="btn-primary"
-                    style={{ padding: "6px 18px", fontSize: 12 }}
+                    className="btn-primary" style={{ padding: "6px 18px", fontSize: 12 }}
                   >Zastosuj</button>
                 </div>
               </div>
             )}
           </div>
-          {/* Source filter — Wszystkie / NFC / QR */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignSelf: "flex-end" }}>
-            <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Źródło</label>
-            <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
-              {(["all", "nfc", "qr"] as const).map(src => (
-                <button key={src} type="button"
-                  onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
-                  style={{
-                    padding: "5px 12px", fontSize: 11, fontWeight: 600, border: "none",
-                    borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
-                    cursor: "pointer",
-                    background: scanSourceFilter === src
-                      ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.2)")
-                      : "#1a253a",
-                    color: scanSourceFilter === src
-                      ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
-                      : "#5a6478",
-                  }}
-                >
-                  {src === "all" ? "Wszystkie" : src.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Pokaż / Reset */}
-          <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
-            <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaż</button>
-            <button onClick={handleResetFilters}
-              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 10, padding: "8px 18px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-            >Reset filtrów</button>
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: "#1e2d45", flexShrink: 0 }} />
+
+          {/* Source filter — Wszystkie / NFC / QR */}
+          <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
+            {(["all", "nfc", "qr"] as const).map(src => (
+              <button key={src} type="button"
+                onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
+                style={{
+                  padding: "4px 10px", fontSize: 11, fontWeight: 600, border: "none",
+                  borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
+                  cursor: "pointer",
+                  background: scanSourceFilter === src
+                    ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.15)")
+                    : "#1a253a",
+                  color: scanSourceFilter === src
+                    ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
+                    : "#5a6478",
+                }}
+              >{src === "all" ? "Wszystkie" : src.toUpperCase()}</button>
+            ))}
           </div>
         </section>
 
@@ -2255,124 +2215,172 @@ function DashboardPage() {
           <div className="anim-fade">
 
             {/* ========================================================== */}
-            {/*  0. ACTIVE FILTERS BAR                                     */}
+            {/*  0. ACTIVE FILTERS BAR — chips only, no duplicates          */}
             {/* ========================================================== */}
-            {(selectedClientId || selectedCampaignId || selectedTagIds.length > 0 || scanSourceFilter !== "all" || scanNfcFilter || tagFilter || rangePreset !== "custom" || dateFrom || dateTo) && (
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
-                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2 }}>Filtry:</span>
-                {/* Range chip */}
-                {rangePreset !== "custom" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(230,149,0,0.1)", border: "1px solid rgba(230,149,0,0.3)", fontSize: 11, color: "#e69500", fontWeight: 600 }}>
-                    🕐 {{"24h":"24h","7d":"7 dni","30d":"30 dni","month":"Ten miesiąc"}[rangePreset]}
-                    <button onClick={() => applyPreset("custom")} style={{ background: "none", border: "none", color: "#e69500", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                {rangePreset === "custom" && (dateFrom || dateTo) && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(230,149,0,0.1)", border: "1px solid rgba(230,149,0,0.3)", fontSize: 11, color: "#e69500", fontWeight: 600 }}>
-                    📅 {dateFrom || "…"} → {dateTo || "…"}
-                    <button onClick={() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }} style={{ background: "none", border: "none", color: "#e69500", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                {selectedClientId && (() => {
-                  const cl = clients.find(c => c.id === selectedClientId);
-                  return cl ? (
-                    <span key="cl" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: `${cl.color || "#e69500"}18`, border: `1px solid ${cl.color || "#e69500"}40`, fontSize: 11, color: cl.color || "#f5b731", fontWeight: 600 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block" }} />
-                      {cl.name}
-                      <button onClick={() => setSelectedClientId(null)} style={{ background: "none", border: "none", color: cl.color || "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+            {(() => {
+              // Build deduplicated chip list with stable keys.
+              // Rules: preset range chips are NOT shown (topbar pill makes them self-evident).
+              // Only custom date range, client, campaign, actions, source≠all, nfc filter shown.
+              const hasCustomDate = rangePreset === "custom" && (dateFrom || dateTo);
+              const hasNonDefaultFilters =
+                hasCustomDate ||
+                selectedClientId ||
+                selectedCampaignId ||
+                selectedTagIds.length > 0 ||
+                tagFilter ||
+                scanSourceFilter !== "all" ||
+                scanNfcFilter;
+              if (!hasNonDefaultFilters) return null;
+
+              // Chip helper
+              const chipStyle = (color: string, bg: string, border: string): React.CSSProperties => ({
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                color, background: bg, border: `1px solid ${border}`,
+              });
+              const xBtn = (onClick: () => void, color: string) => (
+                <button onClick={onClick} style={{ background: "none", border: "none", color, cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7, flexShrink: 0 }}>×</button>
+              );
+
+              return (
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
+                  <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2, flexShrink: 0 }}>Filtry:</span>
+
+                  {/* Custom date range — shown only in custom mode with actual values */}
+                  {hasCustomDate && (
+                    <span key="timeRange" style={chipStyle("#e69500", "rgba(230,149,0,0.1)", "rgba(230,149,0,0.3)")}>
+                      📅 {dateFrom ? dateFrom.slice(5) : "…"}{timeFrom ? ` ${timeFrom}` : ""} → {dateTo ? dateTo.slice(5) : "…"}{timeTo ? ` ${timeTo}` : ""}
+                      {xBtn(() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }, "#e69500")}
                     </span>
-                  ) : null;
-                })()}
-                {selectedCampaignId && (() => {
-                  const cp = campaigns.find(c => c.id === selectedCampaignId);
-                  return cp ? (
-                    <span key="cp" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.3)", fontSize: 11, color: "#60a5fa", fontWeight: 600 }}>
-                      📁 {cp.name}
-                      <button onClick={() => setSelectedCampaignId(null)} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                    </span>
-                  ) : null;
-                })()}
-                {/* Selected tag chips — show first 3, then +N chip with overflow popover */}
-                {selectedTagIds.length > 0 && (() => {
-                  const CHIP_LIMIT = 3;
-                  const visible = selectedTagIds.slice(0, CHIP_LIMIT);
-                  const overflow = selectedTagIds.slice(CHIP_LIMIT);
-                  return (
-                    <>
-                      {visible.map(tid => {
-                        const t = tags.find(x => x.id === tid);
-                        return t ? (
-                          <span key={`t-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                            {t.name}
-                            <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); if (showScanTable) fetchScans(); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                          </span>
-                        ) : null;
-                      })}
-                      {overflow.length > 0 && (
-                        <div ref={tagOverflowRef} style={{ position: "relative", display: "inline-flex" }}>
-                          <button
-                            onClick={() => setShowTagsOverflow(v => !v)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.15)", border: "1px solid rgba(245,183,49,0.4)", fontSize: 11, color: "#f5b731", fontWeight: 700, cursor: "pointer" }}
-                          >+{overflow.length}</button>
-                          {showTagsOverflow && (
-                            <div style={{
-                              position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
-                              background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
-                              boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "8px",
-                              display: "flex", flexDirection: "column", gap: 4, minWidth: 180, maxWidth: 260,
-                            }}>
-                              <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
-                                Wszystkie wybrane ({selectedTagIds.length})
+                  )}
+
+                  {/* Client */}
+                  {selectedClientId && (() => {
+                    const cl = clients.find(c => c.id === selectedClientId);
+                    if (!cl) return null;
+                    return (
+                      <span key={`client:${cl.id}`} style={chipStyle(cl.color || "#f5b731", `${cl.color || "#e69500"}18`, `${cl.color || "#e69500"}40`)}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block", flexShrink: 0 }} />
+                        {cl.name}
+                        {xBtn(() => setSelectedClientId(null), cl.color || "#f5b731")}
+                      </span>
+                    );
+                  })()}
+
+                  {/* Campaign */}
+                  {selectedCampaignId && (() => {
+                    const cp = campaigns.find(c => c.id === selectedCampaignId);
+                    if (!cp) return null;
+                    return (
+                      <span key={`campaign:${cp.id}`} style={chipStyle("#60a5fa", "rgba(96,165,250,0.1)", "rgba(96,165,250,0.3)")}>
+                        📁 {cp.name}
+                        {xBtn(() => setSelectedCampaignId(null), "#60a5fa")}
+                      </span>
+                    );
+                  })()}
+
+                  {/* Selected actions — first 3 chips + "+N more" overflow popover */}
+                  {selectedTagIds.length > 0 && (() => {
+                    const LIMIT = 3;
+                    const visible = selectedTagIds.slice(0, LIMIT);
+                    const overflow = selectedTagIds.slice(LIMIT);
+                    const removeTag = (tid: string) => {
+                      const next = selectedTagIds.filter(id => id !== tid);
+                      setSelectedTagIds(next);
+                      fetchStats({ tagIds: next });
+                      if (showScanTable) fetchScans();
+                      if (next.length === 0) setShowTagsOverflow(false);
+                    };
+                    return (
+                      <>
+                        {visible.map(tid => {
+                          const t = tags.find(x => x.id === tid);
+                          return t ? (
+                            <span key={`action:${tid}`} style={chipStyle("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
+                              {t.name}
+                              {xBtn(() => removeTag(tid), "#f5b731")}
+                            </span>
+                          ) : null;
+                        })}
+                        {overflow.length > 0 && (
+                          <div ref={tagOverflowRef} style={{ position: "relative", display: "inline-flex" }}>
+                            <button
+                              onClick={() => setShowTagsOverflow(v => !v)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.15)", border: "1px solid rgba(245,183,49,0.4)", fontSize: 11, color: "#f5b731", fontWeight: 700, cursor: "pointer" }}
+                            >+{overflow.length}</button>
+                            {showTagsOverflow && (
+                              <div style={{
+                                position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
+                                background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                                boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "8px",
+                                display: "flex", flexDirection: "column", gap: 4, minWidth: 180, maxWidth: 260,
+                              }}>
+                                <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+                                  Wszystkie wybrane ({selectedTagIds.length})
+                                </div>
+                                {selectedTagIds.map(tid => {
+                                  const t = tags.find(x => x.id === tid);
+                                  return t ? (
+                                    <span key={`ov:action:${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                                      {xBtn(() => removeTag(tid), "#f5b731")}
+                                    </span>
+                                  ) : null;
+                                })}
+                                <button
+                                  onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagsOverflow(false); }}
+                                  style={{ marginTop: 4, background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", textAlign: "center" }}
+                                  onMouseEnter={e => e.currentTarget.style.borderColor = "#f87171"}
+                                  onMouseLeave={e => e.currentTarget.style.borderColor = "#1e2d45"}
+                                >Wyczyść akcje</button>
                               </div>
-                              {selectedTagIds.map(tid => {
-                                const t = tags.find(x => x.id === tid);
-                                return t ? (
-                                  <span key={`ov-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                                    <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); if (showScanTable) fetchScans(); if (next.length === 0) setShowTagsOverflow(false); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7, flexShrink: 0 }}>×</button>
-                                  </span>
-                                ) : null;
-                              })}
-                              <button
-                                onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagsOverflow(false); }}
-                                style={{ marginTop: 4, background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", textAlign: "center" }}
-                                onMouseEnter={e => e.currentTarget.style.borderColor = "#f87171"}
-                                onMouseLeave={e => e.currentTarget.style.borderColor = "#1e2d45"}
-                              >Wyczyść akcje</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-                {tagFilter && (() => {
-                  const t = tags.find(x => x.id === tagFilter);
-                  return (
-                    <span key="tf" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                      Akcja: {t?.name ?? tagFilter}
-                      <button onClick={() => setTagFilter("")} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {/* Single tagFilter (set from scan table / tag management drill-down) */}
+                  {tagFilter && (() => {
+                    const t = tags.find(x => x.id === tagFilter);
+                    return (
+                      <span key={`action:${tagFilter}`} style={chipStyle("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
+                        {t?.name ?? tagFilter}
+                        {xBtn(() => setTagFilter(""), "#f5b731")}
+                      </span>
+                    );
+                  })()}
+
+                  {/* Source filter */}
+                  {scanSourceFilter !== "all" && (
+                    <span key={`source:${scanSourceFilter}`} style={chipStyle(
+                      scanSourceFilter === "qr" ? "#10b981" : "#f5b731",
+                      scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)",
+                      scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)",
+                    )}>
+                      {scanSourceFilter.toUpperCase()}
+                      {xBtn(() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }, scanSourceFilter === "qr" ? "#10b981" : "#f5b731")}
                     </span>
-                  );
-                })()}
-                {scanSourceFilter !== "all" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)", border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)"}`, fontSize: 11, color: scanSourceFilter === "qr" ? "#10b981" : "#f5b731", fontWeight: 600 }}>
-                    Źródło: {scanSourceFilter.toUpperCase()}
-                    <button onClick={() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                {scanNfcFilter && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)", fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>
-                    NFC: {scanNfcFilter}
-                    <button onClick={() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }} style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                <button onClick={handleResetFilters} style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
-                  onMouseEnter={e => e.currentTarget.style.color = "#f87171"} onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}>
-                  Wyczyść wszystkie ×
-                </button>
-              </div>
-            )}
+                  )}
+
+                  {/* NFC chip filter */}
+                  {scanNfcFilter && (
+                    <span key={`nfc:${scanNfcFilter}`} style={chipStyle("#a78bfa", "rgba(139,92,246,0.1)", "rgba(139,92,246,0.3)")}>
+                      NFC: {scanNfcFilter}
+                      {xBtn(() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }, "#a78bfa")}
+                    </span>
+                  )}
+
+                  {/* Clear all — always last */}
+                  <button onClick={handleResetFilters}
+                    style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
+                  >Wyczyść wszystkie ×</button>
+                </div>
+              );
+            })()}
 
             {/* ========================================================== */}
             {/*  1. KPI CARDS                                              */}
