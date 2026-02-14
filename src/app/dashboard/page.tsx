@@ -2019,17 +2019,25 @@ function DashboardPage() {
           {/* ============================================================ */}
           {/*  LEFT SIDEBAR — Filtry: Klienci, Kampanie, Akcje             */}
           {/* ============================================================ */}
-          <aside className="nfc-sidebar" style={{
-            width: 260,
-            flexShrink: 0,
-            position: "sticky",
-            top: 76,
-            maxHeight: "calc(100vh - 96px)",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}>
+          <aside
+            className="nfc-sidebar"
+            onScroll={() => {
+              setShowClientDropdown(false);
+              setShowCampaignDropdown(false);
+              setShowTagDropdown(false);
+            }}
+            style={{
+              width: 260,
+              flexShrink: 0,
+              position: "sticky",
+              top: 76,
+              maxHeight: "calc(100vh - 96px)",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
             {/* -- Klienci block — single-select combobox (wybór jednego) -- */}
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -2119,7 +2127,7 @@ function DashboardPage() {
                     position: "fixed", top: clientDropdownPos.top, left: clientDropdownPos.left, width: clientDropdownPos.width,
                     zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
                     boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                    maxHeight: `min(240px, calc(100vh - ${clientDropdownPos.top + 8}px))`,
+                    maxHeight: Math.min(280, window.innerHeight - clientDropdownPos.top - 8),
                     display: "flex", flexDirection: "column",
                   }}
                 >
@@ -2271,7 +2279,7 @@ function DashboardPage() {
                       position: "fixed", top: campaignDropdownPos.top, left: campaignDropdownPos.left, width: campaignDropdownPos.width,
                       zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
                       boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                      maxHeight: `min(240px, calc(100vh - ${campaignDropdownPos.top + 8}px))`,
+                      maxHeight: Math.min(280, window.innerHeight - campaignDropdownPos.top - 8),
                       display: "flex", flexDirection: "column",
                     }}
                   >
@@ -2429,7 +2437,7 @@ function DashboardPage() {
                       zIndex: 9999,
                       background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
                       boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                      maxHeight: "min(220px, calc(100vh - " + (tagDropdownPos.top + 8) + "px))",
+                      maxHeight: Math.min(280, window.innerHeight - tagDropdownPos.top - 8),
                       display: "flex", flexDirection: "column",
                     }}
                   >
