@@ -312,21 +312,31 @@ export function ActionsTable({
       )}
 
       {/* ---- Table ---- */}
-      <div style={{ overflowX: "auto" }}>
+      <div>
       <table
         style={{
           width: "100%",
           borderCollapse: "collapse",
           fontSize: 13,
           color: "#e8ecf1",
+          tableLayout: "fixed",
         }}
       >
+        <colgroup>
+          <col style={{ width: 40 }} />         {/* checkbox */}
+          <col />                                {/* Nazwa — flex */}
+          <col style={{ width: 90 }} />          {/* Typ */}
+          <col style={{ width: 100 }} />         {/* Status */}
+          <col style={{ width: 62 }} />          {/* Skany */}
+          <col style={{ width: 200 }} />         {/* URL / ID */}
+          <col style={{ width: 148 }} />         {/* Akcje */}
+        </colgroup>
         {/* ---- HEAD ---- */}
         <thead>
           <tr style={{ borderBottom: "1px solid #1e2d45" }}>
             {/* Checkbox header */}
             <th
-              style={{ padding: "8px 8px 8px 16px", width: 32 }}
+              style={{ padding: "8px 8px 8px 16px" }}
               onClick={(e) => e.stopPropagation()}
             >
               <input
@@ -349,6 +359,7 @@ export function ActionsTable({
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
+                  overflow: "hidden",
                 }}
               >
                 {h}
@@ -380,7 +391,7 @@ export function ActionsTable({
               >
                 {/* Checkbox */}
                 <td
-                  style={{ padding: "10px 8px 10px 16px", width: 32 }}
+                  style={{ padding: "10px 8px 10px 16px" }}
                   onClick={(e) => { e.stopPropagation(); toggleOne(tag.id); }}
                 >
                   <input
@@ -392,10 +403,12 @@ export function ActionsTable({
                 </td>
 
                 {/* Nazwa */}
-                <td style={{ padding: "10px 12px", fontWeight: 600 }}>
-                  {tag.name}
+                <td style={{ padding: "10px 12px", fontWeight: 600, overflow: "hidden" }}>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.name}>
+                    {tag.name}
+                  </div>
                   {tag.description && (
-                    <div style={{ fontSize: 11, color: "#5a6478", fontWeight: 400, marginTop: 1 }}>
+                    <div style={{ fontSize: 11, color: "#5a6478", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.description}>
                       {tag.description}
                     </div>
                   )}
@@ -439,20 +452,21 @@ export function ActionsTable({
                 </td>
 
                 {/* URL / ID */}
-                <td style={{ padding: "10px 12px", maxWidth: 220 }} onClick={e => e.stopPropagation()}>
+                <td style={{ padding: "10px 12px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => copyLink(tag.id)}
-                    title="Kopiuj link publiczny"
+                    title={`/s/${tag.id}`}
                     style={{
-                      display: "inline-flex",
+                      display: "flex",
                       alignItems: "center",
                       gap: 5,
+                      width: "100%",
                       background: copiedId === tag.id ? "rgba(34,197,94,0.1)" : "rgba(245,183,49,0.08)",
                       border: `1px solid ${copiedId === tag.id ? "rgba(34,197,94,0.3)" : "rgba(245,183,49,0.2)"}`,
                       borderRadius: 6,
                       padding: "3px 7px 3px 6px",
                       cursor: "pointer",
-                      maxWidth: "100%",
+                      minWidth: 0,
                       transition: "background 0.15s, border-color 0.15s",
                     }}
                     onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.14)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.35)"; } }}
@@ -467,8 +481,8 @@ export function ActionsTable({
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                         minWidth: 0,
+                        flex: 1,
                       }}
-                      title={`${window.location.origin}/s/${tag.id}`}
                     >
                       /s/{tag.id}
                     </span>
@@ -479,21 +493,25 @@ export function ActionsTable({
                       }
                     </span>
                   </button>
-                  {(tag.tagType === "url" || tag.tagType === "google-review") && tag.targetUrl && (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "#5a6478",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        marginTop: 3,
-                      }}
-                      title={tag.targetUrl}
-                    >
-                      {tag.targetUrl}
-                    </div>
-                  )}
+                  {(tag.tagType === "url" || tag.tagType === "google-review") && tag.targetUrl && (() => {
+                    let host = tag.targetUrl;
+                    try { host = new URL(tag.targetUrl).hostname.replace(/^www\./, ""); } catch {}
+                    return (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#5a6478",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          marginTop: 3,
+                        }}
+                        title={tag.targetUrl}
+                      >
+                        {host}
+                      </div>
+                    );
+                  })()}
                 </td>
 
                 {/* Akcje */}
