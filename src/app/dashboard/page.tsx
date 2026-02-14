@@ -430,6 +430,9 @@ function DashboardPage() {
   // copy-link toast
   const [copyToast, setCopyToast] = useState(false);
   const copyToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // per-card copy feedback
+  const [copiedCardId, setCopiedCardId] = useState<string | null>(null);
+  const copiedCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // hourly chart mode
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
@@ -1085,11 +1088,16 @@ function DashboardPage() {
   /* ---- copy-link helper ---- */
   const handleCopyLink = (tagId: string) => {
     const url = `${window.location.origin}/s/${tagId}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const done = () => {
       if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
       setCopyToast(true);
       copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
-    }).catch(() => {
+      // per-card visual feedback
+      if (copiedCardTimer.current) clearTimeout(copiedCardTimer.current);
+      setCopiedCardId(tagId);
+      copiedCardTimer.current = setTimeout(() => setCopiedCardId(null), 1500);
+    };
+    navigator.clipboard.writeText(url).then(done).catch(() => {
       // Fallback for browsers that block clipboard API
       const el = document.createElement("textarea");
       el.value = url;
@@ -1099,9 +1107,7 @@ function DashboardPage() {
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
-      setCopyToast(true);
-      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+      done();
     });
   };
 
@@ -4201,6 +4207,60 @@ function DashboardPage() {
                               />
                             </button>
 
+                            {/* Quick: Kopiuj link publiczny */}
+                            <button
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kopiuj link publiczny"
+                              style={{
+                                background: "#1a253a",
+                                border: "1px solid #1e2d45",
+                                color: copiedCardId === tag.id ? "#22c55e" : "#8b95a8",
+                                borderRadius: 6,
+                                width: 28,
+                                height: 28,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                transition: "color 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { if (copiedCardId !== tag.id) { e.currentTarget.style.color = "#f5b731"; e.currentTarget.style.borderColor = "#e69500"; } }}
+                              onMouseLeave={e => { if (copiedCardId !== tag.id) { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; } }}
+                            >
+                              {copiedCardId === tag.id
+                                ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                              }
+                            </button>
+
+                            {/* Quick: Edytuj */}
+                            <button
+                              onClick={e => { e.stopPropagation(); startEdit(tag); }}
+                              title="Edytuj akcję"
+                              style={{
+                                background: "#1a253a",
+                                border: "1px solid #1e2d45",
+                                color: "#8b95a8",
+                                borderRadius: 6,
+                                width: 28,
+                                height: 28,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                transition: "color 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#e69500"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; }}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+
                             {/* ⋯ menu */}
                             <div style={{ position: "relative" }}>
                               <button
@@ -4231,21 +4291,6 @@ function DashboardPage() {
 
                               {openMenuId === tag.id && menuRect && (
                                 <CtxMenuPortal anchorRect={menuRect} onClose={closeCardMenu}>
-                                  {/* Edytuj */}
-                                  <button
-                                    onClick={() => { closeCardMenu(); startEdit(tag); }}
-                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#e8ecf1", fontSize: 13, cursor: "pointer", textAlign: "left" }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                  >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                    Edytuj
-                                  </button>
-
-                                  <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
 
                                   {/* Pobierz QR PNG */}
                                   <button
