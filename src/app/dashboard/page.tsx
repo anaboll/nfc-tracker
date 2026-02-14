@@ -452,12 +452,8 @@ function DashboardPage() {
   const [showScanTable, setShowScanTable] = useState(false);
   // actions search (inline list, no dropdown)
   const [tagSearch, setTagSearch] = useState("");
-  // client combobox
+  // client inline list search
   const [clientSearch, setClientSearch] = useState("");
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const clientDropdownRef = useRef<HTMLDivElement>(null);
-  const clientDropdownPortalRef = useRef<HTMLDivElement>(null);
-  const [clientDropdownPos, setClientDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
   // campaign combobox
   const [campaignSearch, setCampaignSearch] = useState("");
   const [showCampaignDropdown, setShowCampaignDropdown] = useState(false);
@@ -934,30 +930,6 @@ function DashboardPage() {
   }, [showCustomPopover]);
 
 
-  /* ---- client dropdown outside-click + reposition ---- */
-  useEffect(() => {
-    if (!showClientDropdown) return;
-    const handler = (e: MouseEvent) => {
-      const inTrigger = clientDropdownRef.current?.contains(e.target as Node);
-      const inPortal = clientDropdownPortalRef.current?.contains(e.target as Node);
-      if (!inTrigger && !inPortal) { setShowClientDropdown(false); setClientSearch(""); }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showClientDropdown]);
-  useEffect(() => {
-    if (!showClientDropdown) return;
-    const update = () => {
-      if (clientDropdownRef.current) {
-        const r = clientDropdownRef.current.getBoundingClientRect();
-        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      }
-    };
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
-  }, [showClientDropdown]);
-
 
   /* ---- chips overflow outside-click ---- */
   useEffect(() => {
@@ -1118,7 +1090,6 @@ function DashboardPage() {
     setSelectedTagIds([]);
     setTagSearch("");
     setClientSearch("");
-    setShowClientDropdown(false);
     setCampaignSearch("");
     setShowCampaignDropdown(false);
     setShowChipsOverflow(false);
@@ -1987,7 +1958,6 @@ function DashboardPage() {
           <aside
             className="nfc-sidebar"
             onScroll={() => {
-              setShowClientDropdown(false);
             }}
             style={{
               width: 260,
@@ -2025,120 +1995,77 @@ function DashboardPage() {
                 </div>
               </div>
 
-              {/* Combobox trigger */}
-              <div ref={clientDropdownRef}>
-                <div
-                  onClick={() => {
-                    if (clientDropdownRef.current) {
-                      const r = clientDropdownRef.current.getBoundingClientRect();
-                      setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                    }
-                    setShowClientDropdown(true);
-                  }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: "#131b2e", border: `1px solid ${showClientDropdown ? "#3a5a80" : "#1e2d45"}`,
-                    borderRadius: 8, padding: "6px 10px", cursor: "text", transition: "border-color 0.15s",
-                  }}
-                >
-                  {selectedClientId ? (() => {
-                    const cl = clients.find(c => c.id === selectedClientId);
-                    return cl ? <span style={{ width: 8, height: 8, borderRadius: "50%", background: cl.color || "#e69500", flexShrink: 0 }} /> : null;
-                  })() : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                    </svg>
-                  )}
-                  <input
-                    value={clientSearch}
-                    onChange={e => {
-                      setClientSearch(e.target.value);
-                      if (!showClientDropdown && clientDropdownRef.current) {
-                        const r = clientDropdownRef.current.getBoundingClientRect();
-                        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                      }
-                      setShowClientDropdown(true);
-                    }}
-                    onFocus={() => {
-                      if (clientDropdownRef.current) {
-                        const r = clientDropdownRef.current.getBoundingClientRect();
-                        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                      }
-                      setShowClientDropdown(true);
-                    }}
-                    placeholder={selectedClientId ? (clients.find(c => c.id === selectedClientId)?.name ?? "Szukaj…") : "Wszyscy klienci"}
-                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
-                  />
-                  {selectedClientId && (
-                    <button
-                      onMouseDown={e => { e.stopPropagation(); setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); }}
-                      style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
-                      title="Wyczyść klienta"
-                    >×</button>
-                  )}
-                </div>
+              {/* -- Klienci — always-visible inline list -- */}
+              {/* search bar */}
+              <div style={{ display: "flex", alignItems: "center", background: "#131b2e", border: "1px solid #1e2d45", borderRadius: 8, padding: "6px 10px", marginBottom: 6 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginRight: 6 }}>
+                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input
+                  value={clientSearch}
+                  onChange={e => setClientSearch(e.target.value)}
+                  placeholder="Szukaj klienta…"
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
+                />
+                {clientSearch && (
+                  <button onClick={() => setClientSearch("")} style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
+                )}
               </div>
-
-              {/* Client portal dropdown */}
-              {showClientDropdown && clientDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
-                <div
-                  ref={clientDropdownPortalRef}
+              <div style={{ marginLeft: -4, marginRight: -4 }}>
+                {/* "Wszyscy klienci" row */}
+                <button
+                  onClick={() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
                   style={{
-                    position: "fixed", top: clientDropdownPos.top, left: clientDropdownPos.left, width: clientDropdownPos.width,
-                    zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                    maxHeight: Math.min(280, window.innerHeight - clientDropdownPos.top - 8),
-                    display: "flex", flexDirection: "column",
+                    display: "flex", alignItems: "center", gap: 8, width: "100%",
+                    padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
+                    background: !selectedClientId ? "rgba(245,183,49,0.1)" : "transparent",
+                    color: !selectedClientId ? "#f5b731" : "#8b95a8",
+                    fontSize: 12, fontWeight: !selectedClientId ? 600 : 400,
+                    transition: "background 0.12s",
                   }}
+                  onMouseEnter={e => { if (selectedClientId) e.currentTarget.style.background = "#111827"; }}
+                  onMouseLeave={e => { if (selectedClientId) e.currentTarget.style.background = "transparent"; }}
                 >
-                  {/* "Wszyscy" option */}
-                  <button
-                    onMouseDown={e => { e.preventDefault(); setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); setShowClientDropdown(false); setClientSearch(""); }}
-                    style={{
-                      padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
-                      background: !selectedClientId ? "rgba(245,183,49,0.1)" : "transparent",
-                      color: !selectedClientId ? "#f5b731" : "#8b95a8",
-                      border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer", flexShrink: 0,
-                    }}
-                  >{!selectedClientId ? "✓ " : ""}Wszyscy klienci</button>
-                  <div style={{ overflowY: "auto", flex: 1 }}>
-                    {clients
-                      .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
-                      .map(c => {
-                        const sel = selectedClientId === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            onMouseDown={e => {
-                              e.preventDefault();
-                              setSelectedClientId(c.id);
-                              setSelectedCampaignId(null);
-                              setSelectedTagIds([]);
-                              fetchStats({ tagIds: [] });
-                              setShowClientDropdown(false);
-                              setClientSearch("");
-                            }}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 8, width: "100%",
-                              padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
-                              background: sel ? `${c.color || "#e69500"}15` : "transparent",
-                              color: sel ? (c.color || "#f5b731") : "#c8d0de",
-                              border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer", textAlign: "left",
-                            }}
-                          >
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
-                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                            <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}sk</span>
-                          </button>
-                        );
-                      })}
-                    {clients.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
-                      <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak wyników</div>
-                    )}
-                  </div>
-                </div>,
-                document.body
-              )}
+                  <span style={{
+                    width: 14, height: 14, borderRadius: 3, border: `1px solid ${!selectedClientId ? "#f5b731" : "#2a3d5a"}`,
+                    background: !selectedClientId ? "rgba(245,183,49,0.15)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    {!selectedClientId && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f5b731" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </span>
+                  Wszyscy klienci
+                </button>
+                {/* per-client rows */}
+                {clients
+                  .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                  .map(c => {
+                    const sel = selectedClientId === c.id;
+                    const dotColor = c.color || "#e69500";
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => { setSelectedClientId(c.id); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, width: "100%",
+                          padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
+                          background: sel ? `${dotColor}18` : "transparent",
+                          color: sel ? dotColor : "#c8d0de",
+                          fontSize: 12, fontWeight: sel ? 600 : 400,
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#111827"; }}
+                        onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                        {c.scanCount > 0 && <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}</span>}
+                      </button>
+                    );
+                  })}
+                {clients.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                  <div style={{ padding: "8px 4px", fontSize: 11, color: "#3a4460" }}>Brak wyników</div>
+                )}
+              </div>
 
               {/* Add client inline form */}
               {showAddClient && (
