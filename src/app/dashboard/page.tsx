@@ -327,11 +327,24 @@ function DashboardPage() {
   // actions combobox
   const [tagSearch, setTagSearch] = useState("");
   const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [showTagsOverflow, setShowTagsOverflow] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const tagDropdownPortalRef = useRef<HTMLDivElement>(null);
-  const tagOverflowRef = useRef<HTMLDivElement>(null);
   const [tagDropdownPos, setTagDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  // client combobox
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const clientDropdownPortalRef = useRef<HTMLDivElement>(null);
+  const [clientDropdownPos, setClientDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  // campaign combobox
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [showCampaignDropdown, setShowCampaignDropdown] = useState(false);
+  const campaignDropdownRef = useRef<HTMLDivElement>(null);
+  const campaignDropdownPortalRef = useRef<HTMLDivElement>(null);
+  const [campaignDropdownPos, setCampaignDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  // chips overflow popover
+  const [showChipsOverflow, setShowChipsOverflow] = useState(false);
+  const chipsOverflowRef = useRef<HTMLDivElement>(null);
 
   // editing
   const [editingAction, setEditingAction] = useState<TagFull | null>(null);
@@ -791,18 +804,6 @@ function DashboardPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showTagDropdown]);
 
-  /* ---- close tags overflow popover on outside click ---- */
-  useEffect(() => {
-    if (!showTagsOverflow) return;
-    const handler = (e: MouseEvent) => {
-      if (tagOverflowRef.current && !tagOverflowRef.current.contains(e.target as Node)) {
-        setShowTagsOverflow(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showTagsOverflow]);
-
   /* ---- reposition tag dropdown portal on scroll/resize ---- */
   useEffect(() => {
     if (!showTagDropdown) return;
@@ -819,6 +820,66 @@ function DashboardPage() {
       window.removeEventListener("resize", update);
     };
   }, [showTagDropdown]);
+
+  /* ---- client dropdown outside-click + reposition ---- */
+  useEffect(() => {
+    if (!showClientDropdown) return;
+    const handler = (e: MouseEvent) => {
+      const inTrigger = clientDropdownRef.current?.contains(e.target as Node);
+      const inPortal = clientDropdownPortalRef.current?.contains(e.target as Node);
+      if (!inTrigger && !inPortal) { setShowClientDropdown(false); setClientSearch(""); }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showClientDropdown]);
+  useEffect(() => {
+    if (!showClientDropdown) return;
+    const update = () => {
+      if (clientDropdownRef.current) {
+        const r = clientDropdownRef.current.getBoundingClientRect();
+        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    };
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
+  }, [showClientDropdown]);
+
+  /* ---- campaign dropdown outside-click + reposition ---- */
+  useEffect(() => {
+    if (!showCampaignDropdown) return;
+    const handler = (e: MouseEvent) => {
+      const inTrigger = campaignDropdownRef.current?.contains(e.target as Node);
+      const inPortal = campaignDropdownPortalRef.current?.contains(e.target as Node);
+      if (!inTrigger && !inPortal) { setShowCampaignDropdown(false); setCampaignSearch(""); }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showCampaignDropdown]);
+  useEffect(() => {
+    if (!showCampaignDropdown) return;
+    const update = () => {
+      if (campaignDropdownRef.current) {
+        const r = campaignDropdownRef.current.getBoundingClientRect();
+        setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    };
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
+  }, [showCampaignDropdown]);
+
+  /* ---- chips overflow outside-click ---- */
+  useEffect(() => {
+    if (!showChipsOverflow) return;
+    const handler = (e: MouseEvent) => {
+      if (chipsOverflowRef.current && !chipsOverflowRef.current.contains(e.target as Node)) {
+        setShowChipsOverflow(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showChipsOverflow]);
 
   /* ---- handlers ---- */
 
@@ -941,7 +1002,11 @@ function DashboardPage() {
     setSelectedTagIds([]);
     setTagSearch("");
     setShowTagDropdown(false);
-    setShowTagsOverflow(false);
+    setClientSearch("");
+    setShowClientDropdown(false);
+    setCampaignSearch("");
+    setShowCampaignDropdown(false);
+    setShowChipsOverflow(false);
     setRangePreset("custom");
     // Clear URL params
     router.replace("/dashboard", { scroll: false });
@@ -1815,154 +1880,306 @@ function DashboardPage() {
             flexDirection: "column",
             gap: 12,
           }}>
-            {/* -- Klienci block -- */}
+            {/* -- Klienci block — single-select combobox (wybór jednego) -- */}
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klienci</span>
-                <button
-                  onClick={() => setShowAddClient(!showAddClient)}
-                  title="Dodaj klienta"
-                  style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-                >+</button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
+                  <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>single</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {selectedClientId && (
+                    <button
+                      onClick={() => handleDeleteClient(selectedClientId)}
+                      title="Usuń klienta"
+                      style={{ background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                      onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
+                    >🗑</button>
+                  )}
+                  <button
+                    onClick={() => setShowAddClient(!showAddClient)}
+                    title="Dodaj klienta"
+                    style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                  >+</button>
+                </div>
               </div>
 
-              {/* "Wszyscy" chip */}
-              <button
-                onClick={() => setSelectedClientId(null)}
-                style={{
-                  width: "100%", textAlign: "left", background: !selectedClientId ? "rgba(245,183,49,0.12)" : "transparent",
-                  border: `1px solid ${!selectedClientId ? "rgba(245,183,49,0.35)" : "transparent"}`,
-                  borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
-                  transition: "background 0.15s",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600, color: !selectedClientId ? "#f5b731" : "#8b95a8" }}>Wszyscy</span>
-                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500 }} title="Łączna liczba skanów">{clients.reduce((s, c) => s + c.scanCount, 0)}<span style={{ marginLeft: 2, color: "#3a4460" }}>sk</span></span>
-              </button>
-
-              {/* Client chips */}
-              {clients.map((c) => {
-                const active = selectedClientId === c.id;
-                return (
-                  <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
+              {/* Combobox trigger */}
+              <div ref={clientDropdownRef}>
+                <div
+                  onClick={() => {
+                    if (clientDropdownRef.current) {
+                      const r = clientDropdownRef.current.getBoundingClientRect();
+                      setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                    }
+                    setShowClientDropdown(true);
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#131b2e", border: `1px solid ${showClientDropdown ? "#3a5a80" : "#1e2d45"}`,
+                    borderRadius: 8, padding: "6px 10px", cursor: "text", transition: "border-color 0.15s",
+                  }}
+                >
+                  {selectedClientId ? (() => {
+                    const cl = clients.find(c => c.id === selectedClientId);
+                    return cl ? <span style={{ width: 8, height: 8, borderRadius: "50%", background: cl.color || "#e69500", flexShrink: 0 }} /> : null;
+                  })() : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                  )}
+                  <input
+                    value={clientSearch}
+                    onChange={e => {
+                      setClientSearch(e.target.value);
+                      if (!showClientDropdown && clientDropdownRef.current) {
+                        const r = clientDropdownRef.current.getBoundingClientRect();
+                        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                      }
+                      setShowClientDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (clientDropdownRef.current) {
+                        const r = clientDropdownRef.current.getBoundingClientRect();
+                        setClientDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                      }
+                      setShowClientDropdown(true);
+                    }}
+                    placeholder={selectedClientId ? (clients.find(c => c.id === selectedClientId)?.name ?? "Szukaj…") : "Wszyscy klienci"}
+                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
+                  />
+                  {selectedClientId && (
                     <button
-                      onClick={() => setSelectedClientId(c.id)}
-                      style={{
-                        width: "100%", textAlign: "left",
-                        background: active ? `${c.color || "#e69500"}18` : "transparent",
-                        border: `1px solid ${active ? `${c.color || "#e69500"}50` : "transparent"}`,
-                        borderRadius: 8, padding: "7px 10px", cursor: "pointer",
-                        display: "flex", alignItems: "center", gap: 8,
-                        transition: "background 0.15s",
-                      }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? (c.color || "#f5b731") : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                      <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500, flexShrink: 0 }} title={`${c.scanCount} skanów / ${c.tagCount} akcji`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
-                    </button>
-                    {active && (
-                      <button
-                        onClick={() => handleDeleteClient(c.id)}
-                        title="Usun klienta"
-                        style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
-                      >×</button>
+                      onMouseDown={e => { e.stopPropagation(); setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); }}
+                      style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                      title="Wyczyść klienta"
+                    >×</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Client portal dropdown */}
+              {showClientDropdown && clientDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
+                <div
+                  ref={clientDropdownPortalRef}
+                  style={{
+                    position: "fixed", top: clientDropdownPos.top, left: clientDropdownPos.left, width: clientDropdownPos.width,
+                    zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
+                    maxHeight: `min(240px, calc(100vh - ${clientDropdownPos.top + 8}px))`,
+                    display: "flex", flexDirection: "column",
+                  }}
+                >
+                  {/* "Wszyscy" option */}
+                  <button
+                    onMouseDown={e => { e.preventDefault(); setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); setShowClientDropdown(false); setClientSearch(""); }}
+                    style={{
+                      padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
+                      background: !selectedClientId ? "rgba(245,183,49,0.1)" : "transparent",
+                      color: !selectedClientId ? "#f5b731" : "#8b95a8",
+                      border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer", flexShrink: 0,
+                    }}
+                  >{!selectedClientId ? "✓ " : ""}Wszyscy klienci</button>
+                  <div style={{ overflowY: "auto", flex: 1 }}>
+                    {clients
+                      .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                      .map(c => {
+                        const sel = selectedClientId === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            onMouseDown={e => {
+                              e.preventDefault();
+                              setSelectedClientId(c.id);
+                              setSelectedCampaignId(null);
+                              setSelectedTagIds([]);
+                              fetchStats({ tagIds: [] });
+                              setShowClientDropdown(false);
+                              setClientSearch("");
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 8, width: "100%",
+                              padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
+                              background: sel ? `${c.color || "#e69500"}15` : "transparent",
+                              color: sel ? (c.color || "#f5b731") : "#c8d0de",
+                              border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer", textAlign: "left",
+                            }}
+                          >
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                            <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}sk</span>
+                          </button>
+                        );
+                      })}
+                    {clients.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                      <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak wyników</div>
                     )}
                   </div>
-                );
-              })}
+                </div>,
+                document.body
+              )}
 
               {/* Add client inline form */}
               {showAddClient && (
                 <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
-                  <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newClientDesc} onChange={e => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid #1e2d45", borderRadius: 4, background: "#131b2e", cursor: "pointer", flexShrink: 0 }} />
+                    <input type="color" value={newClientColor} onChange={e => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid #1e2d45", borderRadius: 4, background: "#131b2e", cursor: "pointer", flexShrink: 0 }} />
                     <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{clientCreating ? "..." : "Dodaj"}</button>
                     <button onClick={() => setShowAddClient(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
                   </div>
                 </div>
               )}
-              {/* Legend */}
-              <p style={{ fontSize: 9, color: "#2a3550", marginTop: 6, textAlign: "right" }}>
-                <span title="liczba skanów">sk = skany</span>
-              </p>
             </div>
 
-            {/* -- Kampanie block (visible only when client selected) -- */}
+            {/* -- Kampanie block — single-select combobox (visible when client selected) -- */}
             {selectedClientId && (
               <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampanie</span>
-                  <button
-                    onClick={() => setShowAddCampaign(!showAddCampaign)}
-                    title="Dodaj kampanie"
-                    style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-                  >+</button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
+                    <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>single</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {selectedCampaignId && (
+                      <button
+                        onClick={() => handleDeleteCampaign(selectedCampaignId)}
+                        title="Usuń kampanię"
+                        style={{ background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                        onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
+                      >🗑</button>
+                    )}
+                    <button
+                      onClick={() => setShowAddCampaign(!showAddCampaign)}
+                      title="Dodaj kampanię"
+                      style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                    >+</button>
+                  </div>
                 </div>
 
-                {/* "Wszystkie kampanie" chip */}
-                <button
-                  onClick={() => setSelectedCampaignId(null)}
-                  style={{
-                    width: "100%", textAlign: "left", background: !selectedCampaignId ? "rgba(96,165,250,0.10)" : "transparent",
-                    border: `1px solid ${!selectedCampaignId ? "rgba(96,165,250,0.30)" : "transparent"}`,
-                    borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 600, color: !selectedCampaignId ? "#60a5fa" : "#8b95a8" }}>Wszystkie</span>
-                  <span style={{ fontSize: 10, color: "#5a6478" }} title={`${filteredCampaigns.length} kampanii`}>{filteredCampaigns.length}<span style={{ color: "#3a4460" }}>kmp</span></span>
-                </button>
-
-                {/* Campaign chips */}
-                {filteredCampaigns.map((c) => {
-                  const active = selectedCampaignId === c.id;
-                  return (
-                    <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
+                {/* Combobox trigger */}
+                <div ref={campaignDropdownRef}>
+                  <div
+                    onClick={() => {
+                      if (campaignDropdownRef.current) {
+                        const r = campaignDropdownRef.current.getBoundingClientRect();
+                        setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                      }
+                      setShowCampaignDropdown(true);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: "#131b2e", border: `1px solid ${showCampaignDropdown ? "#3a5a80" : "#1e2d45"}`,
+                      borderRadius: 8, padding: "6px 10px", cursor: "text", transition: "border-color 0.15s",
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input
+                      value={campaignSearch}
+                      onChange={e => {
+                        setCampaignSearch(e.target.value);
+                        if (!showCampaignDropdown && campaignDropdownRef.current) {
+                          const r = campaignDropdownRef.current.getBoundingClientRect();
+                          setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                        }
+                        setShowCampaignDropdown(true);
+                      }}
+                      onFocus={() => {
+                        if (campaignDropdownRef.current) {
+                          const r = campaignDropdownRef.current.getBoundingClientRect();
+                          setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                        }
+                        setShowCampaignDropdown(true);
+                      }}
+                      placeholder={selectedCampaignId ? (filteredCampaigns.find(c => c.id === selectedCampaignId)?.name ?? "Szukaj…") : "Wszystkie kampanie"}
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#60a5fa" }}
+                    />
+                    {selectedCampaignId && (
                       <button
-                        onClick={() => setSelectedCampaignId(c.id)}
-                        style={{
-                          width: "100%", textAlign: "left",
-                          background: active ? "rgba(96,165,250,0.10)" : "transparent",
-                          border: `1px solid ${active ? "rgba(96,165,250,0.30)" : "transparent"}`,
-                          borderRadius: 8, padding: "7px 10px", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: 6,
-                          transition: "background 0.15s",
-                        }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={active ? "#60a5fa" : "#5a6478"} strokeWidth={2.5}>
-                          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                        </svg>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#60a5fa" : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                        <span style={{ fontSize: 10, color: "#5a6478", flexShrink: 0 }} title={`${c.scanCount} skanów`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
-                      </button>
-                      {active && (
-                        <button
-                          onClick={() => handleDeleteCampaign(c.id)}
-                          title="Usun kampanie"
-                          style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
-                        >×</button>
+                        onMouseDown={e => { e.stopPropagation(); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); }}
+                        style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                        title="Wyczyść kampanię"
+                      >×</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Campaign portal dropdown */}
+                {showCampaignDropdown && campaignDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
+                  <div
+                    ref={campaignDropdownPortalRef}
+                    style={{
+                      position: "fixed", top: campaignDropdownPos.top, left: campaignDropdownPos.left, width: campaignDropdownPos.width,
+                      zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
+                      maxHeight: `min(240px, calc(100vh - ${campaignDropdownPos.top + 8}px))`,
+                      display: "flex", flexDirection: "column",
+                    }}
+                  >
+                    {/* "Wszystkie kampanie" option */}
+                    <button
+                      onMouseDown={e => { e.preventDefault(); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); setShowCampaignDropdown(false); setCampaignSearch(""); }}
+                      style={{
+                        padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
+                        background: !selectedCampaignId ? "rgba(96,165,250,0.1)" : "transparent",
+                        color: !selectedCampaignId ? "#60a5fa" : "#8b95a8",
+                        border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer", flexShrink: 0,
+                      }}
+                    >{!selectedCampaignId ? "✓ " : ""}Wszystkie kampanie</button>
+                    <div style={{ overflowY: "auto", flex: 1 }}>
+                      {filteredCampaigns
+                        .filter(c => !campaignSearch || c.name.toLowerCase().includes(campaignSearch.toLowerCase()))
+                        .map(c => {
+                          const sel = selectedCampaignId === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              onMouseDown={e => {
+                                e.preventDefault();
+                                setSelectedCampaignId(c.id);
+                                setSelectedTagIds([]);
+                                fetchStats({ tagIds: [] });
+                                setShowCampaignDropdown(false);
+                                setCampaignSearch("");
+                              }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
+                                background: sel ? "rgba(96,165,250,0.1)" : "transparent",
+                                color: sel ? "#60a5fa" : "#c8d0de",
+                                border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer", textAlign: "left",
+                              }}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={sel ? "#60a5fa" : "#5a6478"} strokeWidth={2.5} style={{ flexShrink: 0 }}>
+                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                              </svg>
+                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                              <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}sk</span>
+                            </button>
+                          );
+                        })}
+                      {filteredCampaigns.filter(c => !campaignSearch || c.name.toLowerCase().includes(campaignSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak kampanii</div>
                       )}
                     </div>
-                  );
-                })}
+                  </div>,
+                  document.body
+                )}
 
                 {/* Add campaign inline form */}
                 {showAddCampaign && (
                   <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <input className="input-field" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
-                    <input className="input-field" value={newCampaignDesc} onChange={(e) => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                    <input className="input-field" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
+                    <input className="input-field" value={newCampaignDesc} onChange={e => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
                       <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
@@ -1976,14 +2193,15 @@ function DashboardPage() {
             {(selectedClientId || selectedCampaignId) && filteredTags.length > 0 && (
               <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>
-                    Akcje
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
+                    <span style={{ fontSize: 9, color: "#3a4460", fontWeight: 500 }}>multi</span>
                     {selectedTagIds.length > 0 && (
-                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
                         {selectedTagIds.length}
                       </span>
                     )}
-                  </span>
+                  </div>
                   {selectedTagIds.length > 0 && (
                     <button
                       onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
@@ -2272,169 +2490,177 @@ function DashboardPage() {
           <div className="anim-fade">
 
             {/* ========================================================== */}
-            {/*  0. ACTIVE FILTERS BAR — chips only, no duplicates          */}
+            {/*  0. ACTIVE FILTERS BAR — flat chip array, max N visible     */}
             {/* ========================================================== */}
             {(() => {
-              // Build deduplicated chip list with stable keys.
-              // Rules: preset range chips are NOT shown (topbar pill makes them self-evident).
-              // Only custom date range, client, campaign, actions, source≠all, nfc filter shown.
-              const hasCustomDate = rangePreset === "custom" && (dateFrom || dateTo);
-              const hasNonDefaultFilters =
-                hasCustomDate ||
-                selectedClientId ||
-                selectedCampaignId ||
-                selectedTagIds.length > 0 ||
-                tagFilter ||
-                scanSourceFilter !== "all" ||
-                scanNfcFilter;
-              if (!hasNonDefaultFilters) return null;
-
-              // Chip helper
-              const chipStyle = (color: string, bg: string, border: string): React.CSSProperties => ({
+              // ---- shared helpers ----
+              const cs = (color: string, bg: string, bdr: string): React.CSSProperties => ({
                 display: "inline-flex", alignItems: "center", gap: 4,
                 padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                color, background: bg, border: `1px solid ${border}`,
+                color, background: bg, border: `1px solid ${bdr}`, whiteSpace: "nowrap",
               });
-              const xBtn = (onClick: () => void, color: string) => (
+              const xb = (onClick: () => void, color: string) => (
                 <button onClick={onClick} style={{ background: "none", border: "none", color, cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7, flexShrink: 0 }}>×</button>
               );
 
-              return (
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
-                  <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2, flexShrink: 0 }}>Filtry:</span>
+              // ---- build ordered, deduplicated chip list ----
+              // Each entry: { key, node } — key is stable, node is the rendered chip span
+              type Chip = { key: string; node: React.ReactNode };
+              const chips: Chip[] = [];
 
-                  {/* Custom date range — shown only in custom mode with actual values */}
-                  {hasCustomDate && (
-                    <span key="timeRange" style={chipStyle("#e69500", "rgba(230,149,0,0.1)", "rgba(230,149,0,0.3)")}>
+              // 1. Custom date range (only in custom mode with actual values)
+              const hasCustomDate = rangePreset === "custom" && (dateFrom || dateTo);
+              if (hasCustomDate) {
+                chips.push({
+                  key: "timeRange",
+                  node: (
+                    <span style={cs("#e69500", "rgba(230,149,0,0.1)", "rgba(230,149,0,0.3)")}>
                       📅 {dateFrom ? dateFrom.slice(5) : "…"}{timeFrom ? ` ${timeFrom}` : ""} → {dateTo ? dateTo.slice(5) : "…"}{timeTo ? ` ${timeTo}` : ""}
-                      {xBtn(() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }, "#e69500")}
+                      {xb(() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }, "#e69500")}
                     </span>
-                  )}
+                  ),
+                });
+              }
 
-                  {/* Client */}
-                  {selectedClientId && (() => {
-                    const cl = clients.find(c => c.id === selectedClientId);
-                    if (!cl) return null;
-                    return (
-                      <span key={`client:${cl.id}`} style={chipStyle(cl.color || "#f5b731", `${cl.color || "#e69500"}18`, `${cl.color || "#e69500"}40`)}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block", flexShrink: 0 }} />
-                        {cl.name}
-                        {xBtn(() => setSelectedClientId(null), cl.color || "#f5b731")}
-                      </span>
-                    );
-                  })()}
+              // 2. Client
+              if (selectedClientId) {
+                const cl = clients.find(c => c.id === selectedClientId);
+                if (cl) chips.push({
+                  key: `client:${cl.id}`,
+                  node: (
+                    <span style={cs(cl.color || "#f5b731", `${cl.color || "#e69500"}18`, `${cl.color || "#e69500"}40`)}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block", flexShrink: 0 }} />
+                      {cl.name}
+                      {xb(() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); }, cl.color || "#f5b731")}
+                    </span>
+                  ),
+                });
+              }
 
-                  {/* Campaign */}
-                  {selectedCampaignId && (() => {
-                    const cp = campaigns.find(c => c.id === selectedCampaignId);
-                    if (!cp) return null;
-                    return (
-                      <span key={`campaign:${cp.id}`} style={chipStyle("#60a5fa", "rgba(96,165,250,0.1)", "rgba(96,165,250,0.3)")}>
-                        📁 {cp.name}
-                        {xBtn(() => setSelectedCampaignId(null), "#60a5fa")}
-                      </span>
-                    );
-                  })()}
+              // 3. Campaign
+              if (selectedCampaignId) {
+                const cp = campaigns.find(c => c.id === selectedCampaignId);
+                if (cp) chips.push({
+                  key: `campaign:${cp.id}`,
+                  node: (
+                    <span style={cs("#60a5fa", "rgba(96,165,250,0.1)", "rgba(96,165,250,0.3)")}>
+                      📁 {cp.name}
+                      {xb(() => { setSelectedCampaignId(null); setSelectedTagIds([]); }, "#60a5fa")}
+                    </span>
+                  ),
+                });
+              }
 
-                  {/* Selected actions — first 3 chips + "+N more" overflow popover */}
-                  {selectedTagIds.length > 0 && (() => {
-                    const LIMIT = 3;
-                    const visible = selectedTagIds.slice(0, LIMIT);
-                    const overflow = selectedTagIds.slice(LIMIT);
-                    const removeTag = (tid: string) => {
-                      const next = selectedTagIds.filter(id => id !== tid);
-                      setSelectedTagIds(next);
-                      fetchStats({ tagIds: next });
-                      if (showScanTable) fetchScans();
-                      if (next.length === 0) setShowTagsOverflow(false);
-                    };
-                    return (
-                      <>
-                        {visible.map(tid => {
-                          const t = tags.find(x => x.id === tid);
-                          return t ? (
-                            <span key={`action:${tid}`} style={chipStyle("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
-                              {t.name}
-                              {xBtn(() => removeTag(tid), "#f5b731")}
-                            </span>
-                          ) : null;
-                        })}
-                        {overflow.length > 0 && (
-                          <div ref={tagOverflowRef} style={{ position: "relative", display: "inline-flex" }}>
-                            <button
-                              onClick={() => setShowTagsOverflow(v => !v)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.15)", border: "1px solid rgba(245,183,49,0.4)", fontSize: 11, color: "#f5b731", fontWeight: 700, cursor: "pointer" }}
-                            >+{overflow.length}</button>
-                            {showTagsOverflow && (
-                              <div style={{
-                                position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
-                                background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "8px",
-                                display: "flex", flexDirection: "column", gap: 4, minWidth: 180, maxWidth: 260,
-                              }}>
-                                <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
-                                  Wszystkie wybrane ({selectedTagIds.length})
-                                </div>
-                                {selectedTagIds.map(tid => {
-                                  const t = tags.find(x => x.id === tid);
-                                  return t ? (
-                                    <span key={`ov:action:${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                                      {xBtn(() => removeTag(tid), "#f5b731")}
-                                    </span>
-                                  ) : null;
-                                })}
-                                <button
-                                  onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagsOverflow(false); }}
-                                  style={{ marginTop: 4, background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", textAlign: "center" }}
-                                  onMouseEnter={e => e.currentTarget.style.borderColor = "#f87171"}
-                                  onMouseLeave={e => e.currentTarget.style.borderColor = "#1e2d45"}
-                                >Wyczyść akcje</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+              // 4. Selected actions (multi) — one chip per tag, deduplicated by id
+              const seenTagIds = new Set<string>();
+              for (const tid of selectedTagIds) {
+                if (seenTagIds.has(tid)) continue;
+                seenTagIds.add(tid);
+                const t = tags.find(x => x.id === tid);
+                if (!t) continue;
+                chips.push({
+                  key: `action:${tid}`,
+                  node: (
+                    <span style={cs("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
+                      {t.name}
+                      {xb(() => {
+                        const next = selectedTagIds.filter(id => id !== tid);
+                        setSelectedTagIds(next);
+                        fetchStats({ tagIds: next });
+                        if (showScanTable) fetchScans();
+                      }, "#f5b731")}
+                    </span>
+                  ),
+                });
+              }
 
-                  {/* Single tagFilter (set from scan table / tag management drill-down) */}
-                  {tagFilter && (() => {
-                    const t = tags.find(x => x.id === tagFilter);
-                    return (
-                      <span key={`action:${tagFilter}`} style={chipStyle("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
-                        {t?.name ?? tagFilter}
-                        {xBtn(() => setTagFilter(""), "#f5b731")}
-                      </span>
-                    );
-                  })()}
+              // 5. Single tagFilter (drill-down from scan table) — only if not already in selectedTagIds
+              if (tagFilter && !seenTagIds.has(tagFilter)) {
+                const t = tags.find(x => x.id === tagFilter);
+                chips.push({
+                  key: `action:${tagFilter}`,
+                  node: (
+                    <span style={cs("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
+                      {t?.name ?? tagFilter}
+                      {xb(() => setTagFilter(""), "#f5b731")}
+                    </span>
+                  ),
+                });
+              }
 
-                  {/* Source filter */}
-                  {scanSourceFilter !== "all" && (
-                    <span key={`source:${scanSourceFilter}`} style={chipStyle(
-                      scanSourceFilter === "qr" ? "#10b981" : "#f5b731",
-                      scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)",
-                      scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)",
-                    )}>
+              // 6. Source filter (only when ≠ "all")
+              if (scanSourceFilter !== "all") {
+                const col = scanSourceFilter === "qr" ? "#10b981" : "#f5b731";
+                chips.push({
+                  key: `source:${scanSourceFilter}`,
+                  node: (
+                    <span style={cs(col, scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)", scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)")}>
                       {scanSourceFilter.toUpperCase()}
-                      {xBtn(() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }, scanSourceFilter === "qr" ? "#10b981" : "#f5b731")}
+                      {xb(() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }, col)}
                     </span>
-                  )}
+                  ),
+                });
+              }
 
-                  {/* NFC chip filter */}
-                  {scanNfcFilter && (
-                    <span key={`nfc:${scanNfcFilter}`} style={chipStyle("#a78bfa", "rgba(139,92,246,0.1)", "rgba(139,92,246,0.3)")}>
+              // 7. NFC chip filter
+              if (scanNfcFilter) {
+                chips.push({
+                  key: `nfc:${scanNfcFilter}`,
+                  node: (
+                    <span style={cs("#a78bfa", "rgba(139,92,246,0.1)", "rgba(139,92,246,0.3)")}>
                       NFC: {scanNfcFilter}
-                      {xBtn(() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }, "#a78bfa")}
+                      {xb(() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }, "#a78bfa")}
                     </span>
+                  ),
+                });
+              }
+
+              if (chips.length === 0) return null;
+
+              // ---- split visible / overflow ----
+              const MAX_CHIPS = 5;
+              const visibleChips = chips.slice(0, MAX_CHIPS);
+              const overflowChips = chips.slice(MAX_CHIPS);
+
+              return (
+                <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45", overflow: "hidden" }}>
+                  <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>Filtry:</span>
+
+                  {visibleChips.map(ch => (
+                    <React.Fragment key={ch.key}>{ch.node}</React.Fragment>
+                  ))}
+
+                  {/* +X overflow popover — unified for all filter types */}
+                  {overflowChips.length > 0 && (
+                    <div ref={chipsOverflowRef} style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
+                      <button
+                        onClick={() => setShowChipsOverflow(v => !v)}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(139,149,168,0.12)", border: "1px solid #2a3d5a", fontSize: 11, color: "#8b95a8", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+                      >+{overflowChips.length}</button>
+                      {showChipsOverflow && (
+                        <div style={{
+                          position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 400,
+                          background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "10px",
+                          display: "flex", flexDirection: "column", gap: 6, minWidth: 200, maxWidth: 280,
+                        }}>
+                          <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                            Pozostałe filtry ({overflowChips.length})
+                          </div>
+                          {overflowChips.map(ch => (
+                            <React.Fragment key={`ov:${ch.key}`}>{ch.node}</React.Fragment>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Clear all — always last */}
                   <button onClick={handleResetFilters}
-                    style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}
+                    style={{ marginLeft: "auto", flexShrink: 0, background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
                     onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
                     onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
-                  >Wyczyść wszystkie ×</button>
+                  >Wyczyść ×</button>
                 </div>
               );
             })()}
