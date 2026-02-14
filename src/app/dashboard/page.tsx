@@ -323,6 +323,12 @@ function DashboardPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
+  // actions combobox
+  const [tagSearch, setTagSearch] = useState("");
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [showTagsOverflow, setShowTagsOverflow] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const tagOverflowRef = useRef<HTMLDivElement>(null);
 
   // editing
   const [editingAction, setEditingAction] = useState<TagFull | null>(null);
@@ -615,12 +621,14 @@ function DashboardPage() {
     const urlFrom = searchParams.get("from");
     const urlTo = searchParams.get("to");
     const urlTag = searchParams.get("tag");
+    const urlTags = searchParams.get("tags");
     const urlRange = searchParams.get("range") as "24h" | "7d" | "30d" | "month" | "custom" | null;
-    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlRange;
+    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlTags || urlRange;
     if (hasUrlParams) {
       if (urlClient) setSelectedClientId(urlClient);
       if (urlCampaign) setSelectedCampaignId(urlCampaign);
       if (urlTag) setTagFilter(urlTag);
+      if (urlTags) setSelectedTagIds(urlTags.split(",").filter(Boolean));
       if (urlRange && urlRange !== "custom") {
         // Re-apply preset on load (recomputes from/to to "now minus X")
         // We call applyPreset after mount via a tiny timeout so state is ready
@@ -646,6 +654,7 @@ function DashboardPage() {
           if (f.clientId) setSelectedClientId(f.clientId);
           if (f.campaignId) setSelectedCampaignId(f.campaignId);
           if (f.tagFilter) setTagFilter(f.tagFilter);
+          if (Array.isArray(f.selectedTagIds) && f.selectedTagIds.length > 0) setSelectedTagIds(f.selectedTagIds);
           if (f.rangePreset && f.rangePreset !== "custom") {
             setTimeout(() => applyPreset(f.rangePreset), 0);
           } else {
@@ -668,9 +677,9 @@ function DashboardPage() {
     if (selectedClientId) params.set("client", selectedClientId);
     if (selectedCampaignId) params.set("campaign", selectedCampaignId);
     if (tagFilter) params.set("tag", tagFilter);
+    if (selectedTagIds.length > 0) params.set("tags", selectedTagIds.join(","));
     if (rangePreset !== "custom") {
       params.set("range", rangePreset);
-      // Also write computed from/to for human readability / direct link usage
       if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
       if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
     } else {
@@ -685,6 +694,7 @@ function DashboardPage() {
         clientId: selectedClientId,
         campaignId: selectedCampaignId,
         tagFilter,
+        selectedTagIds,
         rangePreset,
         dateFrom,
         dateTo,
@@ -692,7 +702,7 @@ function DashboardPage() {
         timeTo,
       }));
     } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, rangePreset, dateFrom, dateTo, timeFrom, timeTo, router]);
+  }, [selectedClientId, selectedCampaignId, tagFilter, selectedTagIds, rangePreset, dateFrom, dateTo, timeFrom, timeTo, router]);
 
   /* ---- initial load ---- */
 
@@ -714,6 +724,7 @@ function DashboardPage() {
       setSelectedCampaignId(null); // reset campaign when client changes
       setTagFilter(""); // reset tag filter when client changes
       setSelectedTagIds([]); // reset multi-tag filter
+      setTagSearch(""); setShowTagDropdown(false);
       fetchCampaigns();
       fetchStats();
     }
@@ -727,6 +738,7 @@ function DashboardPage() {
     if (status === "authenticated") {
       setTagFilter(""); // reset tag filter when campaign changes
       setSelectedTagIds([]); // reset multi-tag filter
+      setTagSearch(""); setShowTagDropdown(false);
       fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -760,6 +772,31 @@ function DashboardPage() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showCustomPopover]);
+
+  /* ---- close actions dropdown on outside click ---- */
+  useEffect(() => {
+    if (!showTagDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setShowTagDropdown(false);
+        setTagSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showTagDropdown]);
+
+  /* ---- close tags overflow popover on outside click ---- */
+  useEffect(() => {
+    if (!showTagsOverflow) return;
+    const handler = (e: MouseEvent) => {
+      if (tagOverflowRef.current && !tagOverflowRef.current.contains(e.target as Node)) {
+        setShowTagsOverflow(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showTagsOverflow]);
 
   /* ---- handlers ---- */
 
@@ -880,6 +917,9 @@ function DashboardPage() {
     setScanSourceFilter("all");
     setScanNfcFilter(null);
     setSelectedTagIds([]);
+    setTagSearch("");
+    setShowTagDropdown(false);
+    setShowTagsOverflow(false);
     setRangePreset("custom");
     // Clear URL params
     router.replace("/dashboard", { scroll: false });
@@ -1904,56 +1944,128 @@ function DashboardPage() {
               </div>
             )}
 
-            {/* -- Akcje multi-select (visible when campaign selected) -- */}
-            {selectedCampaignId && filteredTags.length > 0 && (
+            {/* -- Akcje multi-select combobox (visible when client OR campaign selected) -- */}
+            {(selectedClientId || selectedCampaignId) && filteredTags.length > 0 && (
               <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>
+                    Akcje
+                    {selectedTagIds.length > 0 && (
+                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
+                        {selectedTagIds.length}
+                      </span>
+                    )}
+                  </span>
                   {selectedTagIds.length > 0 && (
-                    <button onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
-                      style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px" }}
-                      title="Odznacz wszystkie akcje">Wyczyść</button>
+                    <button
+                      onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                      style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                      onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
+                      title="Wyczyść filtr akcji"
+                    >Wyczyść</button>
                   )}
                 </div>
-                {/* "Wszystkie" chip */}
-                <button
-                  onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 4,
-                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                    border: `1px solid ${selectedTagIds.length === 0 ? "rgba(96,165,250,0.4)" : "#1e2d45"}`,
-                    background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.12)" : "transparent",
-                    color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
-                    marginBottom: 4, marginRight: 4,
-                  }}
-                >Wszystkie</button>
-                {/* Individual tag chips */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {filteredTags.map(t => {
-                    const sel = selectedTagIds.includes(t.id);
-                    return (
-                      <button key={t.id}
-                        onClick={() => {
-                          const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
-                          setSelectedTagIds(next);
-                          fetchStats({ tagIds: next });
-                          if (showScanTable) fetchScans();
-                        }}
+
+                {/* Search combobox trigger */}
+                <div ref={tagDropdownRef} style={{ position: "relative" }}>
+                  <div
+                    onClick={() => { setShowTagDropdown(true); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: "#131b2e", border: `1px solid ${showTagDropdown ? "#3a5a80" : "#1e2d45"}`,
+                      borderRadius: 8, padding: "6px 10px", cursor: "text",
+                      transition: "border-color 0.15s",
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input
+                      value={tagSearch}
+                      onChange={e => { setTagSearch(e.target.value); setShowTagDropdown(true); }}
+                      onFocus={() => setShowTagDropdown(true)}
+                      placeholder={selectedTagIds.length === 0 ? "Szukaj akcji…" : `${selectedTagIds.length} wybranych`}
+                      style={{
+                        flex: 1, background: "transparent", border: "none", outline: "none",
+                        fontSize: 12, color: "#c8d0de", caretColor: "#f5b731",
+                      }}
+                    />
+                    {selectedTagIds.length > 0 && (
+                      <button
+                        onMouseDown={e => { e.stopPropagation(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                        style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                        title="Wyczyść akcje"
+                      >×</button>
+                    )}
+                  </div>
+
+                  {/* Dropdown list */}
+                  {showTagDropdown && (
+                    <div style={{
+                      position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 300,
+                      background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
+                      maxHeight: 220, display: "flex", flexDirection: "column",
+                    }}>
+                      {/* "Wszystkie" / clear option */}
+                      <button
+                        onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
                         style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          padding: "4px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                          border: `1px solid ${sel ? "rgba(245,183,49,0.4)" : "#1e2d45"}`,
-                          background: sel ? "rgba(245,183,49,0.12)" : "transparent",
-                          color: sel ? "#f5b731" : "#8b95a8",
-                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
+                          background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.1)" : "transparent",
+                          color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
+                          border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer",
+                          flexShrink: 0,
                         }}
-                        title={`${t.name} — ${t._count.scans} skanów`}
                       >
-                        {t.name}
-                        {sel && <span style={{ fontSize: 9, marginLeft: 2, color: "#f5b731" }}>✓</span>}
+                        {selectedTagIds.length === 0 ? "✓ " : ""}Wszystkie akcje
                       </button>
-                    );
-                  })}
+                      {/* Scrollable list */}
+                      <div style={{ overflowY: "auto", flex: 1 }}>
+                        {filteredTags
+                          .filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase()))
+                          .map(t => {
+                            const sel = selectedTagIds.includes(t.id);
+                            return (
+                              <button
+                                key={t.id}
+                                onMouseDown={e => {
+                                  e.preventDefault();
+                                  const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
+                                  setSelectedTagIds(next);
+                                  fetchStats({ tagIds: next });
+                                  if (showScanTable) fetchScans();
+                                  // keep dropdown open for multi-select
+                                }}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                  padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
+                                  background: sel ? "rgba(245,183,49,0.08)" : "transparent",
+                                  color: sel ? "#f5b731" : "#c8d0de",
+                                  border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <span style={{
+                                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                  border: `1.5px solid ${sel ? "#f5b731" : "#2a3d5a"}`,
+                                  background: sel ? "rgba(245,183,49,0.2)" : "transparent",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                  {sel && <span style={{ fontSize: 9, color: "#f5b731", lineHeight: 1 }}>✓</span>}
+                                </span>
+                                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                                <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{t._count.scans}sk</span>
+                              </button>
+                            );
+                          })}
+                        {filteredTags.filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak wyników</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2180,15 +2292,60 @@ function DashboardPage() {
                     </span>
                   ) : null;
                 })()}
-                {selectedTagIds.map(tid => {
-                  const t = tags.find(x => x.id === tid);
-                  return t ? (
-                    <span key={`t-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                      {t.name}
-                      <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                    </span>
-                  ) : null;
-                })}
+                {/* Selected tag chips — show first 3, then +N chip with overflow popover */}
+                {selectedTagIds.length > 0 && (() => {
+                  const CHIP_LIMIT = 3;
+                  const visible = selectedTagIds.slice(0, CHIP_LIMIT);
+                  const overflow = selectedTagIds.slice(CHIP_LIMIT);
+                  return (
+                    <>
+                      {visible.map(tid => {
+                        const t = tags.find(x => x.id === tid);
+                        return t ? (
+                          <span key={`t-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                            {t.name}
+                            <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); if (showScanTable) fetchScans(); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                          </span>
+                        ) : null;
+                      })}
+                      {overflow.length > 0 && (
+                        <div ref={tagOverflowRef} style={{ position: "relative", display: "inline-flex" }}>
+                          <button
+                            onClick={() => setShowTagsOverflow(v => !v)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.15)", border: "1px solid rgba(245,183,49,0.4)", fontSize: 11, color: "#f5b731", fontWeight: 700, cursor: "pointer" }}
+                          >+{overflow.length}</button>
+                          {showTagsOverflow && (
+                            <div style={{
+                              position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 300,
+                              background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "8px",
+                              display: "flex", flexDirection: "column", gap: 4, minWidth: 180, maxWidth: 260,
+                            }}>
+                              <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+                                Wszystkie wybrane ({selectedTagIds.length})
+                              </div>
+                              {selectedTagIds.map(tid => {
+                                const t = tags.find(x => x.id === tid);
+                                return t ? (
+                                  <span key={`ov-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                                    <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); if (showScanTable) fetchScans(); if (next.length === 0) setShowTagsOverflow(false); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7, flexShrink: 0 }}>×</button>
+                                  </span>
+                                ) : null;
+                              })}
+                              <button
+                                onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagsOverflow(false); }}
+                                style={{ marginTop: 4, background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", textAlign: "center" }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = "#f87171"}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = "#1e2d45"}
+                              >Wyczyść akcje</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 {tagFilter && (() => {
                   const t = tags.find(x => x.id === tagFilter);
                   return (
