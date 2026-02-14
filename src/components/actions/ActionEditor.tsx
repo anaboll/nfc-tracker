@@ -132,58 +132,89 @@ export function ActionEditor({
 
   return (
     <div>
-      {/* Link akcji */}
-      <div style={{ marginBottom: 14, padding: "10px 12px", background: "#0f1524", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <label style={{ display: "block", fontSize: 10, color: "#8b95a8", marginBottom: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Link akcji
-          </label>
+      {/* Link publiczny */}
+      <div style={{ marginBottom: 20, padding: "12px 14px", background: "rgba(245,183,49,0.05)", borderRadius: 10, border: "1px solid rgba(245,183,49,0.3)" }}>
+        <label style={{ display: "block", fontSize: 11, color: "#e8ecf1", marginBottom: 8, fontWeight: 700, letterSpacing: 0.3 }}>
+          Link publiczny
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <input
             readOnly
             className="input-field"
             value={`${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`}
-            style={{ fontSize: 11, padding: "5px 8px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
+            style={{ fontSize: 12, padding: "6px 10px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all", flex: 1 }}
             onFocus={e => e.target.select()}
           />
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            title="Kopiuj link publiczny"
+            style={{
+              background: linkCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
+              border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#2a4060"}`,
+              color: linkCopied ? "#22c55e" : "#e8ecf1",
+              borderRadius: 7,
+              padding: "6px 12px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 600,
+              flexShrink: 0,
+              transition: "background 0.2s, color 0.2s, border-color 0.2s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {linkCopied ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Skopiowano
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Kopiuj link
+              </>
+            )}
+          </button>
+          <a
+            href={`/s/${tagId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Otwórz w nowej karcie"
+            style={{
+              background: "#1a253a",
+              border: "1px solid #2a4060",
+              color: "#8b95a8",
+              borderRadius: 7,
+              padding: "6px 10px",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 600,
+              flexShrink: 0,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#3a5070"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#2a4060"; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            Otwórz
+          </a>
         </div>
-        <button
-          type="button"
-          onClick={handleCopyLink}
-          title="Kopiuj link"
-          style={{
-            background: linkCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
-            border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#1e2d45"}`,
-            color: linkCopied ? "#22c55e" : "#8b95a8",
-            borderRadius: 7,
-            padding: "6px 10px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 11,
-            fontWeight: 600,
-            flexShrink: 0,
-            marginTop: 18,
-            transition: "background 0.2s, color 0.2s, border-color 0.2s",
-          }}
-        >
-          {linkCopied ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Skopiowano
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              Kopiuj
-            </>
-          )}
-        </button>
       </div>
       <div
         style={{

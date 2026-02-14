@@ -4057,6 +4057,11 @@ function DashboardPage() {
                     onBulkMoveRequest={() => setShowBulkMoveModal(true)}
                     bulkLoading={bulkLoading}
                     bulkMsg={bulkMsg}
+                    onCopySuccess={() => {
+                      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+                      setCopyToast(true);
+                      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+                    }}
                   />
                 </div>
               )}
@@ -4365,47 +4370,48 @@ function DashboardPage() {
                         </div>
 
                         {/* Bottom row: details */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#8b95a8" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12, color: "#8b95a8", alignItems: "center" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <span style={{ color: "#5a6478" }}>ID:</span>{" "}
                             <span style={{ fontFamily: "monospace", color: "#f5b731" }}>{tag.id}</span>
-                            <button
-                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
-                              title="Kopiuj link /s/{id}"
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", color: "#5a6478", display: "inline-flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
-                              onMouseEnter={e => e.currentTarget.style.color = "#f5b731"}
-                              onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
-                            >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                              </svg>
-                            </button>
                           </span>
                           <span>
                             <span style={{ color: "#5a6478" }}>Skany:</span>{" "}
                             <span style={{ fontWeight: 600, color: "#e8ecf1" }}>{tag._count.scans}</span>
                           </span>
+                          {/* Public link chip — click to copy */}
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ color: "#5a6478" }}>URL:</span>{" "}
+                            <button
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kliknij, aby skopiować link publiczny"
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.25)",
+                                borderRadius: 6, padding: "3px 8px 3px 7px",
+                                cursor: "pointer", transition: "background 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,183,49,0.18)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.45)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,183,49,0.1)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.25)"; }}
+                            >
+                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#f5b731" }}>/s/{tag.id}</span>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8b95a8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                              </svg>
+                            </button>
                             <a
                               href={`/s/${tag.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: "#f5b731", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
-                            >
-                              {window.location.origin}/s/{tag.id}
-                            </a>
-                            <button
-                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
-                              title="Kopiuj link"
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", color: "#5a6478", display: "inline-flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
-                              onMouseEnter={e => e.currentTarget.style.color = "#f5b731"}
+                              onClick={e => e.stopPropagation()}
+                              title="Otwórz link publiczny"
+                              style={{ color: "#5a6478", display: "inline-flex", alignItems: "center", transition: "color 0.15s" }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#8b95a8"}
                               onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
                             >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
                               </svg>
-                            </button>
+                            </a>
                           </span>
                           {tag.videoFile && (
                             <span>

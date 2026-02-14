@@ -71,6 +71,8 @@ export interface ActionsTableProps {
   onBulkMoveRequest: () => void;
   bulkLoading: boolean;
   bulkMsg: string;
+
+  onCopySuccess?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,6 +172,7 @@ export function ActionsTable({
   onBulkMoveRequest,
   bulkLoading,
   bulkMsg,
+  onCopySuccess,
 }: ActionsTableProps) {
   const allSelected = tags.length > 0 && tags.every((t) => selectedIds.includes(t.id));
   const someSelected = selectedIds.length > 0;
@@ -196,6 +199,7 @@ export function ActionsTable({
         setCopiedId(tagId);
         setTimeout(() => setCopiedId(null), 1500);
       }
+      onCopySuccess?.();
     };
     navigator.clipboard.writeText(url).then(write).catch(() => {
       const el = document.createElement("textarea");
@@ -436,40 +440,45 @@ export function ActionsTable({
 
                 {/* URL / ID */}
                 <td style={{ padding: "10px 12px", maxWidth: 220 }} onClick={e => e.stopPropagation()}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div
+                  <button
+                    onClick={() => copyLink(tag.id)}
+                    title="Kopiuj link publiczny"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      background: copiedId === tag.id ? "rgba(34,197,94,0.1)" : "rgba(245,183,49,0.08)",
+                      border: `1px solid ${copiedId === tag.id ? "rgba(34,197,94,0.3)" : "rgba(245,183,49,0.2)"}`,
+                      borderRadius: 6,
+                      padding: "3px 7px 3px 6px",
+                      cursor: "pointer",
+                      maxWidth: "100%",
+                      transition: "background 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.14)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.35)"; } }}
+                    onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.08)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.2)"; } }}
+                  >
+                    <span
                       style={{
                         fontFamily: "monospace",
                         fontSize: 11,
-                        color: "#f5b731",
+                        color: copiedId === tag.id ? "#22c55e" : "#f5b731",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        flex: 1,
                         minWidth: 0,
                       }}
-                      title={tag.id}
+                      title={`${window.location.origin}/s/${tag.id}`}
                     >
-                      {tag.id}
-                    </div>
-                    <button
-                      onClick={() => copyLink(tag.id)}
-                      title="Kopiuj link /s/{id}"
-                      style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        padding: "2px 3px", color: copiedId === tag.id ? "#22c55e" : "#3a4460",
-                        display: "inline-flex", alignItems: "center", borderRadius: 4,
-                        flexShrink: 0, transition: "color 0.15s",
-                      }}
-                      onMouseEnter={e => { if (copiedId !== tag.id) e.currentTarget.style.color = "#f5b731"; }}
-                      onMouseLeave={e => { if (copiedId !== tag.id) e.currentTarget.style.color = "#3a4460"; }}
-                    >
+                      /s/{tag.id}
+                    </span>
+                    <span style={{ color: copiedId === tag.id ? "#22c55e" : "#8b95a8", display: "inline-flex", flexShrink: 0 }}>
                       {copiedId === tag.id
                         ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                       }
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                   {(tag.tagType === "url" || tag.tagType === "google-review") && tag.targetUrl && (
                     <div
                       style={{
@@ -478,7 +487,7 @@ export function ActionsTable({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        marginTop: 1,
+                        marginTop: 3,
                       }}
                       title={tag.targetUrl}
                     >
