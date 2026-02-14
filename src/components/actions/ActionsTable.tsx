@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 
 /* ------------------------------------------------------------------ */
 /*  Types (mirror dashboard — consider extracting to shared/types.ts)  */
@@ -93,6 +94,58 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Portal dropdown                                                     */
+/* ------------------------------------------------------------------ */
+
+interface CtxMenuPortalProps {
+  anchorRect: DOMRect;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+export function CtxMenuPortal({ anchorRect, onClose, children }: CtxMenuPortalProps) {
+  const MENU_HEIGHT = 320; // generous estimate
+  const spaceBelow = window.innerHeight - anchorRect.bottom;
+  const openUpward = spaceBelow < MENU_HEIGHT && anchorRect.top > MENU_HEIGHT;
+
+  const style: React.CSSProperties = {
+    position: "fixed",
+    right: window.innerWidth - anchorRect.right,
+    ...(openUpward
+      ? { bottom: window.innerHeight - anchorRect.top + 6 }
+      : { top: anchorRect.bottom + 6 }),
+    minWidth: 200,
+    zIndex: 9999,
+  };
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <>
+      {/* invisible backdrop — closes menu on outside click */}
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+        onClick={onClose}
+        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+      />
+      <div
+        className="ctx-menu"
+        style={{
+          ...style,
+          background: "#0d1526",
+          border: "1px solid #1e2d45",
+          borderRadius: 10,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -129,6 +182,25 @@ export function ActionsTable({
   const toggleOne = (id: string) => {
     if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter((x) => x !== id));
     else setSelectedIds([...selectedIds, id]);
+  };
+
+  // rect of the currently-open ⋯ button — used for portal positioning
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+
+  const openMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuRect(null);
+    } else {
+      setMenuRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+      setOpenMenuId(id);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+    setMenuRect(null);
   };
   /* shared menu item style helpers */
   const menuItem = (color: string) => ({
@@ -413,12 +485,9 @@ export function ActionsTable({
                     </button>
 
                     {/* ⋯ menu */}
-                    <div
-                      style={{ position: "relative" }}
-                      ref={openMenuId === tag.id ? menuRef : undefined}
-                    >
+                    <div style={{ position: "relative" }}>
                       <button
-                        onClick={() => setOpenMenuId(openMenuId === tag.id ? null : tag.id)}
+                        onClick={(e) => openMenu(tag.id, e)}
                         title="Więcej opcji"
                         style={{
                           background: "#1a253a",
@@ -443,25 +512,11 @@ export function ActionsTable({
                         ⋯
                       </button>
 
-                      {openMenuId === tag.id && (
-                        <div
-                          className="ctx-menu"
-                          style={{
-                            position: "absolute",
-                            top: "calc(100% + 6px)",
-                            right: 0,
-                            minWidth: 200,
-                            background: "#0d1526",
-                            border: "1px solid #1e2d45",
-                            borderRadius: 10,
-                            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                            zIndex: 500,
-                            overflow: "hidden",
-                          }}
-                        >
+                      {openMenuId === tag.id && menuRect && (
+                        <CtxMenuPortal anchorRect={menuRect} onClose={closeMenu}>
                           {/* Edytuj */}
                           <button
-                            onClick={() => { setOpenMenuId(null); onStartEdit(tag); }}
+                            onClick={() => { closeMenu(); onStartEdit(tag); }}
                             style={menuItem("#e8ecf1")}
                             onMouseEnter={hoverIn}
                             onMouseLeave={hoverOut}
@@ -478,7 +533,7 @@ export function ActionsTable({
                           {/* Pobierz QR PNG */}
                           <button
                             onClick={async () => {
-                              setOpenMenuId(null);
+                              closeMenu();
                               const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=png`);
                               if (!res.ok) return;
                               const blob = await res.blob();
@@ -501,7 +556,7 @@ export function ActionsTable({
                           {/* Pobierz SVG */}
                           <button
                             onClick={async () => {
-                              setOpenMenuId(null);
+                              closeMenu();
                               const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=svg`);
                               if (!res.ok) return;
                               const blob = await res.blob();
@@ -522,7 +577,7 @@ export function ActionsTable({
 
                           {/* Pobierz PDF */}
                           <button
-                            onClick={() => { setOpenMenuId(null); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
+                            onClick={() => { closeMenu(); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
                             style={menuItem("#f5b731")}
                             onMouseEnter={hoverIn}
                             onMouseLeave={hoverOut}
@@ -550,12 +605,12 @@ export function ActionsTable({
                                   type="file"
                                   accept="video/mp4,video/webm,video/quicktime"
                                   style={{ display: "none" }}
-                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { setOpenMenuId(null); onVideoUpload(tag.id, f); } e.target.value = ""; }}
+                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { closeMenu(); onVideoUpload(tag.id, f); } e.target.value = ""; }}
                                 />
                               </label>
                               {tag.videoFile && (
                                 <button
-                                  onClick={() => { setOpenMenuId(null); onRemoveVideo(tag.id); }}
+                                  onClick={() => { closeMenu(); onRemoveVideo(tag.id); }}
                                   style={menuItem("#f87171")}
                                   onMouseEnter={(e) => hoverIn(e, "#1a253a")}
                                   onMouseLeave={hoverOut}
@@ -573,7 +628,7 @@ export function ActionsTable({
 
                           {/* Reset statystyk */}
                           <button
-                            onClick={() => { setOpenMenuId(null); onSetResetTagConfirm(tag.id); onStartEdit(tag); }}
+                            onClick={() => { closeMenu(); onSetResetTagConfirm(tag.id); onStartEdit(tag); }}
                             style={menuItem("#f59e0b")}
                             onMouseEnter={(e) => hoverIn(e, "rgba(245,158,11,0.08)")}
                             onMouseLeave={hoverOut}
@@ -586,7 +641,7 @@ export function ActionsTable({
 
                           {/* Usuń akcję */}
                           <button
-                            onClick={() => { setOpenMenuId(null); onDeleteTag(tag.id); }}
+                            onClick={() => { closeMenu(); onDeleteTag(tag.id); }}
                             style={menuItem("#f87171")}
                             onMouseEnter={(e) => hoverIn(e, "rgba(239,68,68,0.08)")}
                             onMouseLeave={hoverOut}
@@ -596,7 +651,7 @@ export function ActionsTable({
                             </svg>
                             Usuń akcję
                           </button>
-                        </div>
+                        </CtxMenuPortal>
                       )}
                     </div>
                   </div>

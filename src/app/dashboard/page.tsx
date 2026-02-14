@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
-import { ActionsTable } from "@/components/actions/ActionsTable";
+import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -339,7 +339,24 @@ function DashboardPage() {
 
   // context menu
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const openCardMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuRect(null);
+    } else {
+      setMenuRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+      setOpenMenuId(id);
+    }
+  };
+
+  const closeCardMenu = () => {
+    setOpenMenuId(null);
+    setMenuRect(null);
+  };
 
   // view mode: cards | table
   const [viewMode, setViewMode] = useState<"cards" | "table">(() => {
@@ -3428,9 +3445,9 @@ function DashboardPage() {
                             </button>
 
                             {/* ⋯ menu */}
-                            <div style={{ position: "relative" }} ref={openMenuId === tag.id ? menuRef : undefined}>
+                            <div style={{ position: "relative" }}>
                               <button
-                                onClick={() => setOpenMenuId(openMenuId === tag.id ? null : tag.id)}
+                                onClick={(e) => openCardMenu(tag.id, e)}
                                 title="Więcej opcji"
                                 style={{
                                   background: "#1a253a",
@@ -3455,25 +3472,11 @@ function DashboardPage() {
                                 ⋯
                               </button>
 
-                              {openMenuId === tag.id && (
-                                <div
-                                  className="ctx-menu"
-                                  style={{
-                                    position: "absolute",
-                                    top: "calc(100% + 6px)",
-                                    right: 0,
-                                    minWidth: 200,
-                                    background: "#0d1526",
-                                    border: "1px solid #1e2d45",
-                                    borderRadius: 10,
-                                    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                                    zIndex: 500,
-                                    overflow: "hidden",
-                                  }}
-                                >
+                              {openMenuId === tag.id && menuRect && (
+                                <CtxMenuPortal anchorRect={menuRect} onClose={closeCardMenu}>
                                   {/* Edytuj */}
                                   <button
-                                    onClick={() => { setOpenMenuId(null); startEdit(tag); }}
+                                    onClick={() => { closeCardMenu(); startEdit(tag); }}
                                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#e8ecf1", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -3490,7 +3493,7 @@ function DashboardPage() {
                                   {/* Pobierz QR PNG */}
                                   <button
                                     onClick={async () => {
-                                      setOpenMenuId(null);
+                                      closeCardMenu();
                                       const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=png`);
                                       if (!res.ok) return;
                                       const blob = await res.blob();
@@ -3513,7 +3516,7 @@ function DashboardPage() {
                                   {/* Pobierz SVG */}
                                   <button
                                     onClick={async () => {
-                                      setOpenMenuId(null);
+                                      closeCardMenu();
                                       const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=svg`);
                                       if (!res.ok) return;
                                       const blob = await res.blob();
@@ -3534,7 +3537,7 @@ function DashboardPage() {
 
                                   {/* Pobierz PDF */}
                                   <button
-                                    onClick={() => { setOpenMenuId(null); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
+                                    onClick={() => { closeCardMenu(); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
                                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f5b731", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -3558,11 +3561,11 @@ function DashboardPage() {
                                           <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                                         </svg>
                                         {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmień video" : "Wgraj video")}
-                                        <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { setOpenMenuId(null); handleVideoUpload(tag.id, f); } e.target.value = ""; }} />
+                                        <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { closeCardMenu(); handleVideoUpload(tag.id, f); } e.target.value = ""; }} />
                                       </label>
                                       {tag.videoFile && (
                                         <button
-                                          onClick={() => { setOpenMenuId(null); handleRemoveVideo(tag.id); }}
+                                          onClick={() => { closeCardMenu(); handleRemoveVideo(tag.id); }}
                                           style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                           onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
                                           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -3580,7 +3583,7 @@ function DashboardPage() {
 
                                   {/* Reset statystyk */}
                                   <button
-                                    onClick={() => { setOpenMenuId(null); setResetTagConfirm(tag.id); startEdit(tag); }}
+                                    onClick={() => { closeCardMenu(); setResetTagConfirm(tag.id); startEdit(tag); }}
                                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f59e0b", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -3593,7 +3596,7 @@ function DashboardPage() {
 
                                   {/* Usuń akcję */}
                                   <button
-                                    onClick={() => { setOpenMenuId(null); handleDeleteTag(tag.id); }}
+                                    onClick={() => { closeCardMenu(); handleDeleteTag(tag.id); }}
                                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -3603,7 +3606,7 @@ function DashboardPage() {
                                     </svg>
                                     Usuń akcję
                                   </button>
-                                </div>
+                                </CtxMenuPortal>
                               )}
                             </div>
                           </div>

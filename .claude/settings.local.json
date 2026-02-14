@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(ls \"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\\\\node_modules\\\\.bin\"\" 2>/dev/null | head -20; ls \"E:ClaudeNFC project phase1nfc-tracker\"\")",
+      "Bash(cmd /c \"cd /d \"\"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\"\" && dir node_modules\\\\.bin\\\\tsc* 2>&1 | head -5\")"
+    ]
+  }
+}
