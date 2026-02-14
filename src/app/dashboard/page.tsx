@@ -2326,7 +2326,9 @@ function DashboardPage() {
                           );
                         })}
                       {filteredCampaigns.filter(c => !campaignSearch || c.name.toLowerCase().includes(campaignSearch.toLowerCase())).length === 0 && (
-                        <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak kampanii</div>
+                        <div style={{ padding: "14px 12px", fontSize: 11, color: "#3a4460", textAlign: "center", lineHeight: 1.5 }}>
+                          {campaignSearch ? "Brak wyników wyszukiwania" : "Brak kampanii dla tego klienta"}
+                        </div>
                       )}
                     </div>
                   </div>,
@@ -2347,8 +2349,8 @@ function DashboardPage() {
               </div>
             )}
 
-            {/* -- Akcje multi-select combobox (visible when client OR campaign selected) -- */}
-            {(selectedClientId || selectedCampaignId) && filteredTags.length > 0 && (
+            {/* -- Akcje multi-select combobox (visible when campaign selected, or client with hint) -- */}
+            {selectedClientId && (
               <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2371,6 +2373,37 @@ function DashboardPage() {
                   )}
                 </div>
 
+                {/* — No campaign selected: hint, non-interactive — */}
+                {!selectedCampaignId ? (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    background: "#0e1624", border: "1px dashed #1e2d45",
+                    borderRadius: 8, padding: "8px 10px",
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>
+                      Wybierz kampanię, aby filtrować akcje
+                    </span>
+                  </div>
+                ) : filteredTags.length === 0 ? (
+                  /* — Campaign selected but no tags in it — */
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    background: "#0e1624", border: "1px solid #1e2d45",
+                    borderRadius: 8, padding: "8px 10px",
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
+                    </svg>
+                    <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>
+                      Brak akcji w tej kampanii
+                    </span>
+                  </div>
+                ) : (
+                  /* — Campaign selected and has tags: normal combobox — */
+                  <>
                 {/* Search combobox trigger */}
                 <div ref={tagDropdownRef}>
                   <div
@@ -2499,6 +2532,8 @@ function DashboardPage() {
                       </div>
                   </div>,
                   document.body
+                )}
+                  </>
                 )}
               </div>
             )}
