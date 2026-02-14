@@ -450,12 +450,8 @@ function DashboardPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
-  // actions combobox
+  // actions search (inline list, no dropdown)
   const [tagSearch, setTagSearch] = useState("");
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const tagDropdownRef = useRef<HTMLDivElement>(null);
-  const tagDropdownPortalRef = useRef<HTMLDivElement>(null);
-  const [tagDropdownPos, setTagDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
   // client combobox
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -886,7 +882,7 @@ function DashboardPage() {
       setTagFilter("");            // reset tag filter when client changes
       setSelectedTagIds([]);       // reset multi-tag filter
       setActionsMode("NA");        // actions locked until campaign is chosen
-      setTagSearch(""); setShowTagDropdown(false);
+      setTagSearch("");
       fetchCampaigns();
       fetchStats();
     }
@@ -900,7 +896,7 @@ function DashboardPage() {
     if (status === "authenticated") {
       setTagFilter("");      // reset tag filter when campaign changes
       setSelectedTagIds([]); // reset multi-tag filter
-      setTagSearch(""); setShowTagDropdown(false);
+      setTagSearch("");
       // Cascade actionsMode: NA when campaign cleared, ALL when campaign chosen
       setActionsMode(selectedCampaignId ? "ALL" : "NA");
       fetchStats();
@@ -937,37 +933,6 @@ function DashboardPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showCustomPopover]);
 
-  /* ---- close actions dropdown on outside click ---- */
-  useEffect(() => {
-    if (!showTagDropdown) return;
-    const handler = (e: MouseEvent) => {
-      const inTrigger = tagDropdownRef.current?.contains(e.target as Node);
-      const inPortal = tagDropdownPortalRef.current?.contains(e.target as Node);
-      if (!inTrigger && !inPortal) {
-        setShowTagDropdown(false);
-        setTagSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showTagDropdown]);
-
-  /* ---- reposition tag dropdown portal on scroll/resize ---- */
-  useEffect(() => {
-    if (!showTagDropdown) return;
-    const update = () => {
-      if (tagDropdownRef.current) {
-        const r = tagDropdownRef.current.getBoundingClientRect();
-        setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      }
-    };
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [showTagDropdown]);
 
   /* ---- client dropdown outside-click + reposition ---- */
   useEffect(() => {
@@ -993,29 +958,6 @@ function DashboardPage() {
     return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
   }, [showClientDropdown]);
 
-  /* ---- campaign dropdown outside-click + reposition ---- */
-  useEffect(() => {
-    if (!showCampaignDropdown) return;
-    const handler = (e: MouseEvent) => {
-      const inTrigger = campaignDropdownRef.current?.contains(e.target as Node);
-      const inPortal = campaignDropdownPortalRef.current?.contains(e.target as Node);
-      if (!inTrigger && !inPortal) { setShowCampaignDropdown(false); setCampaignSearch(""); }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showCampaignDropdown]);
-  useEffect(() => {
-    if (!showCampaignDropdown) return;
-    const update = () => {
-      if (campaignDropdownRef.current) {
-        const r = campaignDropdownRef.current.getBoundingClientRect();
-        setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      }
-    };
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
-  }, [showCampaignDropdown]);
 
   /* ---- chips overflow outside-click ---- */
   useEffect(() => {
@@ -1175,7 +1117,6 @@ function DashboardPage() {
     setScanNfcFilter(null);
     setSelectedTagIds([]);
     setTagSearch("");
-    setShowTagDropdown(false);
     setClientSearch("");
     setShowClientDropdown(false);
     setCampaignSearch("");
@@ -2338,145 +2279,97 @@ function DashboardPage() {
               )}
             </div>
 
-            {/* -- Akcje multi-select combobox (visible when campaign selected, or client with hint) -- */}
-            {selectedClientId && (
-              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
-                    {actionsMode === "SELECTED" && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
-                        {selectedTagIds.length}
-                      </span>
-                    )}
-                  </div>
+            {/* -- Akcje — always-visible list, only active when campaign is selected -- */}
+            <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
                   {actionsMode === "SELECTED" && (
-                    <button
-                      onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
-                      style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
-                      onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
-                      title="Wyczyść filtr akcji"
-                    >Wyczyść</button>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
+                      {selectedTagIds.length}
+                    </span>
                   )}
                 </div>
+                {actionsMode === "SELECTED" && (
+                  <button
+                    onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                    style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
+                    title="Wyczyść filtr akcji"
+                  >Wyczyść</button>
+                )}
+              </div>
 
-                {/* — No campaign selected: hint, non-interactive — */}
-                {!selectedCampaignId ? (
+              {!selectedCampaignId ? (
+                /* — no campaign: placeholder — */
+                <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>Wybierz kampanię, aby zobaczyć akcje</span>
+                </div>
+              ) : (
+                /* — campaign selected: always-visible list — */
+                <>
+                  {/* search bar */}
                   <div style={{
-                    display: "flex", alignItems: "center", gap: 7,
-                    background: "#0e1624", border: "1px dashed #1e2d45",
-                    borderRadius: 8, padding: "8px 10px",
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#131b2e", border: "1px solid #1e2d45",
+                    borderRadius: 8, padding: "6px 10px", marginBottom: 6,
                   }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>
-                      Wybierz kampanię, aby filtrować akcje
-                    </span>
-                  </div>
-                ) : filteredTags.length === 0 ? (
-                  /* — Campaign selected but no tags in it — */
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 7,
-                    background: "#0e1624", border: "1px solid #1e2d45",
-                    borderRadius: 8, padding: "8px 10px",
-                  }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
-                    </svg>
-                    <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>
-                      Brak akcji w tej kampanii
-                    </span>
-                  </div>
-                ) : (
-                  /* — Campaign selected and has tags: normal combobox — */
-                  <>
-                {/* Search combobox trigger */}
-                <div ref={tagDropdownRef}>
-                  <div
-                    onClick={() => {
-                      if (tagDropdownRef.current) {
-                        const r = tagDropdownRef.current.getBoundingClientRect();
-                        setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                      }
-                      setShowTagDropdown(true);
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      background: "#131b2e", border: `1px solid ${showTagDropdown ? "#3a5a80" : "#1e2d45"}`,
-                      borderRadius: 8, padding: "6px 10px", cursor: "text",
-                      transition: "border-color 0.15s",
-                    }}
-                  >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                       <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                     </svg>
                     <input
                       value={tagSearch}
-                      onChange={e => {
-                        setTagSearch(e.target.value);
-                        if (!showTagDropdown && tagDropdownRef.current) {
-                          const r = tagDropdownRef.current.getBoundingClientRect();
-                          setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                        }
-                        setShowTagDropdown(true);
-                      }}
-                      onFocus={() => {
-                        if (tagDropdownRef.current) {
-                          const r = tagDropdownRef.current.getBoundingClientRect();
-                          setTagDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                        }
-                        setShowTagDropdown(true);
-                      }}
-                      placeholder={actionsMode === "SELECTED" ? `${selectedTagIds.length} wybranych` : "Szukaj akcji…"}
-                      style={{
-                        flex: 1, background: "transparent", border: "none", outline: "none",
-                        fontSize: 12, color: "#c8d0de", caretColor: "#f5b731",
-                      }}
+                      onChange={e => setTagSearch(e.target.value)}
+                      placeholder="Szukaj akcji…"
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
                     />
-                    {selectedTagIds.length > 0 && (
+                    {tagSearch && (
                       <button
-                        onMouseDown={e => { e.stopPropagation(); setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                        onClick={() => setTagSearch("")}
                         style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
-                        title="Wyczyść akcje"
                       >×</button>
                     )}
                   </div>
-                  {/* Dropdown rendered via portal — see below aside, escapes overflow:auto clipping */}
-                </div>
 
-                {/* Portal dropdown — rendered outside sidebar overflow container */}
-                {showTagDropdown && tagDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
-                  <div
-                    ref={tagDropdownPortalRef}
-                    style={{
-                      position: "fixed",
-                      top: tagDropdownPos.top,
-                      left: tagDropdownPos.left,
-                      width: tagDropdownPos.width,
-                      zIndex: 9999,
-                      background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                      maxHeight: Math.min(280, window.innerHeight - tagDropdownPos.top - 8),
-                      display: "flex", flexDirection: "column",
-                    }}
-                  >
-                    {/* "Wszystkie" / clear option */}
-                    <button
-                      onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
-                      style={{
-                        padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
-                        background: actionsMode === "ALL" ? "rgba(96,165,250,0.1)" : "transparent",
-                        color: actionsMode === "ALL" ? "#60a5fa" : "#8b95a8",
-                        border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {actionsMode === "ALL" ? "✓ " : ""}Wszystkie akcje
-                    </button>
-                    {/* Scrollable list */}
-                    <div style={{ overflowY: "auto", flex: 1 }}>
+                  {/* list */}
+                  {filteredTags.length === 0 ? (
+                    <div style={{ padding: "10px 4px", fontSize: 11, color: "#3a4460", lineHeight: 1.5 }}>
+                      Brak akcji w tej kampanii
+                    </div>
+                  ) : (
+                    <div style={{ marginLeft: -4, marginRight: -4 }}>
+                      {/* "Wszystkie akcje" row */}
+                      <button
+                        onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, width: "100%",
+                          padding: "5px 8px", borderRadius: 7, fontSize: 12,
+                          fontWeight: actionsMode === "ALL" ? 600 : 400,
+                          background: actionsMode === "ALL" ? "rgba(96,165,250,0.1)" : "transparent",
+                          color: actionsMode === "ALL" ? "#60a5fa" : "#8b95a8",
+                          border: "none", cursor: "pointer", textAlign: "left",
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={e => { if (actionsMode !== "ALL") e.currentTarget.style.background = "#0f1a2e"; }}
+                        onMouseLeave={e => { if (actionsMode !== "ALL") e.currentTarget.style.background = "transparent"; }}
+                      >
+                        {/* checkbox-like indicator */}
+                        <span style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${actionsMode === "ALL" ? "#60a5fa" : "#2a3d5a"}`,
+                          background: actionsMode === "ALL" ? "rgba(96,165,250,0.2)" : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          {actionsMode === "ALL" && <span style={{ fontSize: 9, color: "#60a5fa", lineHeight: 1 }}>✓</span>}
+                        </span>
+                        <span style={{ flex: 1 }}>Wszystkie akcje</span>
+                      </button>
+
+                      {/* per-tag rows — filtered by search */}
                       {filteredTags
                         .filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase()))
                         .map(t => {
@@ -2484,23 +2377,26 @@ function DashboardPage() {
                           return (
                             <button
                               key={t.id}
-                              onMouseDown={e => {
-                                e.preventDefault();
-                                const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
+                              onClick={() => {
+                                const next = sel
+                                  ? selectedTagIds.filter(id => id !== t.id)
+                                  : [...selectedTagIds, t.id];
                                 setSelectedTagIds(next);
                                 setActionsMode(next.length > 0 ? "SELECTED" : "ALL");
                                 fetchStats({ tagIds: next });
                                 if (showScanTable) fetchScans();
-                                // keep dropdown open for multi-select
                               }}
                               style={{
                                 display: "flex", alignItems: "center", gap: 8, width: "100%",
-                                padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
+                                padding: "5px 8px", borderRadius: 7, fontSize: 12,
+                                fontWeight: sel ? 600 : 400,
                                 background: sel ? "rgba(245,183,49,0.08)" : "transparent",
                                 color: sel ? "#f5b731" : "#c8d0de",
-                                border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer",
-                                textAlign: "left",
+                                border: "none", cursor: "pointer", textAlign: "left",
+                                transition: "background 0.12s",
                               }}
+                              onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#0f1a2e"; }}
+                              onMouseLeave={e => { if (!sel) e.currentTarget.style.background = sel ? "rgba(245,183,49,0.08)" : "transparent"; }}
                             >
                               <span style={{
                                 width: 14, height: 14, borderRadius: 3, flexShrink: 0,
@@ -2511,21 +2407,22 @@ function DashboardPage() {
                                 {sel && <span style={{ fontSize: 9, color: "#f5b731", lineHeight: 1 }}>✓</span>}
                               </span>
                               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                              <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{t._count.scans}sk</span>
+                              {t._count.scans > 0 && (
+                                <span style={{ fontSize: 10, color: sel ? "#f5b731" : "#3a4460", flexShrink: 0, opacity: 0.8 }}>{t._count.scans}</span>
+                              )}
                             </button>
                           );
-                          })}
-                        {filteredTags.filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
-                          <div style={{ padding: "12px", fontSize: 11, color: "#3a4460", textAlign: "center" }}>Brak wyników</div>
-                        )}
-                      </div>
-                  </div>,
-                  document.body
-                )}
-                  </>
-                )}
-              </div>
-            )}
+                        })}
+
+                      {/* no search results */}
+                      {tagSearch && filteredTags.filter(t => t.name.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding: "10px 8px", fontSize: 11, color: "#3a4460" }}>Brak wyników</div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </aside>
 
           {/* ============================================================ */}
