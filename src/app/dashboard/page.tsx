@@ -3989,7 +3989,13 @@ function DashboardPage() {
               {/* ---- "+ Nowa akcja" button — opens drawer ---- */}
               <div style={{ marginBottom: 20 }}>
                 <button
-                  onClick={() => { setShowNewTagDrawer(true); setTagCreateSuccess(""); setTagCreateError(""); }}
+                  onClick={() => {
+                    setNewTagClient(selectedClientId ?? "");
+                    setNewTagCampaign(selectedCampaignId ?? "");
+                    setShowNewTagDrawer(true);
+                    setTagCreateSuccess("");
+                    setTagCreateError("");
+                  }}
                   style={{
                     background: "linear-gradient(135deg, #e69500, #f5b731)",
                     border: "none",
