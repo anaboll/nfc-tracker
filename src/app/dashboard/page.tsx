@@ -2047,7 +2047,6 @@ function DashboardPage() {
             className="nfc-sidebar"
             onScroll={() => {
               setShowClientDropdown(false);
-              setShowCampaignDropdown(false);
               setShowTagDropdown(false);
             }}
             style={{
@@ -2215,11 +2214,11 @@ function DashboardPage() {
               )}
             </div>
 
-            {/* -- Kampanie block — single-select combobox (visible when client selected) -- */}
-            {selectedClientId && (
-              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
+            {/* -- Kampanie block — always-visible list (no dropdown) -- */}
+            <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
+                {selectedClientId && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {selectedCampaignId && (
                       <button
@@ -2238,134 +2237,106 @@ function DashboardPage() {
                       onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
                     >+</button>
                   </div>
-                </div>
-
-                {/* Combobox trigger */}
-                <div ref={campaignDropdownRef}>
-                  <div
-                    onClick={() => {
-                      if (campaignDropdownRef.current) {
-                        const r = campaignDropdownRef.current.getBoundingClientRect();
-                        setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                      }
-                      setShowCampaignDropdown(true);
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      background: "#131b2e", border: `1px solid ${showCampaignDropdown ? "#3a5a80" : "#1e2d45"}`,
-                      borderRadius: 8, padding: "6px 10px", cursor: "text", transition: "border-color 0.15s",
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                    </svg>
-                    <input
-                      value={campaignSearch}
-                      onChange={e => {
-                        setCampaignSearch(e.target.value);
-                        if (!showCampaignDropdown && campaignDropdownRef.current) {
-                          const r = campaignDropdownRef.current.getBoundingClientRect();
-                          setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                        }
-                        setShowCampaignDropdown(true);
-                      }}
-                      onFocus={() => {
-                        if (campaignDropdownRef.current) {
-                          const r = campaignDropdownRef.current.getBoundingClientRect();
-                          setCampaignDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-                        }
-                        setShowCampaignDropdown(true);
-                      }}
-                      placeholder={selectedCampaignId ? (filteredCampaigns.find(c => c.id === selectedCampaignId)?.name ?? "Szukaj…") : "Wszystkie kampanie"}
-                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#60a5fa" }}
-                    />
-                    {selectedCampaignId && (
-                      <button
-                        onMouseDown={e => { e.stopPropagation(); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); }}
-                        style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
-                        title="Wyczyść kampanię"
-                      >×</button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Campaign portal dropdown */}
-                {showCampaignDropdown && campaignDropdownPos && typeof document !== "undefined" && ReactDOM.createPortal(
-                  <div
-                    ref={campaignDropdownPortalRef}
-                    style={{
-                      position: "fixed", top: campaignDropdownPos.top, left: campaignDropdownPos.left, width: campaignDropdownPos.width,
-                      zIndex: 9999, background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
-                      maxHeight: Math.min(280, window.innerHeight - campaignDropdownPos.top - 8),
-                      display: "flex", flexDirection: "column",
-                    }}
-                  >
-                    {/* "Wszystkie kampanie" option */}
-                    <button
-                      onMouseDown={e => { e.preventDefault(); setSelectedCampaignId(null); setSelectedTagIds([]); fetchStats({ tagIds: [] }); setShowCampaignDropdown(false); setCampaignSearch(""); }}
-                      style={{
-                        padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
-                        background: !selectedCampaignId ? "rgba(96,165,250,0.1)" : "transparent",
-                        color: !selectedCampaignId ? "#60a5fa" : "#8b95a8",
-                        border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer", flexShrink: 0,
-                      }}
-                    >{!selectedCampaignId ? "✓ " : ""}Wszystkie kampanie</button>
-                    <div style={{ overflowY: "auto", flex: 1 }}>
-                      {filteredCampaigns
-                        .filter(c => !campaignSearch || c.name.toLowerCase().includes(campaignSearch.toLowerCase()))
-                        .map(c => {
-                          const sel = selectedCampaignId === c.id;
-                          return (
-                            <button
-                              key={c.id}
-                              onMouseDown={e => {
-                                e.preventDefault();
-                                setSelectedCampaignId(c.id);
-                                setSelectedTagIds([]);
-                                fetchStats({ tagIds: [] });
-                                setShowCampaignDropdown(false);
-                                setCampaignSearch("");
-                              }}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 8, width: "100%",
-                                padding: "7px 12px", fontSize: 12, fontWeight: sel ? 600 : 400,
-                                background: sel ? "rgba(96,165,250,0.1)" : "transparent",
-                                color: sel ? "#60a5fa" : "#c8d0de",
-                                border: "none", borderBottom: "1px solid #0c1220", cursor: "pointer", textAlign: "left",
-                              }}
-                            >
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={sel ? "#60a5fa" : "#5a6478"} strokeWidth={2.5} style={{ flexShrink: 0 }}>
-                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                              </svg>
-                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                              <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}sk</span>
-                            </button>
-                          );
-                        })}
-                      {filteredCampaigns.filter(c => !campaignSearch || c.name.toLowerCase().includes(campaignSearch.toLowerCase())).length === 0 && (
-                        <div style={{ padding: "14px 12px", fontSize: 11, color: "#3a4460", textAlign: "center", lineHeight: 1.5 }}>
-                          {campaignSearch ? "Brak wyników wyszukiwania" : "Brak kampanii dla tego klienta"}
-                        </div>
-                      )}
-                    </div>
-                  </div>,
-                  document.body
-                )}
-
-                {/* Add campaign inline form */}
-                {showAddCampaign && (
-                  <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <input className="input-field" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
-                    <input className="input-field" value={newCampaignDesc} onChange={e => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
-                      <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
-                    </div>
-                  </div>
                 )}
               </div>
-            )}
+
+              {!selectedClientId ? (
+                /* placeholder when no client chosen */
+                <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>Wybierz klienta, aby zobaczyć kampanie</span>
+                </div>
+              ) : (
+                /* always-visible campaign list */
+                <div style={{ marginLeft: -4, marginRight: -4 }}>
+                  {/* "Wszystkie kampanie" row */}
+                  <button
+                    onClick={() => { setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%",
+                      padding: "6px 8px", borderRadius: 7, fontSize: 12,
+                      fontWeight: !selectedCampaignId ? 600 : 400,
+                      background: !selectedCampaignId ? "rgba(96,165,250,0.12)" : "transparent",
+                      color: !selectedCampaignId ? "#60a5fa" : "#8b95a8",
+                      border: "none", cursor: "pointer", textAlign: "left",
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={e => { if (selectedCampaignId) e.currentTarget.style.background = "#0f1a2e"; }}
+                    onMouseLeave={e => { if (selectedCampaignId) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ flexShrink: 0, opacity: 0.6 }}>
+                      <path d="M3 6h18M3 12h18M3 18h18"/>
+                    </svg>
+                    <span style={{ flex: 1 }}>Wszystkie kampanie</span>
+                    {!selectedCampaignId && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* per-campaign rows */}
+                  {filteredCampaigns.length === 0 ? (
+                    <div style={{ padding: "10px 8px", fontSize: 11, color: "#3a4460", lineHeight: 1.5 }}>
+                      Brak kampanii dla tego klienta
+                    </div>
+                  ) : (
+                    filteredCampaigns.map(c => {
+                      const sel = selectedCampaignId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCampaignId(c.id);
+                            setSelectedTagIds([]);
+                            setActionsMode("ALL");
+                            fetchStats({ tagIds: [] });
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8, width: "100%",
+                            padding: "6px 8px", borderRadius: 7, fontSize: 12,
+                            fontWeight: sel ? 600 : 400,
+                            background: sel ? "rgba(96,165,250,0.12)" : "transparent",
+                            color: sel ? "#60a5fa" : "#c8d0de",
+                            border: "none", cursor: "pointer", textAlign: "left",
+                            transition: "background 0.12s",
+                          }}
+                          onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#0f1a2e"; }}
+                          onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ flexShrink: 0, opacity: sel ? 1 : 0.5 }}>
+                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                          </svg>
+                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                          {c.scanCount > 0 && (
+                            <span style={{ fontSize: 10, color: sel ? "#60a5fa" : "#3a4460", flexShrink: 0, opacity: 0.8 }}>{c.scanCount}</span>
+                          )}
+                          {sel && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Add campaign inline form */}
+              {selectedClientId && showAddCampaign && (
+                <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <input className="input-field" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newCampaignDesc} onChange={e => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
+                    <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* -- Akcje multi-select combobox (visible when campaign selected, or client with hint) -- */}
             {selectedClientId && (
