@@ -270,6 +270,7 @@ function DashboardPage() {
   const [timeFrom, setTimeFrom] = useState("");
   const [timeTo, setTimeTo] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [rangePreset, setRangePreset] = useState<"24h" | "7d" | "30d" | "month" | "custom">("custom");
   const [weekOffset, setWeekOffset] = useState(0);
   const filtersRestoredRef = useRef(false);
   const scanTableRef = useRef<HTMLElement>(null);
@@ -611,20 +612,28 @@ function DashboardPage() {
     const urlFrom = searchParams.get("from");
     const urlTo = searchParams.get("to");
     const urlTag = searchParams.get("tag");
-    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag;
+    const urlRange = searchParams.get("range") as "24h" | "7d" | "30d" | "month" | "custom" | null;
+    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlRange;
     if (hasUrlParams) {
       if (urlClient) setSelectedClientId(urlClient);
       if (urlCampaign) setSelectedCampaignId(urlCampaign);
       if (urlTag) setTagFilter(urlTag);
-      if (urlFrom) {
-        const [d, t] = urlFrom.split("T");
-        setDateFrom(d || "");
-        if (t) setTimeFrom(t);
-      }
-      if (urlTo) {
-        const [d, t] = urlTo.split("T");
-        setDateTo(d || "");
-        if (t) setTimeTo(t);
+      if (urlRange && urlRange !== "custom") {
+        // Re-apply preset on load (recomputes from/to to "now minus X")
+        // We call applyPreset after mount via a tiny timeout so state is ready
+        setTimeout(() => applyPreset(urlRange), 0);
+      } else {
+        if (urlRange === "custom" || !urlRange) setRangePreset("custom");
+        if (urlFrom) {
+          const [d, t] = urlFrom.split("T");
+          setDateFrom(d || "");
+          if (t) setTimeFrom(t);
+        }
+        if (urlTo) {
+          const [d, t] = urlTo.split("T");
+          setDateTo(d || "");
+          if (t) setTimeTo(t);
+        }
       }
     } else {
       try {
@@ -634,10 +643,14 @@ function DashboardPage() {
           if (f.clientId) setSelectedClientId(f.clientId);
           if (f.campaignId) setSelectedCampaignId(f.campaignId);
           if (f.tagFilter) setTagFilter(f.tagFilter);
-          if (f.dateFrom) setDateFrom(f.dateFrom);
-          if (f.dateTo) setDateTo(f.dateTo);
-          if (f.timeFrom) setTimeFrom(f.timeFrom);
-          if (f.timeTo) setTimeTo(f.timeTo);
+          if (f.rangePreset && f.rangePreset !== "custom") {
+            setTimeout(() => applyPreset(f.rangePreset), 0);
+          } else {
+            if (f.dateFrom) setDateFrom(f.dateFrom);
+            if (f.dateTo) setDateTo(f.dateTo);
+            if (f.timeFrom) setTimeFrom(f.timeFrom);
+            if (f.timeTo) setTimeTo(f.timeTo);
+          }
         }
       } catch { /* ignore */ }
     }
@@ -652,8 +665,15 @@ function DashboardPage() {
     if (selectedClientId) params.set("client", selectedClientId);
     if (selectedCampaignId) params.set("campaign", selectedCampaignId);
     if (tagFilter) params.set("tag", tagFilter);
-    if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-    if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    if (rangePreset !== "custom") {
+      params.set("range", rangePreset);
+      // Also write computed from/to for human readability / direct link usage
+      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    } else {
+      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    }
     const qs = params.toString();
     router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
     // Also keep localStorage in sync
@@ -662,13 +682,14 @@ function DashboardPage() {
         clientId: selectedClientId,
         campaignId: selectedCampaignId,
         tagFilter,
+        rangePreset,
         dateFrom,
         dateTo,
         timeFrom,
         timeTo,
       }));
     } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo, timeFrom, timeTo, router]);
+  }, [selectedClientId, selectedCampaignId, tagFilter, rangePreset, dateFrom, dateTo, timeFrom, timeTo, router]);
 
   /* ---- initial load ---- */
 
@@ -805,6 +826,30 @@ function DashboardPage() {
     setLoading(false);
   };
 
+  /* ---- range preset helper ---- */
+  const applyPreset = useCallback((preset: "24h" | "7d" | "30d" | "month" | "custom") => {
+    setRangePreset(preset);
+    if (preset === "custom") return; // keep existing Od/Do inputs as-is
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let from: Date;
+    if (preset === "24h") {
+      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    } else if (preset === "7d") {
+      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (preset === "30d") {
+      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else { // month
+      from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    }
+    setDateFrom(toDateStr(from));
+    setTimeFrom(preset === "month" ? "00:00" : toTimeStr(from));
+    setDateTo(toDateStr(now));
+    setTimeTo(toTimeStr(now));
+  }, []);
+
   const handleResetFilters = async () => {
     // Reset all filter state first, then let fetchStats read the cleared values.
     // Previously this called /api/stats directly and bypassed fetchStats(), causing
@@ -819,6 +864,7 @@ function DashboardPage() {
     setWeekOffset(0);
     setScanSourceFilter("all");
     setSelectedTagIds([]);
+    setRangePreset("custom");
     // Clear URL params
     router.replace("/dashboard", { scroll: false });
     setLoading(true);
@@ -1931,26 +1977,49 @@ function DashboardPage() {
             onCampaignChange={setSelectedCampaignId}
           />
 
-          {/* Row 1 (desktop inline, mobile stacked): Od / Do date+time */}
-          <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  style={{ minWidth: 0, width: 130 }} />
-                <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
-                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
-              </div>
+          {/* Range preset pills + Od/Do inputs */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Preset pills row */}
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {(["24h", "7d", "30d", "month", "custom"] as const).map((p) => {
+                const labels: Record<string, string> = { "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
+                const active = rangePreset === p;
+                return (
+                  <button key={p} onClick={() => { applyPreset(p); if (p !== "custom") { /* auto-fetch on preset click */ setTimeout(() => handleFilter(), 0); } }}
+                    style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                      border: `1px solid ${active ? "rgba(230,149,0,0.5)" : "#1e2d45"}`,
+                      background: active ? "rgba(230,149,0,0.12)" : "transparent",
+                      color: active ? "#e69500" : "#8b95a8",
+                      transition: "border-color 0.15s, color 0.15s, background 0.15s",
+                    }}
+                  >{labels[p]}</button>
+                );
+              })}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  style={{ minWidth: 0, width: 130 }} />
-                <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
-                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+            {/* Od/Do inputs — shown only in custom mode */}
+            {rangePreset === "custom" && (
+              <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                      style={{ minWidth: 0, width: 130 }} />
+                    <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
+                      style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                      style={{ minWidth: 0, width: 130 }} />
+                    <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
+                      style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           {/* Row 2 (desktop inline, mobile full-width): Pokaż / Reset */}
           <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
@@ -1994,9 +2063,22 @@ function DashboardPage() {
             {/* ========================================================== */}
             {/*  0. ACTIVE FILTERS BAR                                     */}
             {/* ========================================================== */}
-            {(selectedClientId || selectedCampaignId || selectedTagIds.length > 0 || scanSourceFilter !== "all" || scanNfcFilter || tagFilter) && (
+            {(selectedClientId || selectedCampaignId || selectedTagIds.length > 0 || scanSourceFilter !== "all" || scanNfcFilter || tagFilter || rangePreset !== "custom" || dateFrom || dateTo) && (
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
                 <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2 }}>Filtry:</span>
+                {/* Range chip */}
+                {rangePreset !== "custom" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(230,149,0,0.1)", border: "1px solid rgba(230,149,0,0.3)", fontSize: 11, color: "#e69500", fontWeight: 600 }}>
+                    🕐 {{"24h":"24h","7d":"7 dni","30d":"30 dni","month":"Ten miesiąc"}[rangePreset]}
+                    <button onClick={() => applyPreset("custom")} style={{ background: "none", border: "none", color: "#e69500", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                  </span>
+                )}
+                {rangePreset === "custom" && (dateFrom || dateTo) && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(230,149,0,0.1)", border: "1px solid rgba(230,149,0,0.3)", fontSize: 11, color: "#e69500", fontWeight: 600 }}>
+                    📅 {dateFrom || "…"} → {dateTo || "…"}
+                    <button onClick={() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }} style={{ background: "none", border: "none", color: "#e69500", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                  </span>
+                )}
                 {selectedClientId && (() => {
                   const cl = clients.find(c => c.id === selectedClientId);
                   return cl ? (
