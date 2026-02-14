@@ -271,6 +271,13 @@ function DashboardPage() {
   const [tagFilter, setTagFilter] = useState("");
   const [rangePreset, setRangePreset] = useState<"24h" | "7d" | "30d" | "month" | "custom">("custom");
   const [weekOffset, setWeekOffset] = useState(0);
+  // custom range popover
+  const [showCustomPopover, setShowCustomPopover] = useState(false);
+  const [draftFrom, setDraftFrom] = useState("");
+  const [draftTimeFrom, setDraftTimeFrom] = useState("");
+  const [draftTo, setDraftTo] = useState("");
+  const [draftTimeTo, setDraftTimeTo] = useState("");
+  const customPopoverRef = useRef<HTMLDivElement>(null);
   const filtersRestoredRef = useRef(false);
   const scanTableRef = useRef<HTMLElement>(null);
 
@@ -411,17 +418,14 @@ function DashboardPage() {
 
   /* ---- fetch helpers ---- */
 
-  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[] }) => {
+  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[]; from?: string; to?: string }) => {
     try {
       setFetchError("");
       const params = new URLSearchParams();
-      if (dateFrom) {
-        // Combine date + optional time: "2025-01-15T08:00" or just "2025-01-15"
-        params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-      }
-      if (dateTo) {
-        params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
-      }
+      const effectiveFrom = opts?.from !== undefined ? opts.from : (dateFrom ? (timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom) : "");
+      const effectiveTo = opts?.to !== undefined ? opts.to : (dateTo ? (timeTo ? `${dateTo}T${timeTo}` : dateTo) : "");
+      if (effectiveFrom) params.set("from", effectiveFrom);
+      if (effectiveTo) params.set("to", effectiveTo);
       // Multi-tag filter takes precedence over single tagFilter
       const effectiveTagIds = opts?.tagIds !== undefined ? opts.tagIds : selectedTagIds;
       if (effectiveTagIds.length > 0) {
@@ -744,6 +748,18 @@ function DashboardPage() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [openMenuId]);
+
+  /* ---- close custom range popover on outside click ---- */
+  useEffect(() => {
+    if (!showCustomPopover) return;
+    const handler = (e: MouseEvent) => {
+      if (customPopoverRef.current && !customPopoverRef.current.contains(e.target as Node)) {
+        setShowCustomPopover(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showCustomPopover]);
 
   /* ---- handlers ---- */
 
@@ -1967,15 +1983,29 @@ function DashboardPage() {
           className="card filter-bar"
           style={{ marginBottom: 24, padding: "12px 16px" }}
         >
-          {/* Range preset pills + Od/Do inputs */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {/* Preset pills row */}
+          {/* Range preset pills — fixed height, popover floats below */}
+          <div style={{ position: "relative" }}>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {(["24h", "7d", "30d", "month", "custom"] as const).map((p) => {
                 const labels: Record<string, string> = { "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
                 const active = rangePreset === p;
                 return (
-                  <button key={p} onClick={() => { applyPreset(p); if (p !== "custom") { /* auto-fetch on preset click */ setTimeout(() => handleFilter(), 0); } }}
+                  <button key={p}
+                    onClick={() => {
+                      if (p === "custom") {
+                        // Open popover, initialise drafts from current committed values
+                        setDraftFrom(dateFrom);
+                        setDraftTimeFrom(timeFrom);
+                        setDraftTo(dateTo);
+                        setDraftTimeTo(timeTo);
+                        setRangePreset("custom");
+                        setShowCustomPopover(true);
+                      } else {
+                        setShowCustomPopover(false);
+                        applyPreset(p);
+                        setTimeout(() => handleFilter(), 0);
+                      }
+                    }}
                     style={{
                       padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
                       border: `1px solid ${active ? "rgba(230,149,0,0.5)" : "#1e2d45"}`,
@@ -1983,30 +2013,67 @@ function DashboardPage() {
                       color: active ? "#e69500" : "#8b95a8",
                       transition: "border-color 0.15s, color 0.15s, background 0.15s",
                     }}
-                  >{labels[p]}</button>
+                  >{labels[p]}{p === "custom" && active && (dateFrom || dateTo) && (
+                    <span style={{ marginLeft: 4, fontSize: 10, opacity: 0.7 }}>
+                      {dateFrom ? dateFrom.slice(5) : "…"} → {dateTo ? dateTo.slice(5) : "…"}
+                    </span>
+                  )}</button>
                 );
               })}
             </div>
-            {/* Od/Do inputs — shown only in custom mode */}
-            {rangePreset === "custom" && (
-              <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+
+            {/* Custom range popover — floats out of flow, doesn't affect FilterBar height */}
+            {showCustomPopover && (
+              <div ref={customPopoverRef} style={{
+                position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
+                background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 12,
+                padding: "16px 18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                display: "flex", flexDirection: "column", gap: 12, minWidth: 320,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
+                {/* Od */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                      style={{ minWidth: 0, width: 130 }} />
-                    <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
-                      style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)}
+                      style={{ flex: 1, minWidth: 0 }} />
+                    <input type="time" value={draftTimeFrom} onChange={(e) => setDraftTimeFrom(e.target.value)} placeholder="00:00"
+                      style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
                   </div>
                 </div>
+                {/* Do */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                      style={{ minWidth: 0, width: 130 }} />
-                    <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
-                      style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)}
+                      style={{ flex: 1, minWidth: 0 }} />
+                    <input type="time" value={draftTimeTo} onChange={(e) => setDraftTimeTo(e.target.value)} placeholder="23:59"
+                      style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
                   </div>
+                </div>
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => setShowCustomPopover(false)}
+                    style={{ background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                  >Anuluj</button>
+                  <button
+                    onClick={async () => {
+                      setDateFrom(draftFrom);
+                      setTimeFrom(draftTimeFrom);
+                      setDateTo(draftTo);
+                      setTimeTo(draftTimeTo);
+                      setShowCustomPopover(false);
+                      // fetchStats reads dateFrom/dateTo from closure — pass overrides via opts
+                      const fromStr = draftTimeFrom ? `${draftFrom}T${draftTimeFrom}` : draftFrom;
+                      const toStr = draftTimeTo ? `${draftTo}T${draftTimeTo}` : draftTo;
+                      setLoading(true);
+                      await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
+                      setLoading(false);
+                    }}
+                    className="btn-primary"
+                    style={{ padding: "6px 18px", fontSize: 12 }}
+                  >Zastosuj</button>
                 </div>
               </div>
             )}
