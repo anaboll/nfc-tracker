@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
+import { TopContextFilters } from "@/components/dashboard/TopContextFilters";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1882,6 +1883,16 @@ function DashboardPage() {
           className="card filter-bar"
           style={{ marginBottom: 24, padding: "12px 16px" }}
         >
+          {/* Context selectors: Klient + Kampania */}
+          <TopContextFilters
+            clients={clients}
+            campaigns={filteredCampaigns}
+            selectedClientId={selectedClientId}
+            selectedCampaignId={selectedCampaignId}
+            onClientChange={(id) => { setSelectedClientId(id); setSelectedCampaignId(null); }}
+            onCampaignChange={setSelectedCampaignId}
+          />
+
           {/* Row 1 (desktop inline, mobile stacked): Od / Do date+time */}
           <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
