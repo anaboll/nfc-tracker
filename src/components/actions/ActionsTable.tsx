@@ -324,12 +324,12 @@ export function ActionsTable({
       >
         <colgroup>
           <col style={{ width: 40 }} />         {/* checkbox */}
-          <col />                                {/* Nazwa — flex */}
+          <col style={{ width: 180 }} />         {/* Nazwa */}
           <col style={{ width: 90 }} />          {/* Typ */}
           <col style={{ width: 100 }} />         {/* Status */}
           <col style={{ width: 62 }} />          {/* Skany */}
-          <col style={{ width: 200 }} />         {/* URL / ID */}
-          <col style={{ width: 148 }} />         {/* Akcje */}
+          <col style={{ width: 180 }} />         {/* Linki */}
+          <col style={{ width: 164 }} />         {/* Akcje */}
         </colgroup>
         {/* ---- HEAD ---- */}
         <thead>
@@ -347,7 +347,7 @@ export function ActionsTable({
                 style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
               />
             </th>
-            {["Nazwa", "Typ", "Status", "Skany", "URL / ID", "Akcje"].map((h) => (
+            {["Nazwa", "Typ", "Status", "Skany", "Linki", "Akcje"].map((h) => (
               <th
                 key={h}
                 style={{
@@ -451,7 +451,7 @@ export function ActionsTable({
                   {tag._count.scans}
                 </td>
 
-                {/* URL / ID */}
+                {/* Linki */}
                 <td style={{ padding: "10px 12px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => copyLink(tag.id)}
