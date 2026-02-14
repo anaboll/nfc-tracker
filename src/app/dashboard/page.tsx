@@ -445,6 +445,8 @@ function DashboardPage() {
   const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
   const [scanSourceFilter, setScanSourceFilter] = useState<"all" | "nfc" | "qr">("all");
   // Multi-select tag filter (empty = all tags in current campaign/client scope)
+  // actionsMode: "NA" = campaign not selected (filter locked); "ALL" = campaign selected, all its actions; "SELECTED" = specific actions chosen
+  const [actionsMode, setActionsMode] = useState<"NA" | "ALL" | "SELECTED">("NA");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
@@ -766,9 +768,19 @@ function DashboardPage() {
     const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlTags || urlRange;
     if (hasUrlParams) {
       if (urlClient) setSelectedClientId(urlClient);
-      if (urlCampaign) setSelectedCampaignId(urlCampaign);
+      if (urlCampaign) {
+        setSelectedCampaignId(urlCampaign);
+        // Restore action tags only when a campaign is present
+        if (urlTags) {
+          const ids = urlTags.split(",").filter(Boolean);
+          setSelectedTagIds(ids);
+          setActionsMode(ids.length > 0 ? "SELECTED" : "ALL");
+        } else {
+          setActionsMode("ALL");
+        }
+      }
+      // urlTags without urlCampaign is intentionally ignored (actionsMode stays "NA")
       if (urlTag) setTagFilter(urlTag);
-      if (urlTags) setSelectedTagIds(urlTags.split(",").filter(Boolean));
       if (urlRange && urlRange !== "custom") {
         // Re-apply preset on load (recomputes from/to to "now minus X")
         // We call applyPreset after mount via a tiny timeout so state is ready
@@ -792,9 +804,18 @@ function DashboardPage() {
         if (saved) {
           const f = JSON.parse(saved);
           if (f.clientId) setSelectedClientId(f.clientId);
-          if (f.campaignId) setSelectedCampaignId(f.campaignId);
+          if (f.campaignId) {
+            setSelectedCampaignId(f.campaignId);
+            // Restore action tags only when a campaign is present
+            if (Array.isArray(f.selectedTagIds) && f.selectedTagIds.length > 0) {
+              setSelectedTagIds(f.selectedTagIds);
+              setActionsMode("SELECTED");
+            } else {
+              setActionsMode("ALL");
+            }
+          }
+          // f.selectedTagIds without f.campaignId is intentionally ignored
           if (f.tagFilter) setTagFilter(f.tagFilter);
-          if (Array.isArray(f.selectedTagIds) && f.selectedTagIds.length > 0) setSelectedTagIds(f.selectedTagIds);
           if (f.rangePreset && f.rangePreset !== "custom") {
             setTimeout(() => applyPreset(f.rangePreset), 0);
           } else {
@@ -862,8 +883,9 @@ function DashboardPage() {
     if (!clientInitRef.current) { clientInitRef.current = true; return; }
     if (status === "authenticated") {
       setSelectedCampaignId(null); // reset campaign when client changes
-      setTagFilter(""); // reset tag filter when client changes
-      setSelectedTagIds([]); // reset multi-tag filter
+      setTagFilter("");            // reset tag filter when client changes
+      setSelectedTagIds([]);       // reset multi-tag filter
+      setActionsMode("NA");        // actions locked until campaign is chosen
       setTagSearch(""); setShowTagDropdown(false);
       fetchCampaigns();
       fetchStats();
@@ -876,9 +898,11 @@ function DashboardPage() {
   useEffect(() => {
     if (!campaignInitRef.current) { campaignInitRef.current = true; return; }
     if (status === "authenticated") {
-      setTagFilter(""); // reset tag filter when campaign changes
+      setTagFilter("");      // reset tag filter when campaign changes
       setSelectedTagIds([]); // reset multi-tag filter
       setTagSearch(""); setShowTagDropdown(false);
+      // Cascade actionsMode: NA when campaign cleared, ALL when campaign chosen
+      setActionsMode(selectedCampaignId ? "ALL" : "NA");
       fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2349,15 +2373,15 @@ function DashboardPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
-                    {selectedCampaignId && selectedTagIds.length > 0 && (
+                    {actionsMode === "SELECTED" && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
                         {selectedTagIds.length}
                       </span>
                     )}
                   </div>
-                  {selectedCampaignId && selectedTagIds.length > 0 && (
+                  {actionsMode === "SELECTED" && (
                     <button
-                      onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                      onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
                       style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
                       onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
                       onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
@@ -2434,7 +2458,7 @@ function DashboardPage() {
                         }
                         setShowTagDropdown(true);
                       }}
-                      placeholder={selectedTagIds.length === 0 ? "Szukaj akcji…" : `${selectedTagIds.length} wybranych`}
+                      placeholder={actionsMode === "SELECTED" ? `${selectedTagIds.length} wybranych` : "Szukaj akcji…"}
                       style={{
                         flex: 1, background: "transparent", border: "none", outline: "none",
                         fontSize: 12, color: "#c8d0de", caretColor: "#f5b731",
@@ -2442,7 +2466,7 @@ function DashboardPage() {
                     />
                     {selectedTagIds.length > 0 && (
                       <button
-                        onMouseDown={e => { e.stopPropagation(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                        onMouseDown={e => { e.stopPropagation(); setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
                         style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
                         title="Wyczyść akcje"
                       >×</button>
@@ -2469,16 +2493,16 @@ function DashboardPage() {
                   >
                     {/* "Wszystkie" / clear option */}
                     <button
-                      onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
+                      onMouseDown={e => { e.preventDefault(); setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); setShowTagDropdown(false); setTagSearch(""); }}
                       style={{
                         padding: "7px 12px", fontSize: 11, fontWeight: 600, textAlign: "left",
-                        background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.1)" : "transparent",
-                        color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
+                        background: actionsMode === "ALL" ? "rgba(96,165,250,0.1)" : "transparent",
+                        color: actionsMode === "ALL" ? "#60a5fa" : "#8b95a8",
                         border: "none", borderBottom: "1px solid #1e2d45", cursor: "pointer",
                         flexShrink: 0,
                       }}
                     >
-                      {selectedTagIds.length === 0 ? "✓ " : ""}Wszystkie akcje
+                      {actionsMode === "ALL" ? "✓ " : ""}Wszystkie akcje
                     </button>
                     {/* Scrollable list */}
                     <div style={{ overflowY: "auto", flex: 1 }}>
@@ -2493,6 +2517,7 @@ function DashboardPage() {
                                 e.preventDefault();
                                 const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
                                 setSelectedTagIds(next);
+                                setActionsMode(next.length > 0 ? "SELECTED" : "ALL");
                                 fetchStats({ tagIds: next });
                                 if (showScanTable) fetchScans();
                                 // keep dropdown open for multi-select
