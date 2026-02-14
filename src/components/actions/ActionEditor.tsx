@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  Types (copied from dashboard – keep in sync or extract to shared)  */
@@ -109,8 +109,82 @@ export function ActionEditor({
   onResetStats,
   onDeleteTag,
 }: ActionEditorProps) {
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/s/${tagId}`;
+    const done = () => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    };
+    navigator.clipboard.writeText(url).then(done).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = url;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      done();
+    });
+  };
+
   return (
     <div>
+      {/* Link akcji */}
+      <div style={{ marginBottom: 14, padding: "10px 12px", background: "#0f1524", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <label style={{ display: "block", fontSize: 10, color: "#8b95a8", marginBottom: 3, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Link akcji
+          </label>
+          <input
+            readOnly
+            className="input-field"
+            value={`${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`}
+            style={{ fontSize: 11, padding: "5px 8px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
+            onFocus={e => e.target.select()}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          title="Kopiuj link"
+          style={{
+            background: linkCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
+            border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#1e2d45"}`,
+            color: linkCopied ? "#22c55e" : "#8b95a8",
+            borderRadius: 7,
+            padding: "6px 10px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 11,
+            fontWeight: 600,
+            flexShrink: 0,
+            marginTop: 18,
+            transition: "background 0.2s, color 0.2s, border-color 0.2s",
+          }}
+        >
+          {linkCopied ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Skopiowano
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              Kopiuj
+            </>
+          )}
+        </button>
+      </div>
       <div
         style={{
           display: "grid",

@@ -427,6 +427,9 @@ function DashboardPage() {
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
   const [lastCreatedChannel, setLastCreatedChannel] = useState<"nfc" | "qr">("nfc");
+  // copy-link toast
+  const [copyToast, setCopyToast] = useState(false);
+  const copyToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // hourly chart mode
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
@@ -1077,6 +1080,29 @@ function DashboardPage() {
     setLoading(true);
     await fetchStats();
     setLoading(false);
+  };
+
+  /* ---- copy-link helper ---- */
+  const handleCopyLink = (tagId: string) => {
+    const url = `${window.location.origin}/s/${tagId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+      setCopyToast(true);
+      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+    }).catch(() => {
+      // Fallback for browsers that block clipboard API
+      const el = document.createElement("textarea");
+      el.value = url;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+      setCopyToast(true);
+      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+    });
   };
 
   /* ---- range preset helper ---- */
@@ -4334,15 +4360,26 @@ function DashboardPage() {
 
                         {/* Bottom row: details */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#8b95a8" }}>
-                          <span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <span style={{ color: "#5a6478" }}>ID:</span>{" "}
                             <span style={{ fontFamily: "monospace", color: "#f5b731" }}>{tag.id}</span>
+                            <button
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kopiuj link /s/{id}"
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", color: "#5a6478", display: "inline-flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#f5b731"}
+                              onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                              </svg>
+                            </button>
                           </span>
                           <span>
                             <span style={{ color: "#5a6478" }}>Skany:</span>{" "}
                             <span style={{ fontWeight: 600, color: "#e8ecf1" }}>{tag._count.scans}</span>
                           </span>
-                          <span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <span style={{ color: "#5a6478" }}>URL:</span>{" "}
                             <a
                               href={`/s/${tag.id}`}
@@ -4350,8 +4387,19 @@ function DashboardPage() {
                               rel="noopener noreferrer"
                               style={{ color: "#f5b731", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
                             >
-                              twojenfc.pl/s/{tag.id}
+                              {window.location.origin}/s/{tag.id}
                             </a>
+                            <button
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kopiuj link"
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", color: "#5a6478", display: "inline-flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#f5b731"}
+                              onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                              </svg>
+                            </button>
                           </span>
                           {tag.videoFile && (
                             <span>
@@ -5045,6 +5093,27 @@ function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* ============================================================ */}
+      {/*  COPY LINK TOAST                                             */}
+      {/* ============================================================ */}
+      <div
+        style={{
+          position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${copyToast ? 0 : 16}px)`,
+          background: "#1a2d1a", border: "1px solid #22c55e", color: "#86efac",
+          borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 8, zIndex: 99999,
+          opacity: copyToast ? 1 : 0, pointerEvents: "none",
+          transition: "opacity 0.2s ease, transform 0.2s ease",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Skopiowano link
+      </div>
     </div>
   );
 }

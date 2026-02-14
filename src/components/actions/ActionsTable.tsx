@@ -187,6 +187,24 @@ export function ActionsTable({
   // rect of the currently-open ⋯ button — used for portal positioning
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
 
+  // copy-link per-row feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyLink = (tagId: string) => {
+    const url = `${window.location.origin}/s/${tagId}`;
+    const write = () => {
+      if (copiedId !== tagId) {
+        setCopiedId(tagId);
+        setTimeout(() => setCopiedId(null), 1500);
+      }
+    };
+    navigator.clipboard.writeText(url).then(write).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = url; el.style.position = "fixed"; el.style.opacity = "0";
+      document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
+      write();
+    });
+  };
+
   const openMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (openMenuId === id) {
@@ -417,19 +435,40 @@ export function ActionsTable({
                 </td>
 
                 {/* URL / ID */}
-                <td style={{ padding: "10px 12px", maxWidth: 220 }}>
-                  <div
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: 11,
-                      color: "#f5b731",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={tag.id}
-                  >
-                    {tag.id}
+                <td style={{ padding: "10px 12px", maxWidth: 220 }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: 11,
+                        color: "#f5b731",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                      title={tag.id}
+                    >
+                      {tag.id}
+                    </div>
+                    <button
+                      onClick={() => copyLink(tag.id)}
+                      title="Kopiuj link /s/{id}"
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        padding: "2px 3px", color: copiedId === tag.id ? "#22c55e" : "#3a4460",
+                        display: "inline-flex", alignItems: "center", borderRadius: 4,
+                        flexShrink: 0, transition: "color 0.15s",
+                      }}
+                      onMouseEnter={e => { if (copiedId !== tag.id) e.currentTarget.style.color = "#f5b731"; }}
+                      onMouseLeave={e => { if (copiedId !== tag.id) e.currentTarget.style.color = "#3a4460"; }}
+                    >
+                      {copiedId === tag.id
+                        ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      }
+                    </button>
                   </div>
                   {(tag.tagType === "url" || tag.tagType === "google-review") && tag.targetUrl && (
                     <div
