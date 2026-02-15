@@ -416,7 +416,7 @@ export function ActionEditor({
         </button>
       </div>
       {/* Advanced section */}
-      <details style={{ marginTop: 4 }}>
+      <details style={{ marginTop: 4 }} open={resetTagConfirm === tagId || undefined}>
         <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
           <span className="adv-arrow">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
