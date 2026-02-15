@@ -7,9 +7,9 @@ COPY prisma ./prisma
 COPY . .
 RUN npx prisma generate
 CMD set -e && \
-    (npx prisma db push --skip-generate 2>&1 || echo "prisma db push warning (non-fatal, ensure-columns will handle)") && \
-    echo "Ensuring columns exist..." && \
+    echo "=== Migration: ensure-columns (safe, additive only) ===" && \
     node prisma/ensure-columns.js && \
-    echo "Validating schema..." && \
+    echo "=== Migration: validate schema ===" && \
     node prisma/validate-schema.js && \
+    echo "=== Migration: seed ===" && \
     npx tsx prisma/seed.ts
