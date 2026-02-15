@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashIp, extractIp } from "@/lib/utils";
+import {
+  collectTelemetry,
+  applyTelemetryCookies,
+  telemetryFields,
+} from "@/lib/telemetry";
 
 // POST - record a link click (public endpoint, no auth required)
 export async function POST(request: NextRequest) {
@@ -12,6 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "tagId and linkUrl required" }, { status: 400 });
     }
 
+    // --- Telemetry ---
+    const { data: tele, setCookies } = collectTelemetry(request);
+
+    // Legacy IP hash
     const headers = request.headers;
     const rawIp = extractIp(
       headers.get("x-forwarded-for"),
@@ -20,17 +29,37 @@ export async function POST(request: NextRequest) {
     );
     const ipHash = hashIp(rawIp);
 
-    await prisma.linkClick.create({
-      data: {
-        tagId,
-        linkUrl,
-        linkLabel: linkLabel || null,
-        linkIcon: linkIcon || null,
-        ipHash,
-      },
-    });
+    try {
+      await prisma.linkClick.create({
+        data: {
+          tagId,
+          linkUrl,
+          linkLabel: linkLabel || null,
+          linkIcon: linkIcon || null,
+          ipHash,
+          // P0 telemetry
+          userAgent: tele.userAgent,
+          deviceType: tele.deviceType,
+          referrer: tele.referrer,
+          ...telemetryFields(tele),
+        },
+      });
+    } catch {
+      // Fallback without telemetry fields if columns don't exist yet
+      await prisma.linkClick.create({
+        data: {
+          tagId,
+          linkUrl,
+          linkLabel: linkLabel || null,
+          linkIcon: linkIcon || null,
+          ipHash,
+        },
+      });
+    }
 
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    applyTelemetryCookies(response, setCookies);
+    return response;
   } catch (error) {
     console.error("LinkClick record error:", error);
     return NextResponse.json({ error: "Failed to record click" }, { status: 500 });

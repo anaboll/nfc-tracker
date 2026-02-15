@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import { parseUserAgent, hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import { headers, cookies } from "next/headers";
+import { hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import {
+  resolveVisitorSessionFromCookies,
+  extractCleanIp,
+  ipVersion,
+  ipPrefix,
+  detectDeviceType,
+  buildRawMeta,
+  extractUtm,
+} from "@/lib/telemetry";
 import TrackedVideoPlayer from "./TrackedVideoPlayer";
 
 export default async function WatchPage({ params }: { params: { tagId: string } }) {
@@ -40,28 +49,85 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
       if (!recentScan) {
         const userAgent = hdrs.get("user-agent") || "";
         const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
-        const parsed = parseUserAgent(userAgent);
         // Per-tag returning: has this IP scanned THIS specific tag before?
         const isReturning = (await prisma.scan.count({ where: { ipHash, tagId: params.tagId } })) > 0;
 
         let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
         try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }
 
-        await prisma.scan.create({
-          data: {
-            tagId: params.tagId,
-            ipHash,
-            deviceType: parsed.deviceType,
-            userAgent: userAgent || null,
-            browserLang,
-            city: geo.city,
-            country: geo.country,
-            region: geo.region,
-            isReturning,
-            referrer: referer || null,
-            eventSource: "direct-watch",
-          },
-        });
+        // P0 telemetry from cookies (server component can read but not set)
+        const cookieStore = cookies();
+        const { visitorId, sessionId } = resolveVisitorSessionFromCookies(cookieStore);
+
+        // IP telemetry
+        const cleanedIp = extractCleanIp(
+          hdrs.get("x-forwarded-for"),
+          hdrs.get("x-real-ip"),
+          hdrs.get("cf-connecting-ip")
+        );
+        const ipVer = ipVersion(cleanedIp);
+        const ipPfx = ipPrefix(cleanedIp);
+
+        // Device & rawMeta
+        const device = detectDeviceType(userAgent);
+
+        // Build a URL object for UTM/rawMeta (server component doesn't have request.url easily)
+        // Use referer or construct a minimal URL
+        let pageUrl: URL;
+        try {
+          const proto = hdrs.get("x-forwarded-proto") || "https";
+          const host = hdrs.get("host") || "twojenfc.pl";
+          pageUrl = new URL(`${proto}://${host}/watch/${params.tagId}`);
+        } catch {
+          pageUrl = new URL(`https://twojenfc.pl/watch/${params.tagId}`);
+        }
+        const utm = extractUtm(pageUrl);
+        const rawMeta = buildRawMeta(hdrs, pageUrl);
+
+        try {
+          await prisma.scan.create({
+            data: {
+              tagId: params.tagId,
+              ipHash,
+              deviceType: device,
+              userAgent: userAgent || null,
+              browserLang,
+              city: geo.city,
+              country: geo.country,
+              region: geo.region,
+              isReturning,
+              referrer: referer || null,
+              eventSource: "direct-watch",
+              // P0 telemetry
+              visitorId,
+              sessionId,
+              ...utm,
+              acceptLanguage: hdrs.get("accept-language") || null,
+              path: `/watch/${params.tagId}`,
+              query: null,
+              rawMeta,
+              ipPrefix: ipPfx,
+              ipVersion: ipVer,
+            },
+          });
+        } catch {
+          // Fallback without telemetry fields
+          await prisma.scan.create({
+            data: {
+              tagId: params.tagId,
+              ipHash,
+              deviceType: device,
+              userAgent: userAgent || null,
+              browserLang,
+              city: geo.city,
+              country: geo.country,
+              region: geo.region,
+              isReturning,
+              referrer: referer || null,
+              eventSource: "direct-watch",
+            },
+          });
+        }
       }
     } catch (err) {
       console.error("Watch page scan record failed:", err);
