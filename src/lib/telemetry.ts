@@ -91,7 +91,9 @@ export function resolveVisitorSession(request: NextRequest): {
     expired = true;
   } else {
     const ts = parseInt(sessTs, 10);
-    if (isNaN(ts) || now - ts > SESSION_TTL_MS) {
+    const ONE_DAY_MS = 86400000;
+    // Expired if: NaN, negative, future (> now + 1 day), or older than TTL
+    if (isNaN(ts) || ts < 0 || ts > now + ONE_DAY_MS || now - ts > SESSION_TTL_MS) {
       expired = true;
     }
   }
@@ -132,7 +134,8 @@ export function resolveVisitorSessionFromCookies(cookieStore: ReturnType<typeof 
     expired = true;
   } else {
     const ts = parseInt(sessTs, 10);
-    if (isNaN(ts) || now - ts > SESSION_TTL_MS) {
+    const ONE_DAY_MS = 86400000;
+    if (isNaN(ts) || ts < 0 || ts > now + ONE_DAY_MS || now - ts > SESSION_TTL_MS) {
       expired = true;
     }
   }
@@ -162,29 +165,35 @@ export function applyTelemetryCookies(
 // ---------------------------------------------------------------------------
 
 /**
- * Clean raw IP: strip port, strip ::ffff: prefix.
+ * Clean raw IP: strip brackets, strip ::ffff: prefix, strip port (IPv4 only).
+ * Order matters: brackets first, then ::ffff:, then port.
  */
 export function cleanIp(raw: string): string {
   let ip = raw.trim();
-  // Strip ::ffff: IPv4-mapped prefix
-  if (ip.startsWith("::ffff:")) {
-    ip = ip.slice(7);
-  }
-  // Strip port from IPv4 (1.2.3.4:12345)
-  if (ip.includes(".") && ip.includes(":")) {
-    const lastColon = ip.lastIndexOf(":");
-    const possiblePort = ip.slice(lastColon + 1);
-    if (/^\d+$/.test(possiblePort)) {
-      ip = ip.slice(0, lastColon);
-    }
-  }
-  // Strip brackets from IPv6 [::1]:port
+
+  // 1. Strip brackets from IPv6 [::1]:port or [2001:db8::1]
   if (ip.startsWith("[")) {
     const bracketEnd = ip.indexOf("]");
     if (bracketEnd > 0) {
-      ip = ip.slice(1, bracketEnd);
+      ip = ip.slice(1, bracketEnd); // everything inside brackets, ignore :port after ]
     }
   }
+
+  // 2. Strip ::ffff: IPv4-mapped prefix (e.g. ::ffff:1.2.3.4 → 1.2.3.4)
+  if (ip.toLowerCase().startsWith("::ffff:")) {
+    ip = ip.slice(7);
+  }
+
+  // 3. Strip port from IPv4 ONLY (1.2.3.4:12345)
+  //    Don't touch IPv6 – colons are part of the address
+  if (ip.includes(".") && !ip.includes("::") && ip.includes(":")) {
+    const lastColon = ip.lastIndexOf(":");
+    const possiblePort = ip.slice(lastColon + 1);
+    if (/^\d{1,5}$/.test(possiblePort)) {
+      ip = ip.slice(0, lastColon);
+    }
+  }
+
   return ip;
 }
 
@@ -267,14 +276,28 @@ export function extractCleanIp(
 }
 
 function isPrivateIp(ip: string): boolean {
-  if (ip === "127.0.0.1" || ip === "::1") return true;
+  // IPv4 loopback 127.0.0.0/8
+  if (ip.startsWith("127.")) return true;
+  // IPv6 loopback
+  if (ip === "::1") return true;
+  // IPv4 private ranges
   if (ip.startsWith("10.")) return true;
   if (ip.startsWith("192.168.")) return true;
   if (ip.startsWith("172.")) {
     const second = parseInt(ip.split(".")[1], 10);
     if (second >= 16 && second <= 31) return true;
   }
-  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // IPv6 ULA
+  // Link-local 169.254.0.0/16
+  if (ip.startsWith("169.254.")) return true;
+  // CGNAT 100.64.0.0/10 (100.64.x.x – 100.127.x.x)
+  if (ip.startsWith("100.")) {
+    const second = parseInt(ip.split(".")[1], 10);
+    if (second >= 64 && second <= 127) return true;
+  }
+  // IPv6 ULA fc00::/7
+  if (ip.startsWith("fc") || ip.startsWith("fd")) return true;
+  // IPv6 link-local fe80::/10
+  if (ip.toLowerCase().startsWith("fe80")) return true;
   return false;
 }
 
@@ -333,6 +356,38 @@ export function detectDeviceType(ua: string): DeviceType {
 }
 
 // ---------------------------------------------------------------------------
+// Field truncation (DOS protection)
+// ---------------------------------------------------------------------------
+
+const MAX_FIELD_LENGTH = 4000;
+
+export function truncateField(val: string | null, maxLen = MAX_FIELD_LENGTH): string | null {
+  if (!val) return val;
+  return val.length > maxLen ? val.slice(0, maxLen) : val;
+}
+
+// ---------------------------------------------------------------------------
+// PII parameter filter for rawMeta query params
+// ---------------------------------------------------------------------------
+
+const PII_PARAM_PATTERNS = [
+  /email/i, /phone/i, /token/i, /key/i, /password/i,
+  /secret/i, /ssn/i, /\bcc\b/i, /credit/i, /card/i,
+  /auth/i, /session/i, /csrf/i,
+];
+
+function filterPiiParams(params: Record<string, string>): Record<string, string> {
+  const filtered: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const isPii = PII_PARAM_PATTERNS.some((pattern) => pattern.test(key));
+    if (!isPii) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+}
+
+// ---------------------------------------------------------------------------
 // rawMeta builder
 // ---------------------------------------------------------------------------
 
@@ -343,13 +398,39 @@ export function buildRawMeta(headers: Headers, url: URL): string {
     if (val) headersObj[name] = val;
   }
 
+  const queryParams = Object.fromEntries(url.searchParams.entries());
+  const safeQuery = filterPiiParams(queryParams);
+
   const meta = {
     headers: headersObj,
-    query: Object.fromEntries(url.searchParams.entries()),
+    query: safeQuery,
     path: url.pathname,
   };
 
-  return JSON.stringify(meta);
+  return truncateField(JSON.stringify(meta));
+}
+
+// ---------------------------------------------------------------------------
+// Schema mismatch error detection (for smart fallback)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if a Prisma error is due to unknown fields (schema mismatch).
+ * Only these errors should trigger a fallback without telemetry fields.
+ * Other errors (connection, constraint) should propagate.
+ */
+export function isSchemaMismatchError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as Record<string, unknown>;
+  // Prisma error codes for schema issues:
+  // P2009: validation error (unknown field)
+  // P2025: record not found (shouldn't happen on create but safe to include)
+  const code = e.code as string | undefined;
+  if (code === "P2009") return true;
+  // Also catch generic "unknown field" messages from Prisma
+  const msg = (e.message as string) || "";
+  if (msg.includes("Unknown argument") || msg.includes("Unknown field")) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -414,12 +495,12 @@ export function collectTelemetry(request: NextRequest): {
     visitorId,
     sessionId,
     ...utm,
-    referrer: hdrs.get("referer") || null,
-    acceptLanguage: hdrs.get("accept-language") || null,
-    userAgent: ua || null,
+    referrer: truncateField(hdrs.get("referer") || null),
+    acceptLanguage: truncateField(hdrs.get("accept-language") || null, 500),
+    userAgent: truncateField(ua || null),
     deviceType: device,
-    path: url.pathname || null,
-    query: url.search || null,
+    path: truncateField(url.pathname || null, 2000),
+    query: truncateField(url.search || null, 2000),
     rawMeta,
     ipHash: ipHashVal,
     ipPrefix: ipPfx,

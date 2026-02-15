@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { headers, cookies } from "next/headers";
-import { hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import { hashIp, getGeoLocation } from "@/lib/utils";
 import {
   resolveVisitorSessionFromCookies,
   extractCleanIp,
@@ -10,6 +10,8 @@ import {
   detectDeviceType,
   buildRawMeta,
   extractUtm,
+  isSchemaMismatchError,
+  truncateField,
 } from "@/lib/telemetry";
 import TrackedVideoPlayer from "./TrackedVideoPlayer";
 
@@ -30,12 +32,13 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
 
   if (!isFromRedirect) {
     try {
-      const rawIp = extractIp(
+      // Unified IP extraction – same cleanedIp for legacy hash AND telemetry
+      const cleanedIp = extractCleanIp(
         hdrs.get("x-forwarded-for"),
         hdrs.get("x-real-ip"),
         hdrs.get("cf-connecting-ip")
       );
-      const ipHash = hashIp(rawIp);
+      const ipHash = hashIp(cleanedIp);
 
       // Check if scan already recorded in last 30 seconds (from /s/ redirect)
       const recentScan = await prisma.scan.findFirst({
@@ -53,18 +56,13 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
         const isReturning = (await prisma.scan.count({ where: { ipHash, tagId: params.tagId } })) > 0;
 
         let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
-        try { geo = await getGeoLocation(rawIp); } catch { /* geo failed */ }
+        try { geo = await getGeoLocation(cleanedIp); } catch { /* geo failed */ }
 
         // P0 telemetry from cookies (server component can read but not set)
         const cookieStore = cookies();
         const { visitorId, sessionId } = resolveVisitorSessionFromCookies(cookieStore);
 
         // IP telemetry
-        const cleanedIp = extractCleanIp(
-          hdrs.get("x-forwarded-for"),
-          hdrs.get("x-real-ip"),
-          hdrs.get("cf-connecting-ip")
-        );
         const ipVer = ipVersion(cleanedIp);
         const ipPfx = ipPrefix(cleanedIp);
 
@@ -72,7 +70,6 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
         const device = detectDeviceType(userAgent);
 
         // Build a URL object for UTM/rawMeta (server component doesn't have request.url easily)
-        // Use referer or construct a minimal URL
         let pageUrl: URL;
         try {
           const proto = hdrs.get("x-forwarded-proto") || "https";
@@ -90,19 +87,19 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
               tagId: params.tagId,
               ipHash,
               deviceType: device,
-              userAgent: userAgent || null,
+              userAgent: truncateField(userAgent) || null,
               browserLang,
               city: geo.city,
               country: geo.country,
               region: geo.region,
               isReturning,
-              referrer: referer || null,
+              referrer: truncateField(referer) || null,
               eventSource: "direct-watch",
               // P0 telemetry
               visitorId,
               sessionId,
               ...utm,
-              acceptLanguage: hdrs.get("accept-language") || null,
+              acceptLanguage: truncateField(hdrs.get("accept-language"), 500) || null,
               path: `/watch/${params.tagId}`,
               query: null,
               rawMeta,
@@ -110,23 +107,27 @@ export default async function WatchPage({ params }: { params: { tagId: string } 
               ipVersion: ipVer,
             },
           });
-        } catch {
-          // Fallback without telemetry fields
-          await prisma.scan.create({
-            data: {
-              tagId: params.tagId,
-              ipHash,
-              deviceType: device,
-              userAgent: userAgent || null,
-              browserLang,
-              city: geo.city,
-              country: geo.country,
-              region: geo.region,
-              isReturning,
-              referrer: referer || null,
-              eventSource: "direct-watch",
-            },
-          });
+        } catch (err) {
+          if (isSchemaMismatchError(err)) {
+            // Fallback without telemetry fields
+            await prisma.scan.create({
+              data: {
+                tagId: params.tagId,
+                ipHash,
+                deviceType: device,
+                userAgent: truncateField(userAgent) || null,
+                browserLang,
+                city: geo.city,
+                country: geo.country,
+                region: geo.region,
+                isReturning,
+                referrer: truncateField(referer) || null,
+                eventSource: "direct-watch",
+              },
+            });
+          } else {
+            console.error("Watch page scan create failed (non-schema error):", err);
+          }
         }
       }
     } catch (err) {

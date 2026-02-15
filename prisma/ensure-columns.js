@@ -3,11 +3,29 @@ const { PrismaClient } = require("@prisma/client");
 /**
  * Idempotent column/index migration for NFC Tracker.
  * Adds all telemetry columns (P0) to Scan, LinkClick, VideoEvent.
- * Hard-fails (exit 1) if any statement fails.
+ *
+ * Safety features:
+ * - Advisory lock prevents concurrent runs
+ * - Wrapped in transaction (BEGIN/COMMIT) for atomicity
+ * - Post-migration validation checks all expected columns exist
+ * - Hard-fails (exit 1) if anything fails
  */
 async function main() {
   const prisma = new PrismaClient();
   try {
+    // -----------------------------------------------------------------------
+    // Advisory lock – prevent concurrent migrations
+    // -----------------------------------------------------------------------
+    console.log("Acquiring advisory lock...");
+    await prisma.$executeRawUnsafe("SELECT pg_advisory_lock(42424242)");
+    console.log("  OK: Advisory lock acquired");
+
+    // -----------------------------------------------------------------------
+    // Begin transaction
+    // -----------------------------------------------------------------------
+    await prisma.$executeRawUnsafe("BEGIN");
+    console.log("  OK: Transaction started");
+
     // -----------------------------------------------------------------------
     // Helper: run SQL with logging
     // -----------------------------------------------------------------------
@@ -238,12 +256,83 @@ async function main() {
     console.log("VideoEvent telemetry columns ensured");
 
     // =======================================================================
+    // COMMIT transaction
+    // =======================================================================
+    await prisma.$executeRawUnsafe("COMMIT");
+    console.log("\n  OK: Transaction committed");
+
+    // =======================================================================
+    // POST-MIGRATION VALIDATION
+    // =======================================================================
+    console.log("\n--- Validating schema ---");
+
+    const EXPECTED_COLUMNS = {
+      Scan: [
+        "id", "tagId", "timestamp", "ipHash", "deviceType", "userAgent",
+        "browserLang", "city", "country", "region", "isReturning", "referrer",
+        "eventSource", "nfcId",
+        // P0 telemetry
+        "visitorId", "sessionId", "utmSource", "utmMedium", "utmCampaign",
+        "utmContent", "utmTerm", "gclid", "fbclid", "acceptLanguage",
+        "path", "query", "rawMeta", "ipPrefix", "ipVersion",
+      ],
+      LinkClick: [
+        "id", "tagId", "linkUrl", "linkLabel", "linkIcon", "timestamp", "ipHash",
+        // P0 telemetry
+        "visitorId", "sessionId", "utmSource", "utmMedium", "utmCampaign",
+        "utmContent", "utmTerm", "gclid", "fbclid", "acceptLanguage",
+        "userAgent", "deviceType", "referrer", "path", "query", "rawMeta",
+        "ipPrefix", "ipVersion",
+      ],
+      VideoEvent: [
+        "id", "tagId", "event", "timestamp", "ipHash", "watchTime",
+        // P0 telemetry
+        "visitorId", "sessionId", "utmSource", "utmMedium", "utmCampaign",
+        "utmContent", "utmTerm", "gclid", "fbclid", "acceptLanguage",
+        "userAgent", "deviceType", "referrer", "path", "query", "rawMeta",
+        "ipPrefix", "ipVersion",
+      ],
+    };
+
+    const missing = [];
+    for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
+      const result = await prisma.$queryRawUnsafe(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+        table
+      );
+      const existing = new Set(result.map((r) => r.column_name));
+      for (const col of columns) {
+        if (!existing.has(col)) {
+          missing.push(`${table}.${col}`);
+        }
+      }
+    }
+
+    if (missing.length > 0) {
+      console.error("FATAL: Missing columns after migration:", missing.join(", "));
+      process.exit(1);
+    }
+    console.log("  OK: All expected columns verified");
+
+    // =======================================================================
     console.log("\n=== All ensure-columns completed successfully ===\n");
   } catch (e) {
+    // Rollback on any error
+    try {
+      await prisma.$executeRawUnsafe("ROLLBACK");
+      console.error("  Transaction rolled back");
+    } catch (rollbackErr) {
+      // Rollback may fail if not in transaction, that's OK
+    }
     console.error("FATAL: ensure-columns failed:", e.message);
     console.error(e.stack);
     process.exit(1);
   } finally {
+    // Always release advisory lock
+    try {
+      await prisma.$executeRawUnsafe("SELECT pg_advisory_unlock(42424242)");
+      console.log("  Advisory lock released");
+    } catch { /* ignore */ }
     await prisma.$disconnect();
   }
 }

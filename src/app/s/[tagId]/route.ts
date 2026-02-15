@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import { hashIp, getGeoLocation } from "@/lib/utils";
 import {
   collectTelemetry,
   applyTelemetryCookies,
   telemetryFields,
+  isSchemaMismatchError,
 } from "@/lib/telemetry";
 
 function getRealBaseUrl(headers: Headers): string {
@@ -43,15 +44,10 @@ export async function GET(
     // --- Telemetry: cookies + meta ---
     const { data: tele, setCookies, rawIp } = collectTelemetry(request);
 
-    // Legacy IP hash (existing SHA-256 with IP_HASH_SALT for backward compat)
-    const headers = request.headers;
-    const legacyRawIp = extractIp(
-      headers.get("x-forwarded-for"),
-      headers.get("x-real-ip"),
-      headers.get("cf-connecting-ip")
-    );
-    const ipHash = hashIp(legacyRawIp);
+    // Use same cleaned IP for legacy hash (unified extraction)
+    const ipHash = hashIp(rawIp);
 
+    const headers = request.headers;
     const url = new URL(request.url);
     // Accept ?source=qr (QR code scans) or ?event=... (legacy). ?source takes precedence.
     const sourceParam = url.searchParams.get("source"); // "qr" from QR code links
@@ -66,7 +62,7 @@ export async function GET(
 
       let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
       try {
-        geo = await getGeoLocation(legacyRawIp);
+        geo = await getGeoLocation(rawIp);
       } catch { /* geo failed, use empty */ }
 
       await prisma.scan.create({
@@ -88,23 +84,28 @@ export async function GET(
         },
       });
     } catch (err) {
-      // If it failed (e.g. new columns missing), try without telemetry fields
-      console.error("Scan create failed, retrying without telemetry:", err);
-      try {
-        await prisma.scan.create({
-          data: {
-            tagId,
-            ipHash,
-            deviceType: tele.deviceType,
-            userAgent: tele.userAgent,
-            browserLang: headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null,
-            isReturning: false,
-            referrer: tele.referrer,
-            eventSource,
-          },
-        });
-      } catch (err2) {
-        console.error("Scan create retry also failed:", err2);
+      if (isSchemaMismatchError(err)) {
+        // Schema mismatch (columns not yet added) – retry without telemetry fields
+        console.warn("Scan create: schema mismatch, retrying without telemetry:", (err as Error).message);
+        try {
+          await prisma.scan.create({
+            data: {
+              tagId,
+              ipHash,
+              deviceType: tele.deviceType,
+              userAgent: tele.userAgent,
+              browserLang: headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null,
+              isReturning: false,
+              referrer: tele.referrer,
+              eventSource,
+            },
+          });
+        } catch (err2) {
+          console.error("Scan create retry also failed:", err2);
+        }
+      } else {
+        // Real error (connection, constraint, etc.) – don't silently drop data
+        console.error("Scan create failed (non-schema error):", err);
       }
     }
 

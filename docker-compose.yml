@@ -33,6 +33,8 @@ services:
       NODE_ENV: production
       UPLOAD_DIR: /app/public/uploads
       MAX_FILE_SIZE_MB: "500"
+      IP_HASH_SECRET: "${IP_HASH_SECRET}"
+      IP_HASH_SALT: "${IP_HASH_SALT}"
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
