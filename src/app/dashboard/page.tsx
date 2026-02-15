@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import ReactDOM from "react-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
+import { ActionEditor } from "@/components/actions/ActionEditor";
+import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -216,6 +220,124 @@ interface TagFull {
 }
 
 /* ------------------------------------------------------------------ */
+/*  FilterChipsBar — measures real overflow, shows +N only when needed */
+/* ------------------------------------------------------------------ */
+
+interface ChipItem { key: string; node: React.ReactNode; }
+
+interface FilterChipsBarProps {
+  chips: ChipItem[];
+  onReset: () => void;
+  showOverflow: boolean;
+  setShowOverflow: (v: boolean | ((prev: boolean) => boolean)) => void;
+  overflowRef: React.RefObject<HTMLDivElement>;
+}
+
+function FilterChipsBar({ chips, onReset, showOverflow, setShowOverflow, overflowRef }: FilterChipsBarProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const cutAtRef = useRef<number>(chips.length);
+  const [cutAt, setCutAtState] = useState<number>(chips.length);
+
+  // Stable setter that avoids re-render when value hasn't changed
+  const setCutAt = (n: number) => {
+    if (cutAtRef.current !== n) {
+      cutAtRef.current = n;
+      setCutAtState(n);
+    }
+  };
+
+  // Stable chip identity key — changes only when the set of chip keys changes
+  const chipsKey = chips.map(c => c.key).join(",");
+
+  // Measure layout: find how many chips fit in row 1
+  useEffect(() => {
+    function measure() {
+      const els = chipRefs.current;
+      const total = chips.length;
+      if (!els.length || !els[0]) { setCutAt(total); return; }
+
+      const firstTop = els[0].getBoundingClientRect().top;
+
+      let cut = total;
+      for (let i = 1; i < total; i++) {
+        const el = els[i];
+        if (!el) continue;
+        if (el.getBoundingClientRect().top > firstTop + 4) { cut = i; break; }
+      }
+      setCutAt(cut);
+    }
+
+    // Measure after first paint
+    const raf = requestAnimationFrame(measure);
+
+    // Watch for container width changes (resize) — covers all future layout changes
+    const ro = new ResizeObserver(measure);
+    if (rowRef.current) ro.observe(rowRef.current);
+
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chipsKey]); // re-run only when chip set changes (stable string key)
+
+  const visibleChips = cutAt < chips.length ? chips.slice(0, cutAt) : chips;
+  const overflowChips = cutAt < chips.length ? chips.slice(cutAt) : [];
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45", minWidth: 0 }}>
+      <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>Filtry:</span>
+
+      {/* Chip row — flex-wrap:wrap so all chips are rendered; we measure which ones overflow */}
+      <div ref={rowRef} style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1, minWidth: 0, overflow: "hidden", maxHeight: 32 }}>
+        {chips.map((ch, i) => (
+          <div
+            key={ch.key}
+            ref={el => { chipRefs.current[i] = el; }}
+            style={{ display: "inline-flex", flexShrink: 0 }}
+          >
+            {ch.node}
+          </div>
+        ))}
+      </div>
+
+      {/* +N overflow button — only rendered when cutAt < chips.length */}
+      {overflowChips.length > 0 && (
+        <div ref={overflowRef} style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
+          <button
+            onClick={() => setShowOverflow(v => !v)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(139,149,168,0.12)", border: "1px solid #2a3d5a", fontSize: 11, color: "#8b95a8", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+          >+{overflowChips.length}</button>
+          {showOverflow && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 400,
+              background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 10,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "10px",
+              display: "flex", flexDirection: "column", gap: 6, minWidth: 200, maxWidth: 280,
+            }}>
+              <div style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                Pozostałe filtry ({overflowChips.length})
+              </div>
+              {overflowChips.map(ch => (
+                <React.Fragment key={`ov:${ch.key}`}>{ch.node}</React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Wyczyść — always last */}
+      <button
+        onClick={onReset}
+        style={{ marginLeft: overflowChips.length === 0 ? "auto" : 0, flexShrink: 0, background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+        onMouseLeave={e => (e.currentTarget.style.color = "#3a4460")}
+      >Wyczyść ×</button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -233,6 +355,8 @@ export default function DashboardWrapper() {
 
 function DashboardPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   /* ---- state ---- */
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -264,7 +388,15 @@ function DashboardPage() {
   const [timeFrom, setTimeFrom] = useState("");
   const [timeTo, setTimeTo] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [rangePreset, setRangePreset] = useState<"24h" | "7d" | "30d" | "month" | "custom">("custom");
   const [weekOffset, setWeekOffset] = useState(0);
+  // custom range popover
+  const [showCustomPopover, setShowCustomPopover] = useState(false);
+  const [draftFrom, setDraftFrom] = useState("");
+  const [draftTimeFrom, setDraftTimeFrom] = useState("");
+  const [draftTo, setDraftTo] = useState("");
+  const [draftTimeTo, setDraftTimeTo] = useState("");
+  const customPopoverRef = useRef<HTMLDivElement>(null);
   const filtersRestoredRef = useRef(false);
   const scanTableRef = useRef<HTMLElement>(null);
 
@@ -295,6 +427,12 @@ function DashboardPage() {
   const [tagCreateSuccess, setTagCreateSuccess] = useState("");
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
   const [lastCreatedChannel, setLastCreatedChannel] = useState<"nfc" | "qr">("nfc");
+  // copy-link toast
+  const [copyToast, setCopyToast] = useState(false);
+  const copyToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // per-card copy feedback
+  const [copiedCardId, setCopiedCardId] = useState<string | null>(null);
+  const copiedCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // hourly chart mode
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
@@ -307,12 +445,27 @@ function DashboardPage() {
   const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
   const [scanSourceFilter, setScanSourceFilter] = useState<"all" | "nfc" | "qr">("all");
   // Multi-select tag filter (empty = all tags in current campaign/client scope)
+  // actionsMode: "NA" = campaign not selected (filter locked); "ALL" = campaign selected, all its actions; "SELECTED" = specific actions chosen
+  const [actionsMode, setActionsMode] = useState<"NA" | "ALL" | "SELECTED">("NA");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
+  // actions search (inline list, no dropdown)
+  const [tagSearch, setTagSearch] = useState("");
+  // client inline list search
+  const [clientSearch, setClientSearch] = useState("");
+  // campaign combobox
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [showCampaignDropdown, setShowCampaignDropdown] = useState(false);
+  const campaignDropdownRef = useRef<HTMLDivElement>(null);
+  const campaignDropdownPortalRef = useRef<HTMLDivElement>(null);
+  const [campaignDropdownPos, setCampaignDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  // chips overflow popover
+  const [showChipsOverflow, setShowChipsOverflow] = useState(false);
+  const chipsOverflowRef = useRef<HTMLDivElement>(null);
 
   // editing
-  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editingAction, setEditingAction] = useState<TagFull | null>(null);
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -335,6 +488,36 @@ function DashboardPage() {
   const [uploadingTagId, setUploadingTagId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState("");
 
+  // context menu
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const openCardMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuRect(null);
+    } else {
+      setMenuRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+      setOpenMenuId(id);
+    }
+  };
+
+  const closeCardMenu = () => {
+    setOpenMenuId(null);
+    setMenuRect(null);
+  };
+
+  // view mode: cards | table
+  const [viewMode, setViewMode] = useState<"cards" | "table">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("actionsViewMode");
+      if (saved === "cards" || saved === "table") return saved;
+    }
+    return "cards";
+  });
+
   // link click stats
   const [linkClickStats, setLinkClickStats] = useState<Record<string, LinkClickData>>({});
   const [expandedLinkStats, setExpandedLinkStats] = useState<string | null>(null);
@@ -347,8 +530,6 @@ function DashboardPage() {
   const [selectedVideoRetention, setSelectedVideoRetention] = useState<VideoStats | null>(null);
 
   // management panel
-  const [showManagePanel, setShowManagePanel] = useState(false);
-  const [managePanelTab, setManagePanelTab] = useState<"clients" | "campaigns" | "tags">("clients");
   const [manageLoading, setManageLoading] = useState(false);
   const [manageMsg, setManageMsg] = useState("");
   // cascade delete confirmations (2-step)
@@ -368,19 +549,23 @@ function DashboardPage() {
   // manage filter
   const [manageCampaignFilter, setManageCampaignFilter] = useState<string | null>(null);
 
+  // bulk selection
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false);
+  const [bulkMoveCampaignId, setBulkMoveCampaignId] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
+
   /* ---- fetch helpers ---- */
 
-  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[] }) => {
+  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[]; from?: string; to?: string }) => {
     try {
       setFetchError("");
       const params = new URLSearchParams();
-      if (dateFrom) {
-        // Combine date + optional time: "2025-01-15T08:00" or just "2025-01-15"
-        params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-      }
-      if (dateTo) {
-        params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
-      }
+      const effectiveFrom = opts?.from !== undefined ? opts.from : (dateFrom ? (timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom) : "");
+      const effectiveTo = opts?.to !== undefined ? opts.to : (dateTo ? (timeTo ? `${dateTo}T${timeTo}` : dateTo) : "");
+      if (effectiveFrom) params.set("from", effectiveFrom);
+      if (effectiveTo) params.set("to", effectiveTo);
       // Multi-tag filter takes precedence over single tagFilter
       const effectiveTagIds = opts?.tagIds !== undefined ? opts.tagIds : selectedTagIds;
       if (effectiveTagIds.length > 0) {
@@ -561,40 +746,116 @@ function DashboardPage() {
     }
   }, [tagFilter, selectedTagIds, tags]);
 
-  /* ---- restore filters from localStorage on mount ---- */
+  /* ---- restore filters from URL params (priority) or localStorage on mount ---- */
   useEffect(() => {
     if (filtersRestoredRef.current) return;
     filtersRestoredRef.current = true;
-    try {
-      const saved = localStorage.getItem("nfc_filters");
-      if (saved) {
-        const f = JSON.parse(saved);
-        if (f.clientId) setSelectedClientId(f.clientId);
-        if (f.campaignId) setSelectedCampaignId(f.campaignId);
-        if (f.tagFilter) setTagFilter(f.tagFilter);
-        if (f.dateFrom) setDateFrom(f.dateFrom);
-        if (f.dateTo) setDateTo(f.dateTo);
-        if (f.timeFrom) setTimeFrom(f.timeFrom);
-        if (f.timeTo) setTimeTo(f.timeTo);
+    const urlClient = searchParams.get("client");
+    const urlCampaign = searchParams.get("campaign");
+    const urlFrom = searchParams.get("from");
+    const urlTo = searchParams.get("to");
+    const urlTag = searchParams.get("tag");
+    const urlTags = searchParams.get("tags");
+    const urlRange = searchParams.get("range") as "24h" | "7d" | "30d" | "month" | "custom" | null;
+    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlTags || urlRange;
+    if (hasUrlParams) {
+      if (urlClient) setSelectedClientId(urlClient);
+      if (urlCampaign) {
+        setSelectedCampaignId(urlCampaign);
+        // Restore action tags only when a campaign is present
+        if (urlTags) {
+          const ids = urlTags.split(",").filter(Boolean);
+          setSelectedTagIds(ids);
+          setActionsMode(ids.length > 0 ? "SELECTED" : "ALL");
+        } else {
+          setActionsMode("ALL");
+        }
       }
-    } catch { /* ignore */ }
+      // urlTags without urlCampaign is intentionally ignored (actionsMode stays "NA")
+      if (urlTag) setTagFilter(urlTag);
+      if (urlRange && urlRange !== "custom") {
+        // Re-apply preset on load (recomputes from/to to "now minus X")
+        // We call applyPreset after mount via a tiny timeout so state is ready
+        setTimeout(() => applyPreset(urlRange), 0);
+      } else {
+        if (urlRange === "custom" || !urlRange) setRangePreset("custom");
+        if (urlFrom) {
+          const [d, t] = urlFrom.split("T");
+          setDateFrom(d || "");
+          if (t) setTimeFrom(t);
+        }
+        if (urlTo) {
+          const [d, t] = urlTo.split("T");
+          setDateTo(d || "");
+          if (t) setTimeTo(t);
+        }
+      }
+    } else {
+      try {
+        const saved = localStorage.getItem("nfc_filters");
+        if (saved) {
+          const f = JSON.parse(saved);
+          if (f.clientId) setSelectedClientId(f.clientId);
+          if (f.campaignId) {
+            setSelectedCampaignId(f.campaignId);
+            // Restore action tags only when a campaign is present
+            if (Array.isArray(f.selectedTagIds) && f.selectedTagIds.length > 0) {
+              setSelectedTagIds(f.selectedTagIds);
+              setActionsMode("SELECTED");
+            } else {
+              setActionsMode("ALL");
+            }
+          }
+          // f.selectedTagIds without f.campaignId is intentionally ignored
+          if (f.tagFilter) setTagFilter(f.tagFilter);
+          if (f.rangePreset && f.rangePreset !== "custom") {
+            setTimeout(() => applyPreset(f.rangePreset), 0);
+          } else {
+            if (f.dateFrom) setDateFrom(f.dateFrom);
+            if (f.dateTo) setDateTo(f.dateTo);
+            if (f.timeFrom) setTimeFrom(f.timeFrom);
+            if (f.timeTo) setTimeTo(f.timeTo);
+          }
+        }
+      } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ---- save filters to localStorage when they change ---- */
+  /* ---- sync filters to URL params and localStorage when they change ---- */
   useEffect(() => {
     if (!filtersRestoredRef.current) return;
+    // Build new URL query string
+    const params = new URLSearchParams();
+    if (selectedClientId) params.set("client", selectedClientId);
+    if (selectedCampaignId) params.set("campaign", selectedCampaignId);
+    if (tagFilter) params.set("tag", tagFilter);
+    if (selectedTagIds.length > 0) params.set("tags", selectedTagIds.join(","));
+    if (rangePreset !== "custom") {
+      params.set("range", rangePreset);
+      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    } else {
+      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+    // Also keep localStorage in sync
     try {
       localStorage.setItem("nfc_filters", JSON.stringify({
         clientId: selectedClientId,
         campaignId: selectedCampaignId,
         tagFilter,
+        selectedTagIds,
+        rangePreset,
         dateFrom,
         dateTo,
         timeFrom,
         timeTo,
       }));
     } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, dateFrom, dateTo, timeFrom, timeTo]);
+  }, [selectedClientId, selectedCampaignId, tagFilter, selectedTagIds, rangePreset, dateFrom, dateTo, timeFrom, timeTo, router]);
 
   /* ---- initial load ---- */
 
@@ -614,8 +875,10 @@ function DashboardPage() {
     if (!clientInitRef.current) { clientInitRef.current = true; return; }
     if (status === "authenticated") {
       setSelectedCampaignId(null); // reset campaign when client changes
-      setTagFilter(""); // reset tag filter when client changes
-      setSelectedTagIds([]); // reset multi-tag filter
+      setTagFilter("");            // reset tag filter when client changes
+      setSelectedTagIds([]);       // reset multi-tag filter
+      setActionsMode("NA");        // actions locked until campaign is chosen
+      setTagSearch("");
       fetchCampaigns();
       fetchStats();
     }
@@ -627,12 +890,58 @@ function DashboardPage() {
   useEffect(() => {
     if (!campaignInitRef.current) { campaignInitRef.current = true; return; }
     if (status === "authenticated") {
-      setTagFilter(""); // reset tag filter when campaign changes
+      setTagFilter("");      // reset tag filter when campaign changes
       setSelectedTagIds([]); // reset multi-tag filter
+      setTagSearch("");
+      // Cascade actionsMode: NA when campaign cleared, ALL when campaign chosen
+      setActionsMode(selectedCampaignId ? "ALL" : "NA");
       fetchStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCampaignId]);
+
+  /* ---- persist view mode ---- */
+  useEffect(() => {
+    localStorage.setItem("actionsViewMode", viewMode);
+  }, [viewMode]);
+
+  /* ---- close context menu on outside click ---- */
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
+
+  /* ---- close custom range popover on outside click ---- */
+  useEffect(() => {
+    if (!showCustomPopover) return;
+    const handler = (e: MouseEvent) => {
+      if (customPopoverRef.current && !customPopoverRef.current.contains(e.target as Node)) {
+        setShowCustomPopover(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showCustomPopover]);
+
+
+
+  /* ---- chips overflow outside-click ---- */
+  useEffect(() => {
+    if (!showChipsOverflow) return;
+    const handler = (e: MouseEvent) => {
+      if (chipsOverflowRef.current && !chipsOverflowRef.current.contains(e.target as Node)) {
+        setShowChipsOverflow(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showChipsOverflow]);
 
   /* ---- handlers ---- */
 
@@ -714,6 +1023,56 @@ function DashboardPage() {
     setLoading(false);
   };
 
+  /* ---- copy-link helper ---- */
+  const handleCopyLink = (tagId: string) => {
+    const url = `${window.location.origin}/s/${tagId}`;
+    const done = () => {
+      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+      setCopyToast(true);
+      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+      // per-card visual feedback
+      if (copiedCardTimer.current) clearTimeout(copiedCardTimer.current);
+      setCopiedCardId(tagId);
+      copiedCardTimer.current = setTimeout(() => setCopiedCardId(null), 1500);
+    };
+    navigator.clipboard.writeText(url).then(done).catch(() => {
+      // Fallback for browsers that block clipboard API
+      const el = document.createElement("textarea");
+      el.value = url;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      done();
+    });
+  };
+
+  /* ---- range preset helper ---- */
+  const applyPreset = useCallback((preset: "24h" | "7d" | "30d" | "month" | "custom") => {
+    setRangePreset(preset);
+    if (preset === "custom") return; // keep existing Od/Do inputs as-is
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let from: Date;
+    if (preset === "24h") {
+      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    } else if (preset === "7d") {
+      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (preset === "30d") {
+      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else { // month
+      from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    }
+    setDateFrom(toDateStr(from));
+    setTimeFrom(preset === "month" ? "00:00" : toTimeStr(from));
+    setDateTo(toDateStr(now));
+    setTimeTo(toTimeStr(now));
+  }, []);
+
   const handleResetFilters = async () => {
     // Reset all filter state first, then let fetchStats read the cleared values.
     // Previously this called /api/stats directly and bypassed fetchStats(), causing
@@ -727,7 +1086,16 @@ function DashboardPage() {
     setSelectedCampaignId(null);
     setWeekOffset(0);
     setScanSourceFilter("all");
+    setScanNfcFilter(null);
     setSelectedTagIds([]);
+    setTagSearch("");
+    setClientSearch("");
+    setCampaignSearch("");
+    setShowCampaignDropdown(false);
+    setShowChipsOverflow(false);
+    setRangePreset("custom");
+    // Clear URL params
+    router.replace("/dashboard", { scroll: false });
     setLoading(true);
     try {
       // Call the API directly with a clean slate (all filters cleared above).
@@ -904,6 +1272,7 @@ function DashboardPage() {
     if (!confirm(`Czy na pewno chcesz usunac akcje "${id}" i wszystkie jej skany?`)) return;
     try {
       await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      setEditingAction(null);
       await fetchTags();
       await fetchStats();
     } catch { /* ignore */ }
@@ -933,13 +1302,13 @@ function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      setEditingTagId(null);
+      setEditingAction(null);
       await fetchTags();
     } catch { /* ignore */ }
   };
 
   const startEdit = (tag: TagFull) => {
-    setEditingTagId(tag.id);
+    setEditingAction(tag);
     setEditName(tag.name);
     setEditUrl(tag.targetUrl);
     setEditDesc(tag.description || "");
@@ -1203,6 +1572,71 @@ function DashboardPage() {
     finally { setManageLoading(false); }
   };
 
+  /* ---- bulk handlers ---- */
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Czy na pewno chcesz usunąć ${selectedIds.length} akcji i wszystkie ich dane?`)) return;
+    setBulkLoading(true);
+    setBulkMsg("");
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+        )
+      );
+      setSelectedIds([]);
+      await Promise.all([fetchTags(), fetchStats()]);
+    } catch { setBulkMsg("Błąd usuwania"); }
+    finally { setBulkLoading(false); }
+  };
+
+  const handleBulkMove = async () => {
+    if (!selectedIds.length) return;
+    setBulkLoading(true);
+    setBulkMsg("");
+    try {
+      const results = await Promise.all(
+        selectedIds.map((id) =>
+          fetch("/api/manage/tag-operations", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tagId: id, newCampaignId: bulkMoveCampaignId || null }),
+          })
+        )
+      );
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed) setBulkMsg(`Przeniesiono ${selectedIds.length - failed}/${selectedIds.length} akcji`);
+      setSelectedIds([]);
+      setShowBulkMoveModal(false);
+      setBulkMoveCampaignId("");
+      await Promise.all([fetchCampaigns(), fetchTags(), fetchStats()]);
+    } catch { setBulkMsg("Błąd przenoszenia"); }
+    finally { setBulkLoading(false); }
+  };
+
+  const handleBulkClone = async () => {
+    if (!selectedIds.length) return;
+    setBulkLoading(true);
+    setBulkMsg("");
+    try {
+      let ok = 0;
+      for (const id of selectedIds) {
+        const newId = `${id}-kopia-${Date.now().toString(36)}`;
+        const res = await fetch("/api/manage/tag-operations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sourceTagId: id, newId }),
+        });
+        if (res.ok) ok++;
+      }
+      setBulkMsg(`Zduplikowano ${ok}/${selectedIds.length} akcji`);
+      setSelectedIds([]);
+      await fetchTags();
+    } catch { setBulkMsg("Błąd duplikowania"); }
+    finally { setBulkLoading(false); }
+  };
+
   /* tag type label helper */
   const getTagTypeLabel = (type: string) => {
     switch (type) {
@@ -1362,6 +1796,10 @@ function DashboardPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .anim-fade { animation: fadeIn 0.35s ease forwards; }
+        @keyframes drawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .drawer-panel { animation: drawerIn 0.25s cubic-bezier(0.32,0,0.67,0) forwards; }
+        @keyframes menuIn { from { opacity: 0; transform: scale(0.95) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .ctx-menu { animation: menuIn 0.12s ease forwards; transform-origin: top right; }
       `}</style>
 
       {/* ============================================================ */}
@@ -1502,236 +1940,415 @@ function DashboardPage() {
         <style>{`
           @media (max-width: 700px) {
             .nfc-layout { flex-direction: column !important; }
-            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; flex-direction: row !important; flex-wrap: wrap !important; }
+            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; overflow: visible !important; flex-direction: row !important; flex-wrap: wrap !important; }
             .nfc-sidebar > div { flex: 1 1 calc(50% - 6px); min-width: 140px; }
           }
+          /* Sidebar scrollbar — only appears when content overflows; thin and unobtrusive */
+          .nfc-sidebar { scrollbar-width: thin; scrollbar-color: #1e2d45 transparent; }
+          .nfc-sidebar::-webkit-scrollbar { width: 4px; }
+          .nfc-sidebar::-webkit-scrollbar-track { background: transparent; }
+          .nfc-sidebar::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 4px; }
+          .nfc-sidebar::-webkit-scrollbar-thumb:hover { background: #2a3d5a; }
         `}</style>
         <div className="nfc-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
           {/* ============================================================ */}
-          {/*  LEFT SIDEBAR — Klienci & Kampanie                           */}
+          {/*  LEFT SIDEBAR — Filtry: Klienci, Kampanie, Akcje             */}
           {/* ============================================================ */}
-          <aside className="nfc-sidebar" style={{
-            width: 260,
-            flexShrink: 0,
-            position: "sticky",
-            top: 76,
-            maxHeight: "calc(100vh - 96px)",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}>
+          <aside
+            className="nfc-sidebar"
+            onScroll={() => {
+            }}
+            style={{
+              width: 260,
+              flexShrink: 0,
+              position: "sticky",
+              top: 76,
+              maxHeight: "calc(100vh - 96px)",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
             {/* -- Klienci block -- */}
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klienci</span>
-                <button
-                  onClick={() => setShowAddClient(!showAddClient)}
-                  title="Dodaj klienta"
-                  style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-                >+</button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {selectedClientId && (
+                    <button
+                      onClick={() => handleDeleteClient(selectedClientId)}
+                      title="Usuń klienta"
+                      style={{ background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                      onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
+                    >🗑</button>
+                  )}
+                  <button
+                    onClick={() => setShowAddClient(!showAddClient)}
+                    title="Dodaj klienta"
+                    style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                  >+</button>
+                </div>
               </div>
 
-              {/* "Wszyscy" chip */}
-              <button
-                onClick={() => setSelectedClientId(null)}
-                style={{
-                  width: "100%", textAlign: "left", background: !selectedClientId ? "rgba(245,183,49,0.12)" : "transparent",
-                  border: `1px solid ${!selectedClientId ? "rgba(245,183,49,0.35)" : "transparent"}`,
-                  borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
-                  transition: "background 0.15s",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600, color: !selectedClientId ? "#f5b731" : "#8b95a8" }}>Wszyscy</span>
-                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500 }} title="Łączna liczba skanów">{clients.reduce((s, c) => s + c.scanCount, 0)}<span style={{ marginLeft: 2, color: "#3a4460" }}>sk</span></span>
-              </button>
-
-              {/* Client chips */}
-              {clients.map((c) => {
-                const active = selectedClientId === c.id;
-                return (
-                  <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
-                    <button
-                      onClick={() => setSelectedClientId(c.id)}
-                      style={{
-                        width: "100%", textAlign: "left",
-                        background: active ? `${c.color || "#e69500"}18` : "transparent",
-                        border: `1px solid ${active ? `${c.color || "#e69500"}50` : "transparent"}`,
-                        borderRadius: 8, padding: "7px 10px", cursor: "pointer",
-                        display: "flex", alignItems: "center", gap: 8,
-                        transition: "background 0.15s",
-                      }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || "#e69500", flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? (c.color || "#f5b731") : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                      <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 500, flexShrink: 0 }} title={`${c.scanCount} skanów / ${c.tagCount} akcji`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
-                    </button>
-                    {active && (
+              {/* -- Klienci — always-visible inline list -- */}
+              {/* search bar */}
+              <div style={{ display: "flex", alignItems: "center", background: "#131b2e", border: "1px solid #1e2d45", borderRadius: 8, padding: "6px 10px", marginBottom: 6 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginRight: 6 }}>
+                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input
+                  value={clientSearch}
+                  onChange={e => setClientSearch(e.target.value)}
+                  placeholder="Szukaj klienta…"
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
+                />
+                {clientSearch && (
+                  <button onClick={() => setClientSearch("")} style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
+                )}
+              </div>
+              <div style={{ marginLeft: -4, marginRight: -4 }}>
+                {/* "Wszyscy klienci" row */}
+                <button
+                  onClick={() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, width: "100%",
+                    padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
+                    background: !selectedClientId ? "rgba(245,183,49,0.1)" : "transparent",
+                    color: !selectedClientId ? "#f5b731" : "#8b95a8",
+                    fontSize: 12, fontWeight: !selectedClientId ? 600 : 400,
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={e => { if (selectedClientId) e.currentTarget.style.background = "#111827"; }}
+                  onMouseLeave={e => { if (selectedClientId) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span style={{
+                    width: 14, height: 14, borderRadius: 3, border: `1px solid ${!selectedClientId ? "#f5b731" : "#2a3d5a"}`,
+                    background: !selectedClientId ? "rgba(245,183,49,0.15)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    {!selectedClientId && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f5b731" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </span>
+                  Wszyscy klienci
+                </button>
+                {/* per-client rows */}
+                {clients
+                  .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                  .map(c => {
+                    const sel = selectedClientId === c.id;
+                    const dotColor = c.color || "#e69500";
+                    return (
                       <button
-                        onClick={() => handleDeleteClient(c.id)}
-                        title="Usun klienta"
-                        style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
-                      >×</button>
-                    )}
-                  </div>
-                );
-              })}
+                        key={c.id}
+                        onClick={() => { setSelectedClientId(c.id); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, width: "100%",
+                          padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
+                          background: sel ? `${dotColor}18` : "transparent",
+                          color: sel ? dotColor : "#c8d0de",
+                          fontSize: 12, fontWeight: sel ? 600 : 400,
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#111827"; }}
+                        onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                        {c.scanCount > 0 && <span style={{ fontSize: 10, color: "#3a4460", flexShrink: 0 }}>{c.scanCount}</span>}
+                      </button>
+                    );
+                  })}
+                {clients.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                  <div style={{ padding: "8px 4px", fontSize: 11, color: "#3a4460" }}>Brak wyników</div>
+                )}
+              </div>
 
               {/* Add client inline form */}
               {showAddClient && (
                 <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input className="input-field" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
-                  <input className="input-field" value={newClientDesc} onChange={(e) => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newClientDesc} onChange={e => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input type="color" value={newClientColor} onChange={(e) => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid #1e2d45", borderRadius: 4, background: "#131b2e", cursor: "pointer", flexShrink: 0 }} />
+                    <input type="color" value={newClientColor} onChange={e => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid #1e2d45", borderRadius: 4, background: "#131b2e", cursor: "pointer", flexShrink: 0 }} />
                     <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{clientCreating ? "..." : "Dodaj"}</button>
                     <button onClick={() => setShowAddClient(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
                   </div>
                 </div>
               )}
-              {/* Legend */}
-              <p style={{ fontSize: 9, color: "#2a3550", marginTop: 6, textAlign: "right" }}>
-                <span title="liczba skanów">sk = skany</span>
-              </p>
             </div>
 
-            {/* -- Kampanie block (visible only when client selected) -- */}
-            {selectedClientId && (
-              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampanie</span>
-                  <button
-                    onClick={() => setShowAddCampaign(!showAddCampaign)}
-                    title="Dodaj kampanie"
-                    style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
-                  >+</button>
-                </div>
-
-                {/* "Wszystkie kampanie" chip */}
-                <button
-                  onClick={() => setSelectedCampaignId(null)}
-                  style={{
-                    width: "100%", textAlign: "left", background: !selectedCampaignId ? "rgba(96,165,250,0.10)" : "transparent",
-                    border: `1px solid ${!selectedCampaignId ? "rgba(96,165,250,0.30)" : "transparent"}`,
-                    borderRadius: 8, padding: "7px 10px", marginBottom: 4, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 600, color: !selectedCampaignId ? "#60a5fa" : "#8b95a8" }}>Wszystkie</span>
-                  <span style={{ fontSize: 10, color: "#5a6478" }} title={`${filteredCampaigns.length} kampanii`}>{filteredCampaigns.length}<span style={{ color: "#3a4460" }}>kmp</span></span>
-                </button>
-
-                {/* Campaign chips */}
-                {filteredCampaigns.map((c) => {
-                  const active = selectedCampaignId === c.id;
-                  return (
-                    <div key={c.id} style={{ position: "relative", marginBottom: 4 }}>
+            {/* -- Kampanie block — always-visible list (no dropdown) -- */}
+            <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
+                {selectedClientId && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {selectedCampaignId && (
                       <button
-                        onClick={() => setSelectedCampaignId(c.id)}
-                        style={{
-                          width: "100%", textAlign: "left",
-                          background: active ? "rgba(96,165,250,0.10)" : "transparent",
-                          border: `1px solid ${active ? "rgba(96,165,250,0.30)" : "transparent"}`,
-                          borderRadius: 8, padding: "7px 10px", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: 6,
-                          transition: "background 0.15s",
-                        }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={active ? "#60a5fa" : "#5a6478"} strokeWidth={2.5}>
-                          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                        </svg>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#60a5fa" : "#c8d0de", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                        <span style={{ fontSize: 10, color: "#5a6478", flexShrink: 0 }} title={`${c.scanCount} skanów`}>{c.scanCount}<span style={{ color: "#3a4460" }}>sk</span></span>
-                      </button>
-                      {active && (
-                        <button
-                          onClick={() => handleDeleteCampaign(c.id)}
-                          title="Usun kampanie"
-                          style={{ position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = "#f87171"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = "#3a4460"; }}
-                        >×</button>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Add campaign inline form */}
-                {showAddCampaign && (
-                  <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <input className="input-field" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
-                    <input className="input-field" value={newCampaignDesc} onChange={(e) => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
-                      <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
-                    </div>
+                        onClick={() => handleDeleteCampaign(selectedCampaignId)}
+                        title="Usuń kampanię"
+                        style={{ background: "transparent", border: "none", color: "#3a4460", cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                        onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}
+                      >🗑</button>
+                    )}
+                    <button
+                      onClick={() => setShowAddCampaign(!showAddCampaign)}
+                      title="Dodaj kampanię"
+                      style={{ background: "transparent", border: "1px dashed #2a4060", color: "#5a6478", borderRadius: 6, width: 22, height: 22, fontSize: 16, lineHeight: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#60a5fa"; e.currentTarget.style.color = "#60a5fa"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
+                    >+</button>
                   </div>
                 )}
               </div>
-            )}
 
-            {/* -- Akcje multi-select (visible when campaign selected) -- */}
-            {selectedCampaignId && filteredTags.length > 0 && (
-              <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
-                  {selectedTagIds.length > 0 && (
-                    <button onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
-                      style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px" }}
-                      title="Odznacz wszystkie akcje">Wyczyść</button>
+              {!selectedClientId ? (
+                /* placeholder when no client chosen */
+                <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>Wybierz klienta, aby zobaczyć kampanie</span>
+                </div>
+              ) : (
+                /* always-visible campaign list */
+                <div style={{ marginLeft: -4, marginRight: -4 }}>
+                  {/* "Wszystkie kampanie" row */}
+                  <button
+                    onClick={() => { setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%",
+                      padding: "6px 8px", borderRadius: 7, fontSize: 12,
+                      fontWeight: !selectedCampaignId ? 600 : 400,
+                      background: !selectedCampaignId ? "rgba(96,165,250,0.12)" : "transparent",
+                      color: !selectedCampaignId ? "#60a5fa" : "#8b95a8",
+                      border: "none", cursor: "pointer", textAlign: "left",
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={e => { if (selectedCampaignId) e.currentTarget.style.background = "#0f1a2e"; }}
+                    onMouseLeave={e => { if (selectedCampaignId) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ flexShrink: 0, opacity: 0.6 }}>
+                      <path d="M3 6h18M3 12h18M3 18h18"/>
+                    </svg>
+                    <span style={{ flex: 1 }}>Wszystkie kampanie</span>
+                    {!selectedCampaignId && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* per-campaign rows */}
+                  {filteredCampaigns.length === 0 ? (
+                    <div style={{ padding: "10px 8px", fontSize: 11, color: "#3a4460", lineHeight: 1.5 }}>
+                      Brak kampanii dla tego klienta
+                    </div>
+                  ) : (
+                    filteredCampaigns.map(c => {
+                      const sel = selectedCampaignId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCampaignId(c.id);
+                            setSelectedTagIds([]);
+                            setActionsMode("ALL");
+                            fetchStats({ tagIds: [] });
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8, width: "100%",
+                            padding: "6px 8px", borderRadius: 7, fontSize: 12,
+                            fontWeight: sel ? 600 : 400,
+                            background: sel ? "rgba(96,165,250,0.12)" : "transparent",
+                            color: sel ? "#60a5fa" : "#c8d0de",
+                            border: "none", cursor: "pointer", textAlign: "left",
+                            transition: "background 0.12s",
+                          }}
+                          onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#0f1a2e"; }}
+                          onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ flexShrink: 0, opacity: sel ? 1 : 0.5 }}>
+                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                          </svg>
+                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                          {c.scanCount > 0 && (
+                            <span style={{ fontSize: 10, color: sel ? "#60a5fa" : "#3a4460", flexShrink: 0, opacity: 0.8 }}>{c.scanCount}</span>
+                          )}
+                          {sel && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })
                   )}
                 </div>
-                {/* "Wszystkie" chip */}
-                <button
-                  onClick={() => { setSelectedTagIds([]); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 4,
-                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                    border: `1px solid ${selectedTagIds.length === 0 ? "rgba(96,165,250,0.4)" : "#1e2d45"}`,
-                    background: selectedTagIds.length === 0 ? "rgba(96,165,250,0.12)" : "transparent",
-                    color: selectedTagIds.length === 0 ? "#60a5fa" : "#8b95a8",
-                    marginBottom: 4, marginRight: 4,
-                  }}
-                >Wszystkie</button>
-                {/* Individual tag chips */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {filteredTags.map(t => {
-                    const sel = selectedTagIds.includes(t.id);
-                    return (
-                      <button key={t.id}
-                        onClick={() => {
-                          const next = sel ? selectedTagIds.filter(id => id !== t.id) : [...selectedTagIds, t.id];
-                          setSelectedTagIds(next);
-                          fetchStats({ tagIds: next });
-                          if (showScanTable) fetchScans();
-                        }}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          padding: "4px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                          border: `1px solid ${sel ? "rgba(245,183,49,0.4)" : "#1e2d45"}`,
-                          background: sel ? "rgba(245,183,49,0.12)" : "transparent",
-                          color: sel ? "#f5b731" : "#8b95a8",
-                          maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        }}
-                        title={`${t.name} — ${t._count.scans} skanów`}
-                      >
-                        {t.name}
-                        {sel && <span style={{ fontSize: 9, marginLeft: 2, color: "#f5b731" }}>✓</span>}
-                      </button>
-                    );
-                  })}
+              )}
+
+              {/* Add campaign inline form */}
+              {selectedClientId && showAddCampaign && (
+                <div style={{ marginTop: 8, padding: "10px", background: "#131b2e", borderRadius: 8, border: "1px solid #1e2d45", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <input className="input-field" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <input className="input-field" value={newCampaignDesc} onChange={e => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
+                    <button onClick={() => setShowAddCampaign(false)} style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* -- Akcje — always-visible list, only active when campaign is selected -- */}
+            <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
+                  {actionsMode === "SELECTED" && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#f5b731", background: "rgba(245,183,49,0.12)", border: "1px solid rgba(245,183,49,0.3)", borderRadius: 10, padding: "1px 6px" }}>
+                      {selectedTagIds.length}
+                    </span>
+                  )}
+                </div>
+                {actionsMode === "SELECTED" && (
+                  <button
+                    onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                    style={{ background: "transparent", border: "none", color: "#5a6478", fontSize: 10, cursor: "pointer", padding: "1px 4px", transition: "color 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
+                    title="Wyczyść filtr akcji"
+                  >Wyczyść</button>
+                )}
               </div>
-            )}
+
+              {!selectedCampaignId ? (
+                /* — no campaign: placeholder — */
+                <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3a4460" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 11, color: "#3a4460", lineHeight: 1.4 }}>Wybierz kampanię, aby zobaczyć akcje</span>
+                </div>
+              ) : (
+                /* — campaign selected: always-visible list — */
+                <>
+                  {/* search bar */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#131b2e", border: "1px solid #1e2d45",
+                    borderRadius: 8, padding: "6px 10px", marginBottom: 6,
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a6478" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input
+                      value={tagSearch}
+                      onChange={e => setTagSearch(e.target.value)}
+                      placeholder="Szukaj akcji…"
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "#c8d0de", caretColor: "#f5b731" }}
+                    />
+                    {tagSearch && (
+                      <button
+                        onClick={() => setTagSearch("")}
+                        style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                      >×</button>
+                    )}
+                  </div>
+
+                  {/* list */}
+                  {filteredTags.length === 0 ? (
+                    <div style={{ padding: "10px 4px", fontSize: 11, color: "#3a4460", lineHeight: 1.5 }}>
+                      Brak akcji w tej kampanii
+                    </div>
+                  ) : (
+                    <div style={{ marginLeft: -4, marginRight: -4 }}>
+                      {/* "Wszystkie akcje" row */}
+                      <button
+                        onClick={() => { setSelectedTagIds([]); setActionsMode("ALL"); fetchStats({ tagIds: [] }); if (showScanTable) fetchScans(); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, width: "100%",
+                          padding: "5px 8px", borderRadius: 7, fontSize: 12,
+                          fontWeight: actionsMode === "ALL" ? 600 : 400,
+                          background: actionsMode === "ALL" ? "rgba(96,165,250,0.1)" : "transparent",
+                          color: actionsMode === "ALL" ? "#60a5fa" : "#8b95a8",
+                          border: "none", cursor: "pointer", textAlign: "left",
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={e => { if (actionsMode !== "ALL") e.currentTarget.style.background = "#0f1a2e"; }}
+                        onMouseLeave={e => { if (actionsMode !== "ALL") e.currentTarget.style.background = "transparent"; }}
+                      >
+                        {/* checkbox-like indicator */}
+                        <span style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${actionsMode === "ALL" ? "#60a5fa" : "#2a3d5a"}`,
+                          background: actionsMode === "ALL" ? "rgba(96,165,250,0.2)" : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          {actionsMode === "ALL" && <span style={{ fontSize: 9, color: "#60a5fa", lineHeight: 1 }}>✓</span>}
+                        </span>
+                        <span style={{ flex: 1 }}>Wszystkie akcje</span>
+                      </button>
+
+                      {/* per-tag rows — filtered by search */}
+                      {filteredTags
+                        .filter(t => !tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase()))
+                        .map(t => {
+                          const sel = selectedTagIds.includes(t.id);
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => {
+                                const next = sel
+                                  ? selectedTagIds.filter(id => id !== t.id)
+                                  : [...selectedTagIds, t.id];
+                                setSelectedTagIds(next);
+                                setActionsMode(next.length > 0 ? "SELECTED" : "ALL");
+                                fetchStats({ tagIds: next });
+                                if (showScanTable) fetchScans();
+                              }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                padding: "5px 8px", borderRadius: 7, fontSize: 12,
+                                fontWeight: sel ? 600 : 400,
+                                background: sel ? "rgba(245,183,49,0.08)" : "transparent",
+                                color: sel ? "#f5b731" : "#c8d0de",
+                                border: "none", cursor: "pointer", textAlign: "left",
+                                transition: "background 0.12s",
+                              }}
+                              onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#0f1a2e"; }}
+                              onMouseLeave={e => { if (!sel) e.currentTarget.style.background = sel ? "rgba(245,183,49,0.08)" : "transparent"; }}
+                            >
+                              <span style={{
+                                width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                border: `1.5px solid ${sel ? "#f5b731" : "#2a3d5a"}`,
+                                background: sel ? "rgba(245,183,49,0.2)" : "transparent",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                {sel && <span style={{ fontSize: 9, color: "#f5b731", lineHeight: 1 }}>✓</span>}
+                              </span>
+                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                              {t._count.scans > 0 && (
+                                <span style={{ fontSize: 10, color: sel ? "#f5b731" : "#3a4460", flexShrink: 0, opacity: 0.8 }}>{t._count.scans}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+
+                      {/* no search results */}
+                      {tagSearch && filteredTags.filter(t => t.name.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding: "10px 8px", fontSize: 11, color: "#3a4460" }}>Brak wyników</div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </aside>
 
           {/* ============================================================ */}
@@ -1739,54 +2356,113 @@ function DashboardPage() {
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        {/* ---- Filter Bar (dates + buttons only — Akcja filter is in sidebar chips) ---- */}
-        <style>{`
-          .filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;box-sizing:border-box;width:100%}
-          @media(max-width:700px){
-            .filter-bar{flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px!important}
-            .filter-bar-dates{display:flex;gap:8px;flex-wrap:wrap;width:100%}
-            .filter-bar-dates>div{flex:1;min-width:0}
-            .filter-bar-dates input[type=date]{width:100%;min-width:0;box-sizing:border-box}
-            .filter-bar-dates input[type=time]{width:62px;min-width:0;flex-shrink:0}
-            .filter-bar-buttons{display:flex;gap:8px;width:100%}
-            .filter-bar-buttons button{flex:1}
-          }
-          details[open]>summary .adv-arrow{transform:rotate(90deg)}
-          .adv-arrow{transition:transform .15s;display:inline-block}
-        `}</style>
+        {/* ---- Filter Bar — stała wysokość niezależna od trybu ---- */}
         <section
-          className="card filter-bar"
-          style={{ marginBottom: 24, padding: "12px 16px" }}
+          className="card"
+          style={{ marginBottom: 16, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
         >
-          {/* Row 1 (desktop inline, mobile stacked): Od / Do date+time */}
-          <div className="filter-bar-dates" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  style={{ minWidth: 0, width: 130 }} />
-                <input type="time" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} placeholder="00:00"
-                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
-              </div>
+          {/* Time range preset pills — popover floats, bar height never changes */}
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              {(["24h", "7d", "30d", "month", "custom"] as const).map((p) => {
+                const labels: Record<string, string> = { "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
+                const active = rangePreset === p;
+                return (
+                  <button key={p}
+                    onClick={() => {
+                      if (p === "custom") {
+                        setDraftFrom(dateFrom);
+                        setDraftTimeFrom(timeFrom);
+                        setDraftTo(dateTo);
+                        setDraftTimeTo(timeTo);
+                        setRangePreset("custom");
+                        setShowCustomPopover(true);
+                      } else {
+                        setShowCustomPopover(false);
+                        applyPreset(p);
+                        setTimeout(() => handleFilter(), 0);
+                      }
+                    }}
+                    style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                      border: `1px solid ${active ? "rgba(230,149,0,0.5)" : "#1e2d45"}`,
+                      background: active ? "rgba(230,149,0,0.12)" : "transparent",
+                      color: active ? "#e69500" : "#8b95a8",
+                      transition: "border-color 0.15s, color 0.15s, background 0.15s",
+                    }}
+                  >{labels[p]}</button>
+                );
+              })}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
-              <div style={{ display: "flex", gap: 4 }}>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  style={{ minWidth: 0, width: 130 }} />
-                <input type="time" value={timeTo} onChange={(e) => setTimeTo(e.target.value)} placeholder="23:59"
-                  style={{ width: 74, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+
+            {/* Custom range popover — position:absolute, zero impact on bar height */}
+            {showCustomPopover && (
+              <div ref={customPopoverRef} style={{
+                position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
+                background: "#0e1928", border: "1px solid #2a3d5a", borderRadius: 12,
+                padding: "16px 18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                display: "flex", flexDirection: "column", gap: 12, minWidth: 320,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Od</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+                    <input type="time" value={draftTimeFrom} onChange={(e) => setDraftTimeFrom(e.target.value)} placeholder="00:00"
+                      style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500 }}>Do</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+                    <input type="time" value={draftTimeTo} onChange={(e) => setDraftTimeTo(e.target.value)} placeholder="23:59"
+                      style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button onClick={() => setShowCustomPopover(false)}
+                    style={{ background: "transparent", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                  >Anuluj</button>
+                  <button
+                    onClick={async () => {
+                      setDateFrom(draftFrom); setTimeFrom(draftTimeFrom);
+                      setDateTo(draftTo); setTimeTo(draftTimeTo);
+                      setShowCustomPopover(false);
+                      const fromStr = draftTimeFrom ? `${draftFrom}T${draftTimeFrom}` : draftFrom;
+                      const toStr = draftTimeTo ? `${draftTo}T${draftTimeTo}` : draftTo;
+                      setLoading(true);
+                      await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
+                      setLoading(false);
+                    }}
+                    className="btn-primary" style={{ padding: "6px 18px", fontSize: 12 }}
+                  >Zastosuj</button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-          {/* Row 2 (desktop inline, mobile full-width): Pokaż / Reset */}
-          <div className="filter-bar-buttons" style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
-            <button className="btn-primary" onClick={handleFilter} style={{ padding: "8px 18px", fontSize: 12 }}>Pokaż</button>
-            <button onClick={handleResetFilters}
-              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 10, padding: "8px 18px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-            >Reset filtrów</button>
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: "#1e2d45", flexShrink: 0 }} />
+
+          {/* Source filter — Wszystkie / NFC / QR */}
+          <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
+            {(["all", "nfc", "qr"] as const).map(src => (
+              <button key={src} type="button"
+                onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
+                style={{
+                  padding: "4px 10px", fontSize: 11, fontWeight: 600, border: "none",
+                  borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
+                  cursor: "pointer",
+                  background: scanSourceFilter === src
+                    ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.15)")
+                    : "#1a253a",
+                  color: scanSourceFilter === src
+                    ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
+                    : "#5a6478",
+                }}
+              >{src === "all" ? "Wszystkie" : src.toUpperCase()}</button>
+            ))}
           </div>
         </section>
 
@@ -1819,66 +2495,141 @@ function DashboardPage() {
           <div className="anim-fade">
 
             {/* ========================================================== */}
-            {/*  0. ACTIVE FILTERS BAR                                     */}
+            {/*  0. ACTIVE FILTERS BAR — real-overflow +N via measurement   */}
             {/* ========================================================== */}
-            {(selectedClientId || selectedCampaignId || selectedTagIds.length > 0 || scanSourceFilter !== "all" || scanNfcFilter || tagFilter) && (
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#0c1220", border: "1px solid #1e2d45" }}>
-                <span style={{ fontSize: 10, color: "#5a6478", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 2 }}>Filtry:</span>
-                {selectedClientId && (() => {
-                  const cl = clients.find(c => c.id === selectedClientId);
-                  return cl ? (
-                    <span key="cl" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: `${cl.color || "#e69500"}18`, border: `1px solid ${cl.color || "#e69500"}40`, fontSize: 11, color: cl.color || "#f5b731", fontWeight: 600 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block" }} />
+            {(() => {
+              // ---- shared helpers ----
+              const cs = (color: string, bg: string, bdr: string): React.CSSProperties => ({
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                color, background: bg, border: `1px solid ${bdr}`, whiteSpace: "nowrap",
+              });
+              const xb = (onClick: () => void, color: string) => (
+                <button onClick={onClick} style={{ background: "none", border: "none", color, cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7, flexShrink: 0 }}>×</button>
+              );
+
+              // ---- build ordered, deduplicated chip list ----
+              const chips: ChipItem[] = [];
+
+              // 1. Custom date range (only in custom mode with actual values)
+              const hasCustomDate = rangePreset === "custom" && (dateFrom || dateTo);
+              if (hasCustomDate) {
+                chips.push({
+                  key: "timeRange",
+                  node: (
+                    <span style={cs("#e69500", "rgba(230,149,0,0.1)", "rgba(230,149,0,0.3)")}>
+                      📅 {dateFrom ? dateFrom.slice(5) : "…"}{timeFrom ? ` ${timeFrom}` : ""} → {dateTo ? dateTo.slice(5) : "…"}{timeTo ? ` ${timeTo}` : ""}
+                      {xb(() => { setDateFrom(""); setDateTo(""); setTimeFrom(""); setTimeTo(""); }, "#e69500")}
+                    </span>
+                  ),
+                });
+              }
+
+              // 2. Client
+              if (selectedClientId) {
+                const cl = clients.find(c => c.id === selectedClientId);
+                if (cl) chips.push({
+                  key: `client:${cl.id}`,
+                  node: (
+                    <span style={cs(cl.color || "#f5b731", `${cl.color || "#e69500"}18`, `${cl.color || "#e69500"}40`)}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cl.color || "#e69500", display: "inline-block", flexShrink: 0 }} />
                       {cl.name}
-                      <button onClick={() => setSelectedClientId(null)} style={{ background: "none", border: "none", color: cl.color || "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                      {xb(() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); }, cl.color || "#f5b731")}
                     </span>
-                  ) : null;
-                })()}
-                {selectedCampaignId && (() => {
-                  const cp = campaigns.find(c => c.id === selectedCampaignId);
-                  return cp ? (
-                    <span key="cp" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.3)", fontSize: 11, color: "#60a5fa", fontWeight: 600 }}>
+                  ),
+                });
+              }
+
+              // 3. Campaign
+              if (selectedCampaignId) {
+                const cp = campaigns.find(c => c.id === selectedCampaignId);
+                if (cp) chips.push({
+                  key: `campaign:${cp.id}`,
+                  node: (
+                    <span style={cs("#60a5fa", "rgba(96,165,250,0.1)", "rgba(96,165,250,0.3)")}>
                       📁 {cp.name}
-                      <button onClick={() => setSelectedCampaignId(null)} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                      {xb(() => { setSelectedCampaignId(null); setSelectedTagIds([]); }, "#60a5fa")}
                     </span>
-                  ) : null;
-                })()}
-                {selectedTagIds.map(tid => {
-                  const t = tags.find(x => x.id === tid);
-                  return t ? (
-                    <span key={`t-${tid}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
+                  ),
+                });
+              }
+
+              // 4. Selected actions (multi) — one chip per tag, deduplicated by id
+              const seenTagIds = new Set<string>();
+              for (const tid of selectedTagIds) {
+                if (seenTagIds.has(tid)) continue;
+                seenTagIds.add(tid);
+                const t = tags.find(x => x.id === tid);
+                if (!t) continue;
+                chips.push({
+                  key: `action:${tid}`,
+                  node: (
+                    <span style={cs("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
                       {t.name}
-                      <button onClick={() => { const next = selectedTagIds.filter(id => id !== tid); setSelectedTagIds(next); fetchStats({ tagIds: next }); }} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                      {xb(() => {
+                        const next = selectedTagIds.filter(id => id !== tid);
+                        setSelectedTagIds(next);
+                        fetchStats({ tagIds: next });
+                        if (showScanTable) fetchScans();
+                      }, "#f5b731")}
                     </span>
-                  ) : null;
-                })}
-                {tagFilter && (() => {
-                  const t = tags.find(x => x.id === tagFilter);
-                  return (
-                    <span key="tf" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.3)", fontSize: 11, color: "#f5b731", fontWeight: 600 }}>
-                      Akcja: {t?.name ?? tagFilter}
-                      <button onClick={() => setTagFilter("")} style={{ background: "none", border: "none", color: "#f5b731", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
+                  ),
+                });
+              }
+
+              // 5. Single tagFilter (drill-down from scan table) — only if not already in selectedTagIds
+              if (tagFilter && !seenTagIds.has(tagFilter)) {
+                const t = tags.find(x => x.id === tagFilter);
+                chips.push({
+                  key: `action:${tagFilter}`,
+                  node: (
+                    <span style={cs("#f5b731", "rgba(245,183,49,0.1)", "rgba(245,183,49,0.3)")}>
+                      {t?.name ?? tagFilter}
+                      {xb(() => setTagFilter(""), "#f5b731")}
                     </span>
-                  );
-                })()}
-                {scanSourceFilter !== "all" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)", border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)"}`, fontSize: 11, color: scanSourceFilter === "qr" ? "#10b981" : "#f5b731", fontWeight: 600 }}>
-                    Źródło: {scanSourceFilter.toUpperCase()}
-                    <button onClick={() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                {scanNfcFilter && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)", fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>
-                    NFC: {scanNfcFilter}
-                    <button onClick={() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }} style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 12, padding: 0, lineHeight: 1, opacity: 0.7 }}>×</button>
-                  </span>
-                )}
-                <button onClick={handleResetFilters} style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 10, color: "#3a4460", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
-                  onMouseEnter={e => e.currentTarget.style.color = "#f87171"} onMouseLeave={e => e.currentTarget.style.color = "#3a4460"}>
-                  Wyczyść wszystkie ×
-                </button>
-              </div>
-            )}
+                  ),
+                });
+              }
+
+              // 6. Source filter (only when ≠ "all")
+              if (scanSourceFilter !== "all") {
+                const col = scanSourceFilter === "qr" ? "#10b981" : "#f5b731";
+                chips.push({
+                  key: `source:${scanSourceFilter}`,
+                  node: (
+                    <span style={cs(col, scanSourceFilter === "qr" ? "rgba(16,185,129,0.1)" : "rgba(245,183,49,0.1)", scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)")}>
+                      {scanSourceFilter.toUpperCase()}
+                      {xb(() => { setScanSourceFilter("all"); fetchStats({ source: "all" }); fetchScans({ source: "all" }); }, col)}
+                    </span>
+                  ),
+                });
+              }
+
+              // 7. NFC chip filter
+              if (scanNfcFilter) {
+                chips.push({
+                  key: `nfc:${scanNfcFilter}`,
+                  node: (
+                    <span style={cs("#a78bfa", "rgba(139,92,246,0.1)", "rgba(139,92,246,0.3)")}>
+                      NFC: {scanNfcFilter}
+                      {xb(() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }, "#a78bfa")}
+                    </span>
+                  ),
+                });
+              }
+
+              if (chips.length === 0) return null;
+
+              return (
+                <FilterChipsBar
+                  chips={chips}
+                  onReset={handleResetFilters}
+                  showOverflow={showChipsOverflow}
+                  setShowOverflow={setShowChipsOverflow}
+                  overflowRef={chipsOverflowRef}
+                />
+              );
+            })()}
 
             {/* ========================================================== */}
             {/*  1. KPI CARDS                                              */}
@@ -2794,12 +3545,6 @@ function DashboardPage() {
                         : "Statystyki akcji (wszystkie źródła). Filtruj QR aby zobaczyć tylko skany z kodów QR."}
                     </p>
                   </div>
-                  {scanSourceFilter !== "qr" && (
-                    <button
-                      onClick={() => { setScanSourceFilter("qr"); fetchStats({ source: "qr" }); fetchScans({ source: "qr", page: 1 }); }}
-                      style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", borderRadius: 8, padding: "5px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-                    >Filtruj QR</button>
-                  )}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {topTags.slice(0, 5).map((t, idx) => (
@@ -2842,31 +3587,17 @@ function DashboardPage() {
                   >
                     {showScanTable ? "Ukryj" : "Pokaz"} {scanData ? `(${scanData.total})` : ""}
                   </button>
-                  {/* Source filter */}
-                  <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid #1e2d45" }}>
-                    {(["all", "nfc", "qr"] as const).map(src => (
-                      <button key={src} type="button"
-                        onClick={() => {
-                          setScanSourceFilter(src);
-                          fetchScans({ source: src, page: 1 });
-                          fetchStats({ source: src });
-                        }}
-                        style={{
-                          padding: "3px 10px", fontSize: 11, fontWeight: 600, border: "none",
-                          borderLeft: src !== "all" ? "1px solid #1e2d45" : "none",
-                          cursor: "pointer",
-                          background: scanSourceFilter === src
-                            ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(245,183,49,0.2)" : "rgba(139,149,168,0.2)")
-                            : "#1a253a",
-                          color: scanSourceFilter === src
-                            ? (src === "qr" ? "#10b981" : src === "nfc" ? "#f5b731" : "#e8ecf1")
-                            : "#5a6478",
-                        }}
-                      >
-                        {src === "all" ? "Wszystkie" : src.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Source badge — read-only, control is in FilterBar above */}
+                  {scanSourceFilter !== "all" && (
+                    <span style={{
+                      padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6,
+                      background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.15)" : "rgba(245,183,49,0.15)",
+                      color: scanSourceFilter === "qr" ? "#10b981" : "#f5b731",
+                      border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(245,183,49,0.3)"}`,
+                    }}>
+                      {scanSourceFilter.toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 {showScanTable && scanNfcFilter && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
@@ -3042,8 +3773,50 @@ function DashboardPage() {
                     {displayTags.length}
                   </span>
                 </div>
-                {/* Global reset stats */}
+                {/* View mode toggle + Global reset stats */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {/* Cards / Table toggle */}
+                  <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                    {(["cards", "table"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        title={mode === "cards" ? "Widok kart" : "Widok tabeli"}
+                        style={{
+                          padding: "6px 12px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          background: viewMode === mode ? "#1e2d45" : "transparent",
+                          color: viewMode === mode ? "#e8ecf1" : "#5a6478",
+                          transition: "background 0.15s, color 0.15s",
+                        }}
+                      >
+                        {mode === "cards" ? (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                            Karty
+                          </>
+                        ) : (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                            Tabela
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ width: 1, height: 24, background: "#1e2d45" }} />
                   {resetAllConfirm ? (
                     <>
                       <span style={{ fontSize: 12, color: "#f87171", fontWeight: 600 }}>Na pewno usunac WSZYSTKIE statystyki?</span>
@@ -3077,7 +3850,13 @@ function DashboardPage() {
               {/* ---- "+ Nowa akcja" button — opens drawer ---- */}
               <div style={{ marginBottom: 20 }}>
                 <button
-                  onClick={() => { setShowNewTagDrawer(true); setTagCreateSuccess(""); setTagCreateError(""); }}
+                  onClick={() => {
+                    setNewTagClient(selectedClientId ?? "");
+                    setNewTagCampaign(selectedCampaignId ?? "");
+                    setShowNewTagDrawer(true);
+                    setTagCreateSuccess("");
+                    setTagCreateError("");
+                  }}
                   style={{
                     background: "linear-gradient(135deg, #e69500, #f5b731)",
                     border: "none",
@@ -3105,265 +3884,56 @@ function DashboardPage() {
               {/* ---- Nowa akcja DRAWER: the actual form JSX is rendered in the fixed overlay below the main layout ---- */}
 
               {/* ---- Tags List ---- */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {displayTags.length === 0 && (
-                  <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
-                    <p style={{ color: "#5a6478", fontSize: 14 }}>
-                      {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Kliknij \"+ Nowa akcja\" aby dodac pierwsza akcje."}
-                    </p>
-                  </div>
-                )}
+
+              {/* empty state */}
+              {displayTags.length === 0 && (
+                <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
+                  <p style={{ color: "#5a6478", fontSize: 14 }}>
+                    {selectedClientId ? "Brak akcji dla wybranego filtra." : "Brak akcji. Kliknij \"+ Nowa akcja\" aby dodac pierwsza akcje."}
+                  </p>
+                </div>
+              )}
+
+              {/* TABLE view */}
+              {viewMode === "table" && displayTags.length > 0 && (
+                <div className="card" style={{ padding: "4px 0" }}>
+                  <ActionsTable
+                    tags={displayTags}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    menuRef={menuRef}
+                    uploadingTagId={uploadingTagId}
+                    uploadProgress={uploadProgress}
+                    onToggleActive={handleToggleActive}
+                    onStartEdit={startEdit}
+                    onDeleteTag={handleDeleteTag}
+                    onResetStats={handleResetStats}
+                    onVideoUpload={handleVideoUpload}
+                    onRemoveVideo={handleRemoveVideo}
+                    onSetResetTagConfirm={setResetTagConfirm}
+                    selectedIds={selectedIds}
+                    setSelectedIds={setSelectedIds}
+                    onBulkDelete={handleBulkDelete}
+                    onBulkClone={handleBulkClone}
+                    onBulkMoveRequest={() => setShowBulkMoveModal(true)}
+                    bulkLoading={bulkLoading}
+                    bulkMsg={bulkMsg}
+                    onCopySuccess={() => {
+                      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+                      setCopyToast(true);
+                      copyToastTimer.current = setTimeout(() => setCopyToast(false), 2000);
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* CARDS view */}
+              <div style={{ display: viewMode === "cards" ? "flex" : "none", flexDirection: "column", gap: 12 }}>
+                {/* placeholder so the empty state above handles it */}
 
                 {displayTags.map((tag) => (
                   <div key={tag.id} className="card card-hover" style={{ padding: "16px 20px" }}>
-                    {editingTagId === tag.id ? (
-                      /* ---- Edit Mode ---- */
-                      <div>
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                            gap: 10,
-                            marginBottom: 12,
-                          }}
-                        >
-                          <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
-                              Nazwa
-                            </label>
-                            <input
-                              className="input-field"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
-                              Typ
-                              <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(zablokowany)</span>
-                            </label>
-                            <select
-                              className="input-field"
-                              value={editType}
-                              disabled
-                              style={{ padding: "8px 12px", opacity: 0.55, cursor: "not-allowed" }}
-                            >
-                              <option value="url">Przekierowanie URL</option>
-                              <option value="video">Video player</option>
-                              <option value="multilink">Multi-link</option>
-                              <option value="vcard">Wizytówka (vCard)</option>
-                              <option value="google-review">Recenzja Google</option>
-                            </select>
-                          </div>
-                          {(editType === "url" || editType === "google-review") && (
-                            <div>
-                              <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
-                                {editType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
-                              </label>
-                              <input
-                                className="input-field"
-                                value={editUrl}
-                                onChange={(e) => setEditUrl(e.target.value)}
-                                placeholder={editType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"}
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
-                              Opis
-                            </label>
-                            <input
-                              className="input-field"
-                              value={editDesc}
-                              onChange={(e) => setEditDesc(e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
-                              Kanał
-                              <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(atrybucja)</span>
-                            </label>
-                            <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
-                              <button type="button" onClick={() => setEditChannel("nfc")}
-                                style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer", background: editChannel === "nfc" ? "#f5b731" : "#1a253a", color: editChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
-                              >NFC</button>
-                              <button type="button" onClick={() => setEditChannel("qr")}
-                                style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: editChannel === "qr" ? "#10b981" : "#1a253a", color: editChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
-                              >QR</button>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Multilink editor in edit mode */}
-                        {editType === "multilink" && (
-                          <div style={{
-                            marginBottom: 12,
-                            padding: 14,
-                            background: "#0f1524",
-                            borderRadius: 10,
-                            border: "1px solid #1e2d45",
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                              <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1" }}>Linki</h4>
-                              <button
-                                type="button"
-                                onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
-                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
-                              >
-                                + Dodaj link
-                              </button>
-                            </div>
-                            {editTagLinks.map((link, idx) => (
-                              <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
-                                <select
-                                  className="input-field"
-                                  value={link.icon}
-                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], icon: e.target.value }; setEditTagLinks(u); }}
-                                  style={{ padding: "5px 6px", width: 120, fontSize: 11 }}
-                                >
-                                  {iconOptions.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                  ))}
-                                </select>
-                                <input
-                                  className="input-field"
-                                  placeholder="Etykieta"
-                                  value={link.label}
-                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], label: e.target.value }; setEditTagLinks(u); }}
-                                  style={{ flex: "1 1 100px", minWidth: 80, fontSize: 11, padding: "5px 8px" }}
-                                />
-                                <input
-                                  className="input-field"
-                                  placeholder="https://..."
-                                  value={link.url}
-                                  onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], url: e.target.value }; setEditTagLinks(u); }}
-                                  style={{ flex: "2 1 160px", minWidth: 120, fontSize: 11, padding: "5px 8px" }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
-                                  style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
-                                >
-                                  X
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {editType === "video" && (
-                          <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 12 }}>
-                            URL zostanie ustawiony automatycznie na /watch/{tag.id}. Wgraj video po zapisaniu.
-                          </p>
-                        )}
-                        {editType === "vcard" && (
-                          <div style={{
-                            marginBottom: 12,
-                            padding: 14,
-                            background: "#0f1524",
-                            borderRadius: 10,
-                            border: "1px solid #1e2d45",
-                          }}>
-                            <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1", marginBottom: 10 }}>Dane wizytowki</h4>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
-                              {[
-                                { key: "firstName", label: "Imie" },
-                                { key: "lastName", label: "Nazwisko" },
-                                { key: "company", label: "Firma" },
-                                { key: "jobTitle", label: "Stanowisko" },
-                                { key: "phone", label: "Telefon" },
-                                { key: "email", label: "Email" },
-                                { key: "website", label: "Strona WWW" },
-                                { key: "address", label: "Adres" },
-                                { key: "instagram", label: "Instagram" },
-                                { key: "facebook", label: "Facebook" },
-                                { key: "linkedin", label: "LinkedIn" },
-                                { key: "whatsapp", label: "WhatsApp" },
-                                { key: "tiktok", label: "TikTok" },
-                                { key: "youtube", label: "YouTube" },
-                                { key: "telegram", label: "Telegram" },
-                                { key: "note", label: "Notatka" },
-                              ].map(field => (
-                                <div key={field.key}>
-                                  <label style={{ display: "block", fontSize: 10, color: "#8b95a8", marginBottom: 2 }}>{field.label}</label>
-                                  <input
-                                    className="input-field"
-                                    value={(editVCard as unknown as Record<string, string>)[field.key] || ""}
-                                    onChange={(e) => setEditVCard({ ...editVCard, [field.key]: e.target.value })}
-                                    style={{ fontSize: 11, padding: "5px 8px" }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                          <button
-                            className="btn-primary"
-                            onClick={() => handleSaveEdit(tag.id)}
-                            style={{ padding: "7px 18px", fontSize: 12 }}
-                          >
-                            Zapisz
-                          </button>
-                          <button
-                            onClick={() => setEditingTagId(null)}
-                            style={{
-                              background: "#1a253a",
-                              border: "1px solid #1e2d45",
-                              color: "#8b95a8",
-                              borderRadius: 8,
-                              padding: "7px 18px",
-                              fontSize: 12,
-                              cursor: "pointer",
-                            }}
-                          >
-                            Anuluj
-                          </button>
-                        </div>
-                        {/* Advanced section */}
-                        <details style={{ marginTop: 4 }}>
-                          <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span className="adv-arrow">
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                            </span>
-                            Zaawansowane (reset / usuń)
-                          </summary>
-                          <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                            <span style={{ fontSize: 10, color: "#5a6478", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
-                            {resetTagConfirm === tag.id ? (
-                              <>
-                                <button
-                                  onClick={() => handleResetStats(tag.id)}
-                                  disabled={resetting}
-                                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
-                                >
-                                  {resetting ? "..." : "Potwierdź reset"}
-                                </button>
-                                <button
-                                  onClick={() => setResetTagConfirm(null)}
-                                  style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
-                                >
-                                  Nie
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => setResetTagConfirm(tag.id)}
-                                style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f59e0b", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
-                              >
-                                Reset statystyk
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteTag(tag.id)}
-                              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
-                            >
-                              Usuń akcję
-                            </button>
-                          </div>
-                        </details>
-                      </div>
-                    ) : (
-                      /* ---- View Mode ---- */
-                      <div>
+                    <div>
                         {/* Top row: name + badges + actions */}
                         <div
                           style={{
@@ -3461,7 +4031,8 @@ function DashboardPage() {
                           </div>
 
                           {/* Right: actions */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {/* Active toggle */}
                             <button
                               onClick={() => handleToggleActive(tag)}
                               title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
@@ -3474,6 +4045,7 @@ function DashboardPage() {
                                 cursor: "pointer",
                                 position: "relative",
                                 transition: "background 0.2s",
+                                flexShrink: 0,
                               }}
                             >
                               <span
@@ -3489,73 +4061,217 @@ function DashboardPage() {
                                 }}
                               />
                             </button>
+
+                            {/* Quick: Kopiuj link publiczny */}
                             <button
-                              onClick={() => startEdit(tag)}
-                              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#e69500")}
-                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kopiuj link publiczny"
+                              style={{
+                                background: "#1a253a",
+                                border: "1px solid #1e2d45",
+                                color: copiedCardId === tag.id ? "#22c55e" : "#8b95a8",
+                                borderRadius: 6,
+                                width: 28,
+                                height: 28,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                transition: "color 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { if (copiedCardId !== tag.id) { e.currentTarget.style.color = "#f5b731"; e.currentTarget.style.borderColor = "#e69500"; } }}
+                              onMouseLeave={e => { if (copiedCardId !== tag.id) { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; } }}
                             >
-                              Edytuj
+                              {copiedCardId === tag.id
+                                ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                              }
                             </button>
-                            {/* QR download buttons: PNG, SVG, PDF-print */}
-                            {(["png","svg","pdf"] as const).map((fmt) => (
+
+                            {/* Quick: Edytuj */}
+                            <button
+                              onClick={e => { e.stopPropagation(); startEdit(tag); }}
+                              title="Edytuj akcję"
+                              style={{
+                                background: "#1a253a",
+                                border: "1px solid #1e2d45",
+                                color: "#8b95a8",
+                                borderRadius: 6,
+                                width: 28,
+                                height: 28,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                transition: "color 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#e69500"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; }}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+
+                            {/* ⋯ menu */}
+                            <div style={{ position: "relative" }}>
                               <button
-                                key={fmt}
-                                title={fmt === "png" ? "Pobierz QR PNG 1024×1024" : fmt === "svg" ? "Pobierz QR SVG (do druku)" : "Otwórz kartę do druku A4"}
-                                onClick={async () => {
-                                  if (fmt === "pdf") {
-                                    window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank");
-                                    return;
-                                  }
-                                  const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=${fmt}`);
-                                  if (!res.ok) return;
-                                  const blob = await res.blob();
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = `qr-${tag.id}.${fmt}`;
-                                  a.click();
-                                  URL.revokeObjectURL(url);
+                                onClick={(e) => openCardMenu(tag.id, e)}
+                                title="Więcej opcji"
+                                style={{
+                                  background: "#1a253a",
+                                  border: "1px solid #1e2d45",
+                                  color: "#8b95a8",
+                                  borderRadius: 6,
+                                  width: 32,
+                                  height: 32,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 18,
+                                  lineHeight: 1,
+                                  letterSpacing: "0.05em",
+                                  flexShrink: 0,
+                                  transition: "border-color 0.15s, color 0.15s",
                                 }}
-                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: fmt === "pdf" ? "#f5b731" : "#10b981", borderRadius: 6, padding: "6px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", transition: "border-color 0.2s", letterSpacing: "0.03em" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = fmt === "pdf" ? "#f5b731" : "#10b981"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#e8ecf1"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
                               >
-                                {fmt === "png" ? "QR" : fmt.toUpperCase()}
+                                ⋯
                               </button>
-                            ))}
-                            {tag.tagType === "video" && (
-                              <label
-                                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "border-color 0.2s", display: "inline-flex", alignItems: "center", gap: 4 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#9f67ff")}
-                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1e2d45")}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                  <polygon points="23 7 16 12 23 17 23 7" />
-                                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                                </svg>
-                                {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmien video" : "Wgraj video")}
-                                <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tag.id, f); e.target.value = ""; }} />
-                              </label>
-                            )}
-                            {tag.tagType === "video" && tag.videoFile && (
-                              <button
-                                onClick={() => handleRemoveVideo(tag.id)}
-                                title="Usun video"
-                                style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#6060a0"; }}
-                              >
-                                Usun video
-                              </button>
-                            )}
-                            {/* Reset stats / Delete moved to edit mode → Zaawansowane section */}
+
+                              {openMenuId === tag.id && menuRect && (
+                                <CtxMenuPortal anchorRect={menuRect} onClose={closeCardMenu}>
+
+                                  {/* Pobierz QR PNG */}
+                                  <button
+                                    onClick={async () => {
+                                      closeCardMenu();
+                                      const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=png`);
+                                      if (!res.ok) return;
+                                      const blob = await res.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url; a.download = `qr-${tag.id}.png`; a.click();
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#10b981", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                                      <path d="M14 14h3v3m0 4h4v-4m-4 0h4" />
+                                    </svg>
+                                    Pobierz QR (PNG)
+                                  </button>
+
+                                  {/* Pobierz SVG */}
+                                  <button
+                                    onClick={async () => {
+                                      closeCardMenu();
+                                      const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=svg`);
+                                      if (!res.ok) return;
+                                      const blob = await res.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url; a.download = `qr-${tag.id}.svg`; a.click();
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#10b981", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                                    </svg>
+                                    Pobierz SVG
+                                  </button>
+
+                                  {/* Pobierz PDF */}
+                                  <button
+                                    onClick={() => { closeCardMenu(); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f5b731", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                                    </svg>
+                                    Pobierz PDF (druk A4)
+                                  </button>
+
+                                  {/* Video items */}
+                                  {tag.tagType === "video" && (
+                                    <>
+                                      <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+                                      <label
+                                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", color: "#9f67ff", fontSize: 13, cursor: "pointer" }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                      >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                          <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                        </svg>
+                                        {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmień video" : "Wgraj video")}
+                                        <input type="file" accept="video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { closeCardMenu(); handleVideoUpload(tag.id, f); } e.target.value = ""; }} />
+                                      </label>
+                                      {tag.videoFile && (
+                                        <button
+                                          onClick={() => { closeCardMenu(); handleRemoveVideo(tag.id); }}
+                                          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.background = "#1a253a"; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                        >
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                                          </svg>
+                                          Usuń video
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+
+                                  <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+
+                                  {/* Reset statystyk */}
+                                  <button
+                                    onClick={() => { closeCardMenu(); setResetTagConfirm(tag.id); startEdit(tag); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f59e0b", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                                    </svg>
+                                    Reset statystyk
+                                  </button>
+
+                                  {/* Usuń akcję */}
+                                  <button
+                                    onClick={() => { closeCardMenu(); handleDeleteTag(tag.id); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f87171", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                                    </svg>
+                                    Usuń akcję
+                                  </button>
+                                </CtxMenuPortal>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         {/* Bottom row: details */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "#8b95a8" }}>
-                          <span>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12, color: "#8b95a8", alignItems: "center" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <span style={{ color: "#5a6478" }}>ID:</span>{" "}
                             <span style={{ fontFamily: "monospace", color: "#f5b731" }}>{tag.id}</span>
                           </span>
@@ -3563,15 +4279,38 @@ function DashboardPage() {
                             <span style={{ color: "#5a6478" }}>Skany:</span>{" "}
                             <span style={{ fontWeight: 600, color: "#e8ecf1" }}>{tag._count.scans}</span>
                           </span>
-                          <span>
-                            <span style={{ color: "#5a6478" }}>URL:</span>{" "}
+                          {/* Public link chip — click to copy */}
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
+                              title="Kliknij, aby skopiować link publiczny"
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                background: "rgba(245,183,49,0.1)", border: "1px solid rgba(245,183,49,0.25)",
+                                borderRadius: 6, padding: "3px 8px 3px 7px",
+                                cursor: "pointer", transition: "background 0.15s, border-color 0.15s",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,183,49,0.18)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.45)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,183,49,0.1)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.25)"; }}
+                            >
+                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#f5b731" }}>/s/{tag.id}</span>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8b95a8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                              </svg>
+                            </button>
                             <a
                               href={`/s/${tag.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: "#f5b731", fontFamily: "monospace", fontSize: 11, textDecoration: "underline", cursor: "pointer" }}
+                              onClick={e => e.stopPropagation()}
+                              title="Otwórz link publiczny"
+                              style={{ color: "#5a6478", display: "inline-flex", alignItems: "center", transition: "color 0.15s" }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#8b95a8"}
+                              onMouseLeave={e => e.currentTarget.style.color = "#5a6478"}
                             >
-                              twojenfc.pl/s/{tag.id}
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                              </svg>
                             </a>
                           </span>
                           {tag.videoFile && (
@@ -3769,413 +4508,13 @@ function DashboardPage() {
                             )}
                           </div>
                         )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
           </div>
         )}
-        {/* ============================================================ */}
-        {/*  MANAGEMENT PANEL                                            */}
-        {/* ============================================================ */}
-
-        <section style={{ margin: "40px 0 0", padding: "0 20px 30px" }}>
-          <button
-            onClick={() => setShowManagePanel(!showManagePanel)}
-            style={{
-              width: "100%",
-              padding: "14px 20px",
-              background: "rgba(239,68,68,0.06)",
-              border: "1px solid rgba(239,68,68,0.25)",
-              borderRadius: 12,
-              color: "#f87171",
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              transition: "all 0.2s",
-            }}
-          >
-            <span>⚙️ Panel zarzadzania (kaskadowe usuwanie, przenoszenie, klonowanie)</span>
-            <span style={{ fontSize: 18, transform: showManagePanel ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
-          </button>
-
-          {showManagePanel && (
-            <div style={{
-              marginTop: 12,
-              padding: 20,
-              background: "var(--surface-1)",
-              borderRadius: 12,
-              border: "1px solid rgba(239,68,68,0.15)",
-            }}>
-              {/* Tab buttons */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                {(["clients", "campaigns", "tags"] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => { setManagePanelTab(tab); setManageMsg(""); }}
-                    style={{
-                      padding: "8px 20px",
-                      borderRadius: 8,
-                      border: "1px solid",
-                      borderColor: managePanelTab === tab ? "#e69500" : "var(--border)",
-                      background: managePanelTab === tab ? "rgba(230,149,0,0.12)" : "transparent",
-                      color: managePanelTab === tab ? "#e69500" : "#8b95a8",
-                      fontWeight: 600,
-                      fontSize: 13,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {tab === "clients" ? "Klienci" : tab === "campaigns" ? "Kampanie" : "Akcje"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Status message */}
-              {manageMsg && (
-                <div style={{
-                  marginBottom: 16,
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  background: manageMsg.startsWith("Blad") ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                  color: manageMsg.startsWith("Blad") ? "#f87171" : "#10b981",
-                  border: `1px solid ${manageMsg.startsWith("Blad") ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
-                }}>
-                  {manageMsg}
-                </div>
-              )}
-
-              {/* ---- CLIENTS TAB ---- */}
-              {managePanelTab === "clients" && (
-                <div>
-                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
-                    Kaskadowe usuwanie: usunie klienta + wszystkie jego kampanie + akcje + skany/kliki/eventy.
-                    Reset stats: usunie tylko dane (skany/kliki/eventy), zachowa akcje.
-                  </p>
-                  {clients.length === 0 && <p style={{ color: "#555", fontSize: 13 }}>Brak klientow</p>}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {clients.map(cl => (
-                      <div key={cl.id} style={{
-                        padding: "12px 16px",
-                        background: "var(--surface-2)",
-                        borderRadius: 8,
-                        border: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: "wrap",
-                        gap: 8,
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 200 }}>
-                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: cl.color || "#666" }} />
-                          <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{cl.name}</span>
-                          <span style={{ fontSize: 11, color: "#8b95a8" }}>
-                            {cl.tagCount} akcji · {cl.scanCount} skanow
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          {/* Reset stats */}
-                          {resetClientStatsId === cl.id ? (
-                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                              <span style={{ fontSize: 11, color: "#f59e0b" }}>Na pewno reset?</span>
-                              <button
-                                onClick={() => handleResetClientStats(cl.id)}
-                                disabled={manageLoading}
-                                style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
-                              >
-                                {manageLoading ? "..." : "TAK"}
-                              </button>
-                              <button
-                                onClick={() => setResetClientStatsId(null)}
-                                style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
-                              >
-                                Nie
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setResetClientStatsId(cl.id)}
-                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)", color: "#f59e0b", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
-                            >
-                              Reset stats
-                            </button>
-                          )}
-
-                          {/* Cascade delete */}
-                          {cascadeDeleteClientId === cl.id && cascadeDeleteClientPreview ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4, background: "rgba(239,68,68,0.06)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
-                              <span style={{ fontSize: 11, color: "#f87171", fontWeight: 600 }}>
-                                Usuniesz: {cascadeDeleteClientPreview.campaignsCount} kampanii, {cascadeDeleteClientPreview.tagsCount} akcji, {cascadeDeleteClientPreview.scanCount} skanow
-                              </span>
-                              {cascadeDeleteClientPreview.tagNames.length > 0 && (
-                                <span style={{ fontSize: 10, color: "#8b95a8" }}>
-                                  Akcje: {cascadeDeleteClientPreview.tagNames.slice(0, 5).join(", ")}{cascadeDeleteClientPreview.tagNames.length > 5 ? ` +${cascadeDeleteClientPreview.tagNames.length - 5}` : ""}
-                                </span>
-                              )}
-                              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                                <button
-                                  onClick={handleCascadeDeleteClient}
-                                  disabled={manageLoading}
-                                  style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.15)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 700 }}
-                                >
-                                  {manageLoading ? "Usuwanie..." : "USUN WSZYSTKO"}
-                                </button>
-                                <button
-                                  onClick={() => { setCascadeDeleteClientId(null); setCascadeDeleteClientPreview(null); }}
-                                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
-                                >
-                                  Anuluj
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleCascadeDeleteClientPreview(cl.id)}
-                              disabled={manageLoading}
-                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
-                            >
-                              Usun kaskadowo
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ---- CAMPAIGNS TAB ---- */}
-              {managePanelTab === "campaigns" && (
-                <div>
-                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
-                    Usuwanie kampanii: usunie kampanie + wszystkie jej akcje + ich dane (skany/kliki/eventy).
-                  </p>
-                  {/* Client filter */}
-                  <div style={{ marginBottom: 12 }}>
-                    <select
-                      value={manageCampaignFilter || ""}
-                      onChange={e => setManageCampaignFilter(e.target.value || null)}
-                      style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 13 }}
-                    >
-                      <option value="">Wszystkie klienci</option>
-                      {clients.map(cl => (
-                        <option key={cl.id} value={cl.id}>{cl.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {campaigns.filter(c => !manageCampaignFilter || c.clientId === manageCampaignFilter).length === 0 && (
-                    <p style={{ color: "#555", fontSize: 13 }}>Brak kampanii</p>
-                  )}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {campaigns
-                      .filter(c => !manageCampaignFilter || c.clientId === manageCampaignFilter)
-                      .map(camp => (
-                        <div key={camp.id} style={{
-                          padding: "12px 16px",
-                          background: "var(--surface-2)",
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          flexWrap: "wrap",
-                          gap: 8,
-                        }}>
-                          <div style={{ minWidth: 200 }}>
-                            <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{camp.name}</span>
-                            <span style={{ fontSize: 11, color: "#8b95a8", marginLeft: 8 }}>
-                              ({camp.client?.name || "?"}) · {camp.tagCount} akcji · {camp.scanCount} skanow
-                            </span>
-                          </div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            {cascadeDeleteCampaignId === camp.id && cascadeDeleteCampaignPreview ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4, background: "rgba(239,68,68,0.06)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
-                                <span style={{ fontSize: 11, color: "#f87171", fontWeight: 600 }}>
-                                  Usuniesz: {cascadeDeleteCampaignPreview.tagsCount} akcji, {cascadeDeleteCampaignPreview.scanCount} skanow, {cascadeDeleteCampaignPreview.clickCount} klikniec
-                                </span>
-                                {cascadeDeleteCampaignPreview.tagNames.length > 0 && (
-                                  <span style={{ fontSize: 10, color: "#8b95a8" }}>
-                                    Akcje: {cascadeDeleteCampaignPreview.tagNames.join(", ")}
-                                  </span>
-                                )}
-                                <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                                  <button
-                                    onClick={handleCascadeDeleteCampaign}
-                                    disabled={manageLoading}
-                                    style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.15)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 700 }}
-                                  >
-                                    {manageLoading ? "Usuwanie..." : "USUN WSZYSTKO"}
-                                  </button>
-                                  <button
-                                    onClick={() => { setCascadeDeleteCampaignId(null); setCascadeDeleteCampaignPreview(null); }}
-                                    style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "#8b95a8", fontSize: 11, cursor: "pointer" }}
-                                  >
-                                    Anuluj
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleCascadeDeleteCampaignPreview(camp.id)}
-                                disabled={manageLoading}
-                                style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
-                              >
-                                Usun kaskadowo
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ---- TAGS TAB ---- */}
-              {managePanelTab === "tags" && (
-                <div>
-                  <p style={{ fontSize: 12, color: "#8b95a8", marginBottom: 12 }}>
-                    Przenoszenie akcji miedzy kampaniami (w ramach tego samego klienta). Klonowanie akcji (kopia konfiguracji bez danych).
-                  </p>
-                  {tags.length === 0 && <p style={{ color: "#555", fontSize: 13 }}>Brak akcji</p>}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tags.map(tag => (
-                      <div key={tag.id} style={{
-                        padding: "12px 16px",
-                        background: "var(--surface-2)",
-                        borderRadius: 8,
-                        border: "1px solid var(--border)",
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                          <div style={{ minWidth: 200 }}>
-                            <span style={{ fontWeight: 600, color: "#e8ecf1", fontSize: 14 }}>{tag.name}</span>
-                            <span style={{ fontSize: 11, color: "#8b95a8", marginLeft: 6 }}>
-                              ({tag.id}) · {tag.client?.name || "brak klienta"} · {tag.campaign?.name || "brak kampanii"} · {tag.tagType} · {tag._count.scans} skanow
-                            </span>
-                          </div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button
-                              onClick={() => {
-                                if (reassignTagId === tag.id) { setReassignTagId(null); }
-                                else { setReassignTagId(tag.id); setReassignCampaignId(tag.campaignId || ""); setCloneSourceTag(null); }
-                              }}
-                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)", color: "#60a5fa", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
-                            >
-                              {reassignTagId === tag.id ? "Anuluj" : "Przenies"}
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (cloneSourceTag === tag.id) { setCloneSourceTag(null); }
-                                else { setCloneSourceTag(tag.id); setCloneNewId(""); setCloneTargetClient(tag.clientId || ""); setCloneTargetCampaign(""); setReassignTagId(null); }
-                              }}
-                              style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10b981", fontSize: 11, cursor: "pointer", fontWeight: 500 }}
-                            >
-                              {cloneSourceTag === tag.id ? "Anuluj" : "Klonuj"}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Reassign inline form */}
-                        {reassignTagId === tag.id && (
-                          <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(59,130,246,0.05)", borderRadius: 8, border: "1px solid rgba(59,130,246,0.15)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 12, color: "#60a5fa", fontWeight: 500 }}>Przenies do kampanii:</span>
-                            <select
-                              value={reassignCampaignId}
-                              onChange={e => setReassignCampaignId(e.target.value)}
-                              style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
-                            >
-                              <option value="">(bez kampanii)</option>
-                              {campaigns
-                                .filter(c => !tag.clientId || c.clientId === tag.clientId)
-                                .map(c => (
-                                  <option key={c.id} value={c.id}>{c.name} ({c.client?.name})</option>
-                                ))}
-                            </select>
-                            <button
-                              onClick={handleReassignTag}
-                              disabled={manageLoading}
-                              style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: "#3b82f6", color: "#fff", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
-                            >
-                              {manageLoading ? "..." : "Przenies"}
-                            </button>
-                            {manageMsg && reassignTagId === tag.id && (
-                              <span style={{ fontSize: 11, color: manageMsg.startsWith("Przeniesiono") ? "#10b981" : "#f87171" }}>
-                                {manageMsg}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Clone inline form */}
-                        {cloneSourceTag === tag.id && (
-                          <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(16,185,129,0.05)", borderRadius: 8, border: "1px solid rgba(16,185,129,0.15)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Nowe ID:</span>
-                              <input
-                                type="text"
-                                value={cloneNewId}
-                                onChange={e => setCloneNewId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, ""))}
-                                placeholder="nowe-id-akcji"
-                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12, width: 200 }}
-                              />
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Docelowy klient:</span>
-                              <select
-                                value={cloneTargetClient}
-                                onChange={e => { setCloneTargetClient(e.target.value); setCloneTargetCampaign(""); }}
-                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
-                              >
-                                <option value="">(ten sam)</option>
-                                {clients.map(cl => (
-                                  <option key={cl.id} value={cl.id}>{cl.name}</option>
-                                ))}
-                              </select>
-                              <span style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>Kampania:</span>
-                              <select
-                                value={cloneTargetCampaign}
-                                onChange={e => setCloneTargetCampaign(e.target.value)}
-                                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--txt)", fontSize: 12 }}
-                              >
-                                <option value="">(bez kampanii)</option>
-                                {campaigns
-                                  .filter(c => !cloneTargetClient || c.clientId === cloneTargetClient || (!cloneTargetClient && tag.clientId && c.clientId === tag.clientId))
-                                  .map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                  ))}
-                              </select>
-                            </div>
-                            <button
-                              onClick={handleCloneTag}
-                              disabled={manageLoading || !cloneNewId}
-                              style={{
-                                padding: "6px 16px",
-                                borderRadius: 6,
-                                border: "none",
-                                background: !cloneNewId ? "#333" : "#10b981",
-                                color: !cloneNewId ? "#666" : "#fff",
-                                fontSize: 12,
-                                cursor: cloneNewId ? "pointer" : "not-allowed",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {manageLoading ? "Klonowanie..." : "Klonuj akcje"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
           </div>{/* end right content column */}
         </div>{/* end sidebar+content flex */}
       </main>
@@ -4501,6 +4840,192 @@ function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ============================================================ */}
+      {/*  BULK MOVE MODAL                                            */}
+      {/* ============================================================ */}
+      {showBulkMoveModal && (
+        <>
+          <div
+            onClick={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1100 }}
+          />
+          <div style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%,-50%)",
+            background: "#0d1526",
+            border: "1px solid #1e2d45",
+            borderRadius: 14,
+            padding: "28px 32px",
+            zIndex: 1101,
+            minWidth: 360,
+            maxWidth: "90vw",
+            boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+          }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#e8ecf1", marginBottom: 6 }}>
+              Przenieś {selectedIds.length} akcji
+            </h3>
+            <p style={{ fontSize: 12, color: "#5a6478", marginBottom: 20 }}>
+              Wybierz kampanię docelową. Akcje zostaną przeniesione bez zmiany klienta.
+            </p>
+            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 6 }}>
+              Kampania docelowa
+            </label>
+            <select
+              value={bulkMoveCampaignId}
+              onChange={(e) => setBulkMoveCampaignId(e.target.value)}
+              className="input-field"
+              style={{ width: "100%", marginBottom: 20, padding: "8px 12px" }}
+            >
+              <option value="">(bez kampanii)</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            {bulkMsg && (
+              <p style={{ fontSize: 12, color: "#f87171", marginBottom: 12 }}>{bulkMsg}</p>
+            )}
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #1e2d45", background: "#1a253a", color: "#8b95a8", fontSize: 13, cursor: "pointer" }}
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleBulkMove}
+                disabled={bulkLoading}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: bulkLoading ? 0.7 : 1 }}
+              >
+                {bulkLoading ? "Przenoszenie..." : "Przenieś"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ============================================================ */}
+      {/*  EDIT ACTION DRAWER                                          */}
+      {/* ============================================================ */}
+      {editingAction && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setEditingAction(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              zIndex: 1000,
+            }}
+          />
+          {/* Panel */}
+          <div
+            className="drawer-panel"
+            style={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: "min(520px, 100vw)",
+              background: "#0d1526",
+              borderLeft: "1px solid #1e2d45",
+              zIndex: 1001,
+              display: "flex",
+              flexDirection: "column",
+              overflowY: "auto",
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 20px",
+              borderBottom: "1px solid #1e2d45",
+              position: "sticky",
+              top: 0,
+              background: "#0d1526",
+              zIndex: 1,
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#5a6478", marginBottom: 2 }}>Edycja akcji</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#e8ecf1" }}>{editingAction.name}</div>
+              </div>
+              <button
+                onClick={() => setEditingAction(null)}
+                title="Zamknij"
+                style={{
+                  background: "transparent",
+                  border: "1px solid #1e2d45",
+                  color: "#8b95a8",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "20px 20px 32px" }}>
+              <ActionEditor
+                tagId={editingAction.id}
+                editName={editName}
+                setEditName={setEditName}
+                editType={editType}
+                editUrl={editUrl}
+                setEditUrl={setEditUrl}
+                editDesc={editDesc}
+                setEditDesc={setEditDesc}
+                editChannel={editChannel}
+                setEditChannel={setEditChannel}
+                editTagLinks={editTagLinks}
+                setEditTagLinks={setEditTagLinks}
+                editVCard={editVCard}
+                setEditVCard={setEditVCard}
+                resetTagConfirm={resetTagConfirm}
+                setResetTagConfirm={setResetTagConfirm}
+                resetting={resetting}
+                onSave={handleSaveEdit}
+                onCancel={() => setEditingAction(null)}
+                onResetStats={handleResetStats}
+                onDeleteTag={handleDeleteTag}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ============================================================ */}
+      {/*  COPY LINK TOAST                                             */}
+      {/* ============================================================ */}
+      <div
+        style={{
+          position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${copyToast ? 0 : 16}px)`,
+          background: "#1a2d1a", border: "1px solid #22c55e", color: "#86efac",
+          borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 8, zIndex: 99999,
+          opacity: copyToast ? 1 : 0, pointerEvents: "none",
+          transition: "opacity 0.2s ease, transform 0.2s ease",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Skopiowano link
+      </div>
     </div>
   );
 }

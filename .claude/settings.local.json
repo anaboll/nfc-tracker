@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(ls \"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\\\\node_modules\\\\.bin\"\" 2>/dev/null | head -20; ls \"E:ClaudeNFC project phase1nfc-tracker\"\")",
+      "Bash(cmd /c \"cd /d \"\"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\"\" && dir node_modules\\\\.bin\\\\tsc* 2>&1 | head -5\")",
+      "Bash(node_modules.bintsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(cd:*)",
+      "Bash(cmd /c \"dir /b \"\"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\\\\node_modules\\\\.bin\"\" 2>&1 | findstr tsc\")",
+      "Bash(cmd /c \"cd /d \"\"E:\\\\Claude\\\\NFC project phase1\\\\nfc-tracker\"\" && npx --yes tsc --noEmit 2>&1\")",
+      "Bash(npm run build:*)",
+      "Bash(node_modules.binnext build:*)",
+      "Bash(npx --no-install next build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

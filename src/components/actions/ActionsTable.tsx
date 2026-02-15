@@ -1,0 +1,772 @@
+"use client";
+
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
+
+/* ------------------------------------------------------------------ */
+/*  Types (mirror dashboard — consider extracting to shared/types.ts)  */
+/* ------------------------------------------------------------------ */
+
+interface TagLink {
+  label: string;
+  url: string;
+  icon: string;
+}
+
+interface ClientInfo {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
+
+interface CampaignInfo {
+  id: string;
+  name: string;
+}
+
+interface TagFull {
+  id: string;
+  name: string;
+  targetUrl: string;
+  description: string | null;
+  videoFile: string | null;
+  isActive: boolean;
+  tagType: string;
+  links: TagLink[] | null;
+  clientId: string | null;
+  client: ClientInfo | null;
+  campaignId: string | null;
+  campaign: CampaignInfo | null;
+  _count: { scans: number };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                               */
+/* ------------------------------------------------------------------ */
+
+export interface ActionsTableProps {
+  tags: TagFull[];
+
+  openMenuId: string | null;
+  setOpenMenuId: (id: string | null) => void;
+  menuRef: React.RefObject<HTMLDivElement>;
+
+  uploadingTagId: string | null;
+  uploadProgress: string;
+
+  onToggleActive: (tag: TagFull) => void;
+  onStartEdit: (tag: TagFull) => void;
+  onDeleteTag: (id: string) => void;
+  onResetStats: (tagId: string) => void;
+  onVideoUpload: (tagId: string, file: File) => void;
+  onRemoveVideo: (tagId: string) => void;
+  onSetResetTagConfirm: (id: string) => void;
+
+  // bulk selection
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+  onBulkDelete: () => void;
+  onBulkClone: () => void;
+  onBulkMoveRequest: () => void;
+  bulkLoading: boolean;
+  bulkMsg: string;
+
+  onCopySuccess?: () => void;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+const TYPE_LABELS: Record<string, string> = {
+  url: "URL",
+  video: "Video",
+  multilink: "Multi-link",
+  vcard: "Wizytówka",
+  "google-review": "Recenzja",
+};
+
+const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
+  url:             { bg: "rgba(96,165,250,0.12)",  color: "#60a5fa" },
+  video:           { bg: "rgba(159,103,255,0.12)", color: "#9f67ff" },
+  multilink:       { bg: "rgba(245,183,49,0.12)",  color: "#f5b731" },
+  vcard:           { bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
+  "google-review": { bg: "rgba(251,146,60,0.12)",  color: "#fb923c" },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Portal dropdown                                                     */
+/* ------------------------------------------------------------------ */
+
+interface CtxMenuPortalProps {
+  anchorRect: DOMRect;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+export function CtxMenuPortal({ anchorRect, onClose, children }: CtxMenuPortalProps) {
+  const MENU_HEIGHT = 320; // generous estimate
+  const spaceBelow = window.innerHeight - anchorRect.bottom;
+  const openUpward = spaceBelow < MENU_HEIGHT && anchorRect.top > MENU_HEIGHT;
+
+  const style: React.CSSProperties = {
+    position: "fixed",
+    right: window.innerWidth - anchorRect.right,
+    ...(openUpward
+      ? { bottom: window.innerHeight - anchorRect.top + 6 }
+      : { top: anchorRect.bottom + 6 }),
+    minWidth: 200,
+    zIndex: 9999,
+  };
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <>
+      {/* invisible backdrop — closes menu on outside click */}
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+        onClick={onClose}
+        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+      />
+      <div
+        className="ctx-menu"
+        style={{
+          ...style,
+          background: "#0d1526",
+          border: "1px solid #1e2d45",
+          borderRadius: 10,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                           */
+/* ------------------------------------------------------------------ */
+
+export function ActionsTable({
+  tags,
+  openMenuId,
+  setOpenMenuId,
+  menuRef,
+  uploadingTagId,
+  uploadProgress,
+  onToggleActive,
+  onStartEdit,
+  onDeleteTag,
+  onResetStats,
+  onVideoUpload,
+  onRemoveVideo,
+  onSetResetTagConfirm,
+  selectedIds,
+  setSelectedIds,
+  onBulkDelete,
+  onBulkClone,
+  onBulkMoveRequest,
+  bulkLoading,
+  bulkMsg,
+  onCopySuccess,
+}: ActionsTableProps) {
+  const allSelected = tags.length > 0 && tags.every((t) => selectedIds.includes(t.id));
+  const someSelected = selectedIds.length > 0;
+
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds([]);
+    else setSelectedIds(tags.map((t) => t.id));
+  };
+
+  const toggleOne = (id: string) => {
+    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter((x) => x !== id));
+    else setSelectedIds([...selectedIds, id]);
+  };
+
+  // rect of the currently-open ⋯ button — used for portal positioning
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+
+  // copy-link per-row feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyLink = (tagId: string) => {
+    const url = `${window.location.origin}/s/${tagId}`;
+    const write = () => {
+      if (copiedId !== tagId) {
+        setCopiedId(tagId);
+        setTimeout(() => setCopiedId(null), 1500);
+      }
+      onCopySuccess?.();
+    };
+    navigator.clipboard.writeText(url).then(write).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = url; el.style.position = "fixed"; el.style.opacity = "0";
+      document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
+      write();
+    });
+  };
+
+  const openMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuRect(null);
+    } else {
+      setMenuRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+      setOpenMenuId(id);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+    setMenuRect(null);
+  };
+  /* shared menu item style helpers */
+  const menuItem = (color: string) => ({
+    display: "flex" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    width: "100%",
+    padding: "10px 14px",
+    background: "transparent",
+    border: "none",
+    color,
+    fontSize: 13,
+    cursor: "pointer" as const,
+    textAlign: "left" as const,
+  });
+
+  const hoverIn = (e: React.MouseEvent<HTMLElement>, bg = "#1a253a") => {
+    (e.currentTarget as HTMLElement).style.background = bg;
+  };
+  const hoverOut = (e: React.MouseEvent<HTMLElement>) => {
+    (e.currentTarget as HTMLElement).style.background = "transparent";
+  };
+
+  return (
+    <div>
+      {/* ---- Bulk Action Bar ---- */}
+      {someSelected && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 16px",
+          borderBottom: "1px solid #1e2d45",
+          background: "rgba(59,130,246,0.06)",
+          flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa" }}>
+            Zaznaczono: {selectedIds.length}
+          </span>
+          <div style={{ width: 1, height: 16, background: "#1e2d45" }} />
+          {/* Przenieś */}
+          <button
+            onClick={onBulkMoveRequest}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)", color: "#60a5fa", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+            Przenieś
+          </button>
+          {/* Duplikuj */}
+          <button
+            onClick={onBulkClone}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10b981", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+            Duplikuj
+          </button>
+          {/* Usuń */}
+          <button
+            onClick={onBulkDelete}
+            disabled={bulkLoading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#f87171", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" />
+            </svg>
+            Usuń
+          </button>
+          {bulkLoading && (
+            <span style={{ fontSize: 11, color: "#5a6478" }}>Trwa operacja...</span>
+          )}
+          {bulkMsg && !bulkLoading && (
+            <span style={{ fontSize: 11, color: "#10b981" }}>{bulkMsg}</span>
+          )}
+          <button
+            onClick={() => setSelectedIds([])}
+            style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 6, border: "1px solid #1e2d45", background: "transparent", color: "#5a6478", fontSize: 11, cursor: "pointer" }}
+          >
+            Odznacz wszystkie
+          </button>
+        </div>
+      )}
+
+      {/* ---- Table ---- */}
+      <div>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: 13,
+          color: "#e8ecf1",
+          tableLayout: "fixed",
+        }}
+      >
+        <colgroup>
+          <col style={{ width: 40 }} />         {/* checkbox */}
+          <col style={{ width: 180 }} />         {/* Nazwa */}
+          <col style={{ width: 90 }} />          {/* Typ */}
+          <col style={{ width: 100 }} />         {/* Status */}
+          <col style={{ width: 62 }} />          {/* Skany */}
+          <col style={{ width: 180 }} />         {/* Linki */}
+          <col style={{ width: 164 }} />         {/* Akcje */}
+        </colgroup>
+        {/* ---- HEAD ---- */}
+        <thead>
+          <tr style={{ borderBottom: "1px solid #1e2d45" }}>
+            {/* Checkbox header */}
+            <th
+              style={{ padding: "8px 8px 8px 16px" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                title="Zaznacz wszystkie"
+                style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+              />
+            </th>
+            {["Nazwa", "Typ", "Status", "Skany", "Linki", "Akcje"].map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: "8px 12px",
+                  textAlign: "left",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#5a6478",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        {/* ---- BODY ---- */}
+        <tbody>
+          {tags.map((tag, idx) => {
+            const typeStyle = TYPE_COLORS[tag.tagType] ?? { bg: "rgba(139,149,168,0.12)", color: "#8b95a8" };
+            const isLast = idx === tags.length - 1;
+
+            const isSelected = selectedIds.includes(tag.id);
+
+            return (
+              <tr
+                key={tag.id}
+                onClick={() => onStartEdit(tag)}
+                style={{
+                  borderBottom: isLast ? "none" : "1px solid #1a253a",
+                  cursor: "pointer",
+                  transition: "background 0.12s",
+                  background: isSelected ? "rgba(59,130,246,0.06)" : "transparent",
+                }}
+                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#0f1a2e"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isSelected ? "rgba(59,130,246,0.06)" : "transparent"; }}
+              >
+                {/* Checkbox */}
+                <td
+                  style={{ padding: "10px 8px 10px 16px" }}
+                  onClick={(e) => { e.stopPropagation(); toggleOne(tag.id); }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleOne(tag.id)}
+                    style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+                  />
+                </td>
+
+                {/* Nazwa */}
+                <td style={{ padding: "10px 12px", fontWeight: 600, overflow: "hidden" }}>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.name}>
+                    {tag.name}
+                  </div>
+                  {tag.description && (
+                    <div style={{ fontSize: 11, color: "#5a6478", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.description}>
+                      {tag.description}
+                    </div>
+                  )}
+                </td>
+
+                {/* Typ */}
+                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      background: typeStyle.bg,
+                      color: typeStyle.color,
+                    }}
+                  >
+                    {TYPE_LABELS[tag.tagType] ?? tag.tagType}
+                  </span>
+                </td>
+
+                {/* Status */}
+                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      background: tag.isActive ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                      color: tag.isActive ? "#10b981" : "#f87171",
+                    }}
+                  >
+                    {tag.isActive ? "Aktywny" : "Nieaktywny"}
+                  </span>
+                </td>
+
+                {/* Skany */}
+                <td style={{ padding: "10px 12px", fontWeight: 700, color: "#f5b731", whiteSpace: "nowrap" }}>
+                  {tag._count.scans}
+                </td>
+
+                {/* Linki */}
+                <td style={{ padding: "10px 12px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => copyLink(tag.id)}
+                    title={`/s/${tag.id}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      width: "100%",
+                      background: copiedId === tag.id ? "rgba(34,197,94,0.1)" : "rgba(245,183,49,0.08)",
+                      border: `1px solid ${copiedId === tag.id ? "rgba(34,197,94,0.3)" : "rgba(245,183,49,0.2)"}`,
+                      borderRadius: 6,
+                      padding: "3px 7px 3px 6px",
+                      cursor: "pointer",
+                      minWidth: 0,
+                      transition: "background 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.14)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.35)"; } }}
+                    onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.08)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.2)"; } }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: 11,
+                        color: copiedId === tag.id ? "#22c55e" : "#f5b731",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        minWidth: 0,
+                        flex: 1,
+                      }}
+                    >
+                      /s/{tag.id}
+                    </span>
+                    <span style={{ color: copiedId === tag.id ? "#22c55e" : "#8b95a8", display: "inline-flex", flexShrink: 0 }}>
+                      {copiedId === tag.id
+                        ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      }
+                    </span>
+                  </button>
+                  {(tag.tagType === "url" || tag.tagType === "google-review") && tag.targetUrl && (() => {
+                    let host = tag.targetUrl;
+                    try { host = new URL(tag.targetUrl).hostname.replace(/^www\./, ""); } catch {}
+                    return (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#5a6478",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          marginTop: 3,
+                        }}
+                        title={tag.targetUrl}
+                      >
+                        {host}
+                      </div>
+                    );
+                  })()}
+                </td>
+
+                {/* Akcje */}
+                <td
+                  style={{ padding: "10px 12px", whiteSpace: "nowrap" }}
+                  onClick={(e) => e.stopPropagation()} /* prevent row-click when clicking controls */
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {/* Active toggle */}
+                    <button
+                      onClick={() => onToggleActive(tag)}
+                      title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
+                      style={{
+                        width: 44,
+                        height: 24,
+                        borderRadius: 12,
+                        background: tag.isActive ? "#10b981" : "#2a4060",
+                        border: "none",
+                        cursor: "pointer",
+                        position: "relative",
+                        transition: "background 0.2s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 3,
+                          left: tag.isActive ? 23 : 3,
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          background: "#fff",
+                          transition: "left 0.2s",
+                        }}
+                      />
+                    </button>
+
+                    {/* Quick: Kopiuj link publiczny */}
+                    <button
+                      onClick={() => copyLink(tag.id)}
+                      title="Kopiuj link publiczny"
+                      style={{
+                        background: "#1a253a",
+                        border: "1px solid #1e2d45",
+                        color: copiedId === tag.id ? "#22c55e" : "#8b95a8",
+                        borderRadius: 6,
+                        width: 28,
+                        height: 28,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        transition: "color 0.15s, border-color 0.15s",
+                      }}
+                      onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#f5b731"; e.currentTarget.style.borderColor = "#e69500"; } }}
+                      onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; } }}
+                    >
+                      {copiedId === tag.id
+                        ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      }
+                    </button>
+
+                    {/* Quick: Edytuj */}
+                    <button
+                      onClick={() => onStartEdit(tag)}
+                      title="Edytuj akcję"
+                      style={{
+                        background: "#1a253a",
+                        border: "1px solid #1e2d45",
+                        color: "#8b95a8",
+                        borderRadius: 6,
+                        width: 28,
+                        height: 28,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        transition: "color 0.15s, border-color 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#e69500"; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+
+                    {/* ⋯ menu */}
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={(e) => openMenu(tag.id, e)}
+                        title="Więcej opcji"
+                        style={{
+                          background: "#1a253a",
+                          border: "1px solid #1e2d45",
+                          color: "#8b95a8",
+                          borderRadius: 6,
+                          width: 32,
+                          height: 32,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 18,
+                          lineHeight: 1,
+                          letterSpacing: "0.05em",
+                          flexShrink: 0,
+                          transition: "border-color 0.15s, color 0.15s",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#e8ecf1"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
+                      >
+                        ⋯
+                      </button>
+
+                      {openMenuId === tag.id && menuRect && (
+                        <CtxMenuPortal anchorRect={menuRect} onClose={closeMenu}>
+
+                          {/* Pobierz QR PNG */}
+                          <button
+                            onClick={async () => {
+                              closeMenu();
+                              const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=png`);
+                              if (!res.ok) return;
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url; a.download = `qr-${tag.id}.png`; a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            style={menuItem("#10b981")}
+                            onMouseEnter={hoverIn}
+                            onMouseLeave={hoverOut}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                              <path d="M14 14h3v3m0 4h4v-4m-4 0h4" />
+                            </svg>
+                            Pobierz QR (PNG)
+                          </button>
+
+                          {/* Pobierz SVG */}
+                          <button
+                            onClick={async () => {
+                              closeMenu();
+                              const res = await fetch(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=svg`);
+                              if (!res.ok) return;
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url; a.download = `qr-${tag.id}.svg`; a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            style={menuItem("#10b981")}
+                            onMouseEnter={hoverIn}
+                            onMouseLeave={hoverOut}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            Pobierz SVG
+                          </button>
+
+                          {/* Pobierz PDF */}
+                          <button
+                            onClick={() => { closeMenu(); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
+                            style={menuItem("#f5b731")}
+                            onMouseEnter={hoverIn}
+                            onMouseLeave={hoverOut}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                            </svg>
+                            Pobierz PDF (druk A4)
+                          </button>
+
+                          {/* Video items */}
+                          {tag.tagType === "video" && (
+                            <>
+                              <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+                              <label
+                                style={{ ...menuItem("#9f67ff"), display: "flex" }}
+                                onMouseEnter={hoverIn}
+                                onMouseLeave={hoverOut}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                  <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                                </svg>
+                                {uploadingTagId === tag.id ? uploadProgress : (tag.videoFile ? "Podmień video" : "Wgraj video")}
+                                <input
+                                  type="file"
+                                  accept="video/mp4,video/webm,video/quicktime"
+                                  style={{ display: "none" }}
+                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { closeMenu(); onVideoUpload(tag.id, f); } e.target.value = ""; }}
+                                />
+                              </label>
+                              {tag.videoFile && (
+                                <button
+                                  onClick={() => { closeMenu(); onRemoveVideo(tag.id); }}
+                                  style={menuItem("#f87171")}
+                                  onMouseEnter={(e) => hoverIn(e, "#1a253a")}
+                                  onMouseLeave={hoverOut}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                                  </svg>
+                                  Usuń video
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+
+                          {/* Reset statystyk */}
+                          <button
+                            onClick={() => { closeMenu(); onSetResetTagConfirm(tag.id); onStartEdit(tag); }}
+                            style={menuItem("#f59e0b")}
+                            onMouseEnter={(e) => hoverIn(e, "rgba(245,158,11,0.08)")}
+                            onMouseLeave={hoverOut}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                            </svg>
+                            Reset statystyk
+                          </button>
+
+                          {/* Usuń akcję */}
+                          <button
+                            onClick={() => { closeMenu(); onDeleteTag(tag.id); }}
+                            style={menuItem("#f87171")}
+                            onMouseEnter={(e) => hoverIn(e, "rgba(239,68,68,0.08)")}
+                            onMouseLeave={hoverOut}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                            </svg>
+                            Usuń akcję
+                          </button>
+                        </CtxMenuPortal>
+                      )}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      </div>{/* end overflowX */}
+    </div>
+  );
+}
