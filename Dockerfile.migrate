@@ -6,7 +6,8 @@ RUN npm install
 COPY prisma ./prisma
 COPY . .
 RUN npx prisma generate
-CMD npx prisma db push --skip-generate 2>&1 || echo "prisma db push warning (non-fatal, ensure-columns will handle)" && \
+CMD set -e && \
+    (npx prisma db push --skip-generate 2>&1 || echo "prisma db push warning (non-fatal, ensure-columns will handle)") && \
     echo "Ensuring columns exist..." && \
     node prisma/ensure-columns.js && \
     echo "Validating schema..." && \

@@ -108,18 +108,44 @@ async function main() {
     console.log("Client table ensured");
 
     // =======================================================================
-    // 3. TAG – clientId
+    // 3. CAMPAIGN TABLE
     // =======================================================================
-    console.log("\n--- Tag.clientId ---");
+    console.log("\n--- Campaign table ---");
+
+    await run("Campaign table",
+      `CREATE TABLE IF NOT EXISTS "Campaign" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "description" TEXT,
+        "clientId" TEXT NOT NULL,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Campaign_pkey" PRIMARY KEY ("id")
+      )`);
+    await run("Campaign.clientId index",
+      'CREATE INDEX IF NOT EXISTS "Campaign_clientId_idx" ON "Campaign"("clientId")');
+    await run("Campaign.isActive index",
+      'CREATE INDEX IF NOT EXISTS "Campaign_isActive_idx" ON "Campaign"("isActive")');
+    console.log("Campaign table ensured");
+
+    // =======================================================================
+    // 4. TAG – clientId + campaignId
+    // =======================================================================
+    console.log("\n--- Tag.clientId + Tag.campaignId ---");
 
     await run("Tag.clientId column",
       'ALTER TABLE "Tag" ADD COLUMN IF NOT EXISTS "clientId" TEXT');
     await run("Tag.clientId index",
       'CREATE INDEX IF NOT EXISTS "Tag_clientId_idx" ON "Tag"("clientId")');
-    console.log("Tag.clientId ensured");
+    await run("Tag.campaignId column",
+      'ALTER TABLE "Tag" ADD COLUMN IF NOT EXISTS "campaignId" TEXT');
+    await run("Tag.campaignId index",
+      'CREATE INDEX IF NOT EXISTS "Tag_campaignId_idx" ON "Tag"("campaignId")');
+    console.log("Tag.clientId + Tag.campaignId ensured");
 
     // =======================================================================
-    // 4. LINKCLICK TABLE + P0 telemetry
+    // 5. LINKCLICK TABLE + P0 telemetry
     // =======================================================================
     console.log("\n--- LinkClick table ---");
 
@@ -188,7 +214,7 @@ async function main() {
     console.log("LinkClick telemetry columns ensured");
 
     // =======================================================================
-    // 5. VIDEOEVENT TABLE + P0 telemetry
+    // 6. VIDEOEVENT TABLE + P0 telemetry
     // =======================================================================
     console.log("\n--- VideoEvent table ---");
 
@@ -292,6 +318,8 @@ async function main() {
         "userAgent", "deviceType", "referrer", "path", "query", "rawMeta",
         "ipPrefix", "ipVersion",
       ],
+      Campaign: ["id", "name", "clientId", "isActive"],
+      Tag: ["id", "clientId", "campaignId"],
     };
 
     const missing = [];

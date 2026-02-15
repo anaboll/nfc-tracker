@@ -20,7 +20,8 @@
       "Bash(node --input-type=commonjs:*)",
       "Bash(dir:*)",
       "Bash(npx:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
     ]
   }
 }
