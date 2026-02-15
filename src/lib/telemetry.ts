@@ -407,7 +407,7 @@ export function buildRawMeta(headers: Headers, url: URL): string {
     path: url.pathname,
   };
 
-  return truncateField(JSON.stringify(meta));
+  return truncateField(JSON.stringify(meta)) ?? "";
 }
 
 // ---------------------------------------------------------------------------
