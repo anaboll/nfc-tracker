@@ -88,6 +88,22 @@ model Scan {
   referrer    String?  @db.Text
   eventSource String?
   nfcId       String?  // Physical NFC chip identifier (from ?nfc= URL param)
+  // P0 telemetry
+  visitorId      String?
+  sessionId      String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  gclid          String?
+  fbclid         String?
+  acceptLanguage String?
+  path           String?
+  query          String?
+  rawMeta        String?  @db.Text
+  ipPrefix       String?
+  ipVersion      Int?
 
   @@index([tagId])
   @@index([timestamp])
@@ -95,6 +111,8 @@ model Scan {
   @@index([country])
   @@index([deviceType])
   @@index([nfcId])
+  @@index([tagId, timestamp])
+  @@index([visitorId, timestamp])
 }
 
 model LinkClick {
@@ -106,10 +124,31 @@ model LinkClick {
   linkIcon  String?
   timestamp DateTime @default(now())
   ipHash    String?
+  // P0 telemetry
+  visitorId      String?
+  sessionId      String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  gclid          String?
+  fbclid         String?
+  acceptLanguage String?
+  userAgent      String?  @db.Text
+  deviceType     String?
+  referrer       String?  @db.Text
+  path           String?
+  query          String?
+  rawMeta        String?  @db.Text
+  ipPrefix       String?
+  ipVersion      Int?
 
   @@index([tagId])
   @@index([timestamp])
   @@index([tagId, linkUrl])
+  @@index([tagId, timestamp])
+  @@index([visitorId, timestamp])
 }
 
 model VideoEvent {
@@ -120,8 +159,29 @@ model VideoEvent {
   timestamp DateTime @default(now())
   ipHash    String?
   watchTime Float?   // seconds watched at the time of event
+  // P0 telemetry
+  visitorId      String?
+  sessionId      String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  gclid          String?
+  fbclid         String?
+  acceptLanguage String?
+  userAgent      String?  @db.Text
+  deviceType     String?
+  referrer       String?  @db.Text
+  path           String?
+  query          String?
+  rawMeta        String?  @db.Text
+  ipPrefix       String?
+  ipVersion      Int?
 
   @@index([tagId])
   @@index([timestamp])
   @@index([tagId, event])
+  @@index([tagId, timestamp])
+  @@index([visitorId, timestamp])
 }

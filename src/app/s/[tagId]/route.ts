@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { parseUserAgent, hashIp, getGeoLocation, extractIp } from "@/lib/utils";
+import { hashIp, getGeoLocation } from "@/lib/utils";
+import {
+  collectTelemetry,
+  applyTelemetryCookies,
+  telemetryFields,
+  isSchemaMismatchError,
+} from "@/lib/telemetry";
 
 function getRealBaseUrl(headers: Headers): string {
   const proto = headers.get("x-forwarded-proto") || "https";
@@ -35,25 +41,19 @@ export async function GET(
       return NextResponse.redirect(`${getRealBaseUrl(request.headers)}/`, { status: 302 });
     }
 
-    // Collect data
+    // --- Telemetry: cookies + meta ---
+    const { data: tele, setCookies, rawIp } = collectTelemetry(request);
+
+    // Use same cleaned IP for legacy hash (unified extraction)
+    const ipHash = hashIp(rawIp);
+
     const headers = request.headers;
-    const rawIp = extractIp(
-      headers.get("x-forwarded-for"),
-      headers.get("x-real-ip"),
-      headers.get("cf-connecting-ip")
-    );
-    const userAgent = headers.get("user-agent") || "";
-    const browserLang = headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
-    const referrer = headers.get("referer") || null;
     const url = new URL(request.url);
     // Accept ?source=qr (QR code scans) or ?event=... (legacy). ?source takes precedence.
     const sourceParam = url.searchParams.get("source"); // "qr" from QR code links
     const eventSource = sourceParam || url.searchParams.get("event") || null;
     // NFC chip ID: from :: separator in URL or ?nfc= query param
     const nfcId = chipId || url.searchParams.get("nfc") || null;
-
-    const ipHash = hashIp(rawIp);
-    const parsed = parseUserAgent(userAgent);
 
     // Record scan BEFORE redirect
     try {
@@ -69,34 +69,43 @@ export async function GET(
         data: {
           tagId,
           ipHash,
-          deviceType: parsed.deviceType,
-          userAgent: userAgent || null,
-          browserLang,
+          deviceType: tele.deviceType,
+          userAgent: tele.userAgent,
+          browserLang: headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null,
           city: geo.city,
           country: geo.country,
           region: geo.region,
           isReturning,
-          referrer,
+          referrer: tele.referrer,
           eventSource,
           ...(nfcId ? { nfcId } : {}),
+          // P0 telemetry fields (visitorId, sessionId, UTM, rawMeta, ipPrefix, ipVersion, etc.)
+          ...telemetryFields(tele),
         },
       });
     } catch (err) {
-      // If it failed (e.g. nfcId column missing), try without nfcId
-      console.error("Scan create failed, retrying without nfcId:", err);
-      try {
-        await prisma.scan.create({
-          data: {
-            tagId,
-            ipHash,
-            deviceType: parsed.deviceType,
-            userAgent: userAgent || null,
-            browserLang,
-            isReturning: false,
-          },
-        });
-      } catch (err2) {
-        console.error("Scan create retry also failed:", err2);
+      if (isSchemaMismatchError(err)) {
+        // Schema mismatch (columns not yet added) – retry without telemetry fields
+        console.warn("Scan create: schema mismatch, retrying without telemetry:", (err as Error).message);
+        try {
+          await prisma.scan.create({
+            data: {
+              tagId,
+              ipHash,
+              deviceType: tele.deviceType,
+              userAgent: tele.userAgent,
+              browserLang: headers.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null,
+              isReturning: false,
+              referrer: tele.referrer,
+              eventSource,
+            },
+          });
+        } catch (err2) {
+          console.error("Scan create retry also failed:", err2);
+        }
+      } else {
+        // Real error (connection, constraint, etc.) – don't silently drop data
+        console.error("Scan create failed (non-schema error):", err);
       }
     }
 
@@ -112,7 +121,12 @@ export async function GET(
       targetUrl = `${getRealBaseUrl(headers)}${targetUrl}`;
     }
 
-    return NextResponse.redirect(targetUrl, { status: 302 });
+    const response = NextResponse.redirect(targetUrl, { status: 302 });
+
+    // Apply telemetry cookies to redirect response
+    applyTelemetryCookies(response, setCookies);
+
+    return response;
   } catch (error) {
     console.error("Scan route error:", error);
     return NextResponse.redirect(`${getRealBaseUrl(request.headers)}/`, { status: 302 });

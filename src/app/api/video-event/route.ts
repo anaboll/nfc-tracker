@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashIp, extractIp } from "@/lib/utils";
+import { hashIp } from "@/lib/utils";
+import {
+  collectTelemetry,
+  applyTelemetryCookies,
+  telemetryFields,
+  isSchemaMismatchError,
+} from "@/lib/telemetry";
 
 // POST - record a video event (public endpoint, no auth required)
 export async function POST(request: NextRequest) {
@@ -17,24 +23,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid event type" }, { status: 400 });
     }
 
-    const headers = request.headers;
-    const rawIp = extractIp(
-      headers.get("x-forwarded-for"),
-      headers.get("x-real-ip"),
-      headers.get("cf-connecting-ip")
-    );
+    // --- Telemetry (unified IP extraction) ---
+    const { data: tele, setCookies, rawIp } = collectTelemetry(request);
     const ipHash = hashIp(rawIp);
 
-    await prisma.videoEvent.create({
-      data: {
-        tagId,
-        event,
-        ipHash,
-        watchTime: watchTime != null ? Number(watchTime) : null,
-      },
-    });
+    try {
+      await prisma.videoEvent.create({
+        data: {
+          tagId,
+          event,
+          ipHash,
+          watchTime: watchTime != null ? Number(watchTime) : null,
+          // P0 telemetry
+          userAgent: tele.userAgent,
+          deviceType: tele.deviceType,
+          referrer: tele.referrer,
+          ...telemetryFields(tele),
+        },
+      });
+    } catch (err) {
+      if (isSchemaMismatchError(err)) {
+        // Schema mismatch – retry without telemetry fields
+        console.warn("VideoEvent create: schema mismatch, retrying without telemetry:", (err as Error).message);
+        await prisma.videoEvent.create({
+          data: {
+            tagId,
+            event,
+            ipHash,
+            watchTime: watchTime != null ? Number(watchTime) : null,
+          },
+        });
+      } else {
+        throw err; // Real error – propagate
+      }
+    }
 
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    applyTelemetryCookies(response, setCookies);
+    return response;
   } catch (error) {
     console.error("VideoEvent record error:", error);
     return NextResponse.json({ error: "Failed to record event" }, { status: 500 });

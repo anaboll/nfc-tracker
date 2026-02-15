@@ -15,7 +15,13 @@
       "Bash(npx --no-install next build:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node -e:*)",
+      "Bash(node --input-type=commonjs:*)",
+      "Bash(dir:*)",
+      "Bash(npx:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
     ]
   }
 }
