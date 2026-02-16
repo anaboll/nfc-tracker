@@ -127,6 +127,8 @@ interface ScanRow {
   browserLang: string | null;
   isReturning: boolean;
   eventSource: string | null;
+  guestKey: string | null;
+  ipHash: string | null;
 }
 
 interface ScansResponse {
@@ -450,6 +452,10 @@ function DashboardPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [showScanTable, setShowScanTable] = useState(false);
+  // Guest modal state
+  const [guestModal, setGuestModal] = useState<{ ipHash: string; guestKey: string } | null>(null);
+  const [guestScans, setGuestScans] = useState<ScanRow[]>([]);
+  const [guestLoading, setGuestLoading] = useState(false);
   // actions search (inline list, no dropdown)
   const [tagSearch, setTagSearch] = useState("");
   // client inline list search
@@ -3653,6 +3659,7 @@ function DashboardPage() {
                               ))}
                               <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }}>Jezyk</th>
                               <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }} title="Czy ta osoba skanowala te sama akcje wczesniej">Ponowny</th>
+                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#8b95a8", fontWeight: 600 }} title="Identyfikator goscia (IP hash). Kliknij aby zobaczyc wszystkie skany tej osoby">Gość</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -3714,6 +3721,43 @@ function DashboardPage() {
                                     <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
                                   ) : (
                                     <span style={{ color: "#2a4060", fontSize: 10 }}>Nie</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: "6px 8px" }}>
+                                  {scan.ipHash ? (
+                                    <button
+                                      onClick={async () => {
+                                        setGuestModal({ ipHash: scan.ipHash!, guestKey: scan.guestKey ?? scan.ipHash!.slice(0, 7) });
+                                        setGuestScans([]);
+                                        setGuestLoading(true);
+                                        try {
+                                          const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(scan.ipHash!)}`);
+                                          const data = await res.json();
+                                          setGuestScans(data.rows ?? []);
+                                        } catch { /* ignore */ }
+                                        finally { setGuestLoading(false); }
+                                      }}
+                                      style={{
+                                        background: "rgba(99,102,241,0.12)",
+                                        border: "1px solid rgba(99,102,241,0.3)",
+                                        color: "#818cf8",
+                                        borderRadius: 4,
+                                        padding: "2px 7px",
+                                        fontSize: 10,
+                                        fontFamily: "monospace",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        letterSpacing: 0.5,
+                                        transition: "background 0.15s",
+                                      }}
+                                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(99,102,241,0.25)")}
+                                      onMouseLeave={e => (e.currentTarget.style.background = "rgba(99,102,241,0.12)")}
+                                      title="Kliknij aby zobaczyc wszystkie skany tej osoby"
+                                    >
+                                      #{scan.guestKey ?? scan.ipHash!.slice(0, 7)}
+                                    </button>
+                                  ) : (
+                                    <span style={{ color: "#2a4060" }}>—</span>
                                   )}
                                 </td>
                               </tr>
@@ -5026,6 +5070,125 @@ function DashboardPage() {
         </svg>
         Skopiowano link
       </div>
+
+      {/* ── GUEST MODAL ─────────────────────────────────────────── */}
+      {guestModal && (
+        <div
+          onClick={() => setGuestModal(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 100000,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            backdropFilter: "blur(3px)",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#0d1625",
+              border: "1px solid #1e2d45",
+              borderRadius: 12,
+              width: "min(760px, 95vw)",
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #1e2d45" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  background: "rgba(99,102,241,0.15)",
+                  border: "1px solid rgba(99,102,241,0.35)",
+                  color: "#818cf8",
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  fontSize: 13,
+                  fontFamily: "monospace",
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                }}>
+                  #{guestModal.guestKey}
+                </span>
+                <span style={{ color: "#8b95a8", fontSize: 12 }}>
+                  {guestLoading ? "Ładowanie..." : `${guestScans.length} skan${guestScans.length === 1 ? "" : guestScans.length < 5 ? "y" : "ów"}`}
+                </span>
+              </div>
+              <button
+                onClick={() => setGuestModal(null)}
+                style={{ background: "none", border: "none", color: "#5a6478", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "0 4px" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#e8ecf1")}
+                onMouseLeave={e => (e.currentTarget.style.color = "#5a6478")}
+              >×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ overflowY: "auto", padding: "12px 20px 20px" }}>
+              {guestLoading && (
+                <p style={{ color: "#5a6478", fontSize: 12, textAlign: "center", padding: "32px 0" }}>Ładowanie skanów...</p>
+              )}
+              {!guestLoading && guestScans.length === 0 && (
+                <p style={{ color: "#5a6478", fontSize: 12, textAlign: "center", padding: "32px 0" }}>Brak skanów</p>
+              )}
+              {!guestLoading && guestScans.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #1e2d45" }}>
+                      {["#", "Data/Czas", "Akcja", "Źródło", "Urządzenie", "Miasto", "Ponowny"].map(h => (
+                        <th key={h} style={{ textAlign: "left", padding: "6px 8px", color: "#8b95a8", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {guestScans.map((s, idx) => (
+                      <tr key={s.id}
+                        style={{ borderBottom: "1px solid #131b2e", transition: "background 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#0c1220")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <td style={{ padding: "5px 8px", color: "#5a6478", fontFamily: "monospace" }}>{idx + 1}</td>
+                        <td style={{ padding: "5px 8px", color: "#e8ecf1", fontFamily: "monospace", fontSize: 10, whiteSpace: "nowrap" }}>
+                          {new Date(s.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                        </td>
+                        <td style={{ padding: "5px 8px" }}>
+                          <span style={{ color: "#f5b731", fontWeight: 600 }}>{s.tagName}</span>
+                        </td>
+                        <td style={{ padding: "5px 8px" }}>
+                          {s.eventSource === "qr" ? (
+                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>QR</span>
+                          ) : s.nfcId ? (
+                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(245,183,49,0.12)", color: "#f5b731", border: "1px solid rgba(245,183,49,0.25)" }}>NFC</span>
+                          ) : (
+                            <span style={{ color: "#2a4060" }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "5px 8px" }}>
+                          <span style={{
+                            padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
+                            background: s.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : s.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
+                            color: s.deviceType === "iOS" ? "#60a5fa" : s.deviceType === "Android" ? "#10b981" : "#8b95a8",
+                          }}>
+                            {s.deviceType}
+                          </span>
+                        </td>
+                        <td style={{ padding: "5px 8px", color: "#8b95a8" }}>{s.city || "—"}</td>
+                        <td style={{ padding: "5px 8px" }}>
+                          {s.isReturning
+                            ? <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
+                            : <span style={{ color: "#2a4060", fontSize: 10 }}>Nie</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── END GUEST MODAL ─────────────────────────────────────── */}
+
     </div>
   );
 }

@@ -107,6 +107,8 @@ export async function GET(request: NextRequest) {
     browserLang: scan.browserLang,
     isReturning: scan.isReturning,
     eventSource: scan.eventSource,
+    guestKey: scan.ipHash ? scan.ipHash.slice(0, 7) : null,
+    ipHash: scan.ipHash,
   }));
 
   return NextResponse.json({
