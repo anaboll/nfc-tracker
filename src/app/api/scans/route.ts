@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Build orderBy
-  const validSortFields = ["timestamp", "tagId", "deviceType", "country", "city", "nfcId"];
+  const validSortFields = ["timestamp", "tagId", "deviceType", "country", "city", "nfcId", "ipHash"];
   const orderField = validSortFields.includes(sortBy) ? sortBy : "timestamp";
   const orderBy = { [orderField]: sortDir };
 
