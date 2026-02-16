@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 // GET top guests aggregated by ipHash, respecting current filters
 export async function GET(request: NextRequest) {
+  try {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
       nfcId: true,
     },
     orderBy: { timestamp: "desc" },
+    take: 5000,
   });
 
   // Aggregate by ipHash
@@ -92,7 +94,7 @@ export async function GET(request: NextRequest) {
         guestKey: scan.ipHash.slice(0, 7),
         scanCount: 1,
         uniqueTagIds: new Set([scan.tagId]),
-        lastSeen: scan.timestamp.toISOString(),
+        lastSeen: new Date(scan.timestamp).toISOString(),
         deviceType: scan.deviceType,
         city: scan.city,
         country: scan.country,
@@ -127,4 +129,9 @@ export async function GET(request: NextRequest) {
     }));
 
   return NextResponse.json({ guests, total: guestMap.size });
+  } catch (e) {
+    console.error("[/api/scans/guests] error:", e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }
+
