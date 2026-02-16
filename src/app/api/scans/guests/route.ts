@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
     where.tagId = { in: clientTags.map((t) => t.id) };
   }
 
-  // Only scans where ipHash is known
-  where.ipHash = { not: null };
+  // Only scans where ipHash is known (Prisma: string filter excludes nulls automatically via isSet check in JS)
+  // We filter out null ipHash in the aggregation loop below
 
   // Fetch all matching scans (select only what we need for aggregation)
   const scans = await prisma.scan.findMany({
