@@ -3825,15 +3825,19 @@ function DashboardPage() {
                   onClick={async () => {
                     const next = !showGuestsTable;
                     setShowGuestsTable(next);
-                    if (next && guestsData.length === 0) {
+                    if (next) {
                       setGuestsLoading(true);
                       try {
                         const params = new URLSearchParams();
-                        if (selectedClientId) params.set("clientId", selectedClientId);
+                        if (selectedTagIds.length > 0) {
+                          params.set("tags", selectedTagIds.join(","));
+                        } else if (tagFilter) {
+                          params.set("tagId", tagFilter);
+                        }
                         if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
-                        if (selectedTagIds.length > 0) params.set("tags", selectedTagIds.join(","));
-                        if (dateFrom) params.set("from", dateFrom);
-                        if (dateTo) params.set("to", dateTo);
+                        if (selectedClientId) params.set("clientId", selectedClientId);
+                        if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+                        if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
                         const res = await fetch(`/api/scans/guests?${params.toString()}`);
                         const data = await res.json();
                         setGuestsData(data.guests ?? []);
