@@ -438,6 +438,12 @@ function DashboardPage() {
 
   // hourly chart mode
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
+  const [hourlyDataMode, setHourlyDataMode] = useState<"both" | "all" | "unique">("both");
+
+  // geo pagination
+  const [countriesPage, setCountriesPage] = useState(1);
+  const [citiesPage, setCitiesPage] = useState(1);
+  const [languagesPage, setLanguagesPage] = useState(1);
 
   // raw scan table
   const [scanData, setScanData] = useState<ScansResponse | null>(null);
@@ -958,7 +964,7 @@ function DashboardPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchStats(), fetchTags(), fetchClients(), fetchCampaigns()]);
+    await Promise.all([fetchStats(), fetchTags(), fetchClients(), fetchCampaigns(), fetchScans()]);
     setRefreshing(false);
   };
 
@@ -1785,6 +1791,21 @@ function DashboardPage() {
     return grid;
   })();
   const heatmapMax = Math.max(...heatmapData.flat(), 1);
+
+  // Build unique heatmap data: dayOfWeek × hour → unique IPs
+  const heatmapUniqueData: number[][] = (() => {
+    const raw = stats?.hourlyRaw ?? [];
+    const ipSets = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => new Set<string>()));
+    for (const entry of raw) {
+      const d = new Date(entry.t);
+      const h = d.getHours();
+      let dow = d.getDay();
+      dow = dow === 0 ? 6 : dow - 1;
+      ipSets[dow][h].add(entry.ip);
+    }
+    return ipSets.map(row => row.map(s => s.size));
+  })();
+  const heatmapUniqueMax = Math.max(...heatmapUniqueData.flat(), 1);
   const allTagsFilter = stats?.allTags ?? [];
 
   const maxWeeklyCount = weekly
@@ -3022,7 +3043,7 @@ function DashboardPage() {
                 {topCountries.length === 0 && (
                   <p style={{ color: "#5a6478", fontSize: 14 }}>Brak danych</p>
                 )}
-                {topCountries.map((c, i) => (
+                {topCountries.slice((countriesPage - 1) * 5, countriesPage * 5).map((c, i, arr) => (
                   <div
                     key={c.country}
                     style={{
@@ -3030,7 +3051,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < topCountries.length - 1 ? "1px solid #2a2a4a" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid #2a2a4a" : "none",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3051,6 +3072,23 @@ function DashboardPage() {
                     </div>
                   </div>
                 ))}
+                {topCountries.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid #1e2d45" }}>
+                    <span style={{ fontSize: 10, color: "#5a6478" }}>{Math.min(countriesPage * 5, topCountries.length)}/{topCountries.length}</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        disabled={countriesPage <= 1}
+                        onClick={() => setCountriesPage(p => p - 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: countriesPage <= 1 ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage <= 1 ? "default" : "pointer" }}
+                      >← Poprz.</button>
+                      <button
+                        disabled={countriesPage * 5 >= topCountries.length}
+                        onClick={() => setCountriesPage(p => p + 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: countriesPage * 5 >= topCountries.length ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage * 5 >= topCountries.length ? "default" : "pointer" }}
+                      >Nast. →</button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Cities */}
@@ -3061,7 +3099,7 @@ function DashboardPage() {
                 {topCities.length === 0 && (
                   <p style={{ color: "#5a6478", fontSize: 14 }}>Brak danych</p>
                 )}
-                {topCities.map((c, i) => (
+                {topCities.slice((citiesPage - 1) * 5, citiesPage * 5).map((c, i, arr) => (
                   <div
                     key={`${c.city}-${c.country}`}
                     style={{
@@ -3069,7 +3107,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < topCities.length - 1 ? "1px solid #2a2a4a" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid #2a2a4a" : "none",
                     }}
                   >
                     <div>
@@ -3090,6 +3128,23 @@ function DashboardPage() {
                     </div>
                   </div>
                 ))}
+                {topCities.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid #1e2d45" }}>
+                    <span style={{ fontSize: 10, color: "#5a6478" }}>{Math.min(citiesPage * 5, topCities.length)}/{topCities.length}</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        disabled={citiesPage <= 1}
+                        onClick={() => setCitiesPage(p => p - 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: citiesPage <= 1 ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage <= 1 ? "default" : "pointer" }}
+                      >← Poprz.</button>
+                      <button
+                        disabled={citiesPage * 5 >= topCities.length}
+                        onClick={() => setCitiesPage(p => p + 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: citiesPage * 5 >= topCities.length ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage * 5 >= topCities.length ? "default" : "pointer" }}
+                      >Nast. →</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -3256,7 +3311,7 @@ function DashboardPage() {
                 {topLanguages.length === 0 && (
                   <p style={{ color: "#5a6478", fontSize: 14 }}>Brak danych</p>
                 )}
-                {topLanguages.map((l, i) => (
+                {topLanguages.slice((languagesPage - 1) * 5, languagesPage * 5).map((l, i, arr) => (
                   <div
                     key={l.lang}
                     style={{
@@ -3264,7 +3319,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < topLanguages.length - 1 ? "1px solid #2a2a4a" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid #2a2a4a" : "none",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3296,6 +3351,23 @@ function DashboardPage() {
                     </div>
                   </div>
                 ))}
+                {topLanguages.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid #1e2d45" }}>
+                    <span style={{ fontSize: 10, color: "#5a6478" }}>{Math.min(languagesPage * 5, topLanguages.length)}/{topLanguages.length}</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        disabled={languagesPage <= 1}
+                        onClick={() => setLanguagesPage(p => p - 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: languagesPage <= 1 ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage <= 1 ? "default" : "pointer" }}
+                      >← Poprz.</button>
+                      <button
+                        disabled={languagesPage * 5 >= topLanguages.length}
+                        onClick={() => setLanguagesPage(p => p + 1)}
+                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: languagesPage * 5 >= topLanguages.length ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage * 5 >= topLanguages.length ? "default" : "pointer" }}
+                      >Nast. →</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -3326,70 +3398,117 @@ function DashboardPage() {
                       ) : null;
                     })()}
                   </div>
-                  {/* Mode toggle */}
-                  <div style={{ display: "flex", background: "#0f1a2e", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
-                    <button
-                      onClick={() => setHourlyMode("bars")}
-                      style={{
-                        padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                        background: hourlyMode === "bars" ? "rgba(245,183,49,0.15)" : "transparent",
-                        color: hourlyMode === "bars" ? "#f5b731" : "#5a6478",
-                      }}
-                    >
-                      Histogram
-                    </button>
-                    <button
-                      onClick={() => setHourlyMode("heatmap")}
-                      style={{
-                        padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                        background: hourlyMode === "heatmap" ? "rgba(245,183,49,0.15)" : "transparent",
-                        color: hourlyMode === "heatmap" ? "#f5b731" : "#5a6478",
-                      }}
-                    >
-                      Heatmapa
-                    </button>
+                  {/* Toggles */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {/* Data mode toggle */}
+                    <div style={{ display: "flex", background: "#0f1a2e", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                      <button
+                        onClick={() => setHourlyDataMode("both")}
+                        style={{
+                          padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                          background: hourlyDataMode === "both" ? "rgba(245,183,49,0.15)" : "transparent",
+                          color: hourlyDataMode === "both" ? "#f5b731" : "#5a6478",
+                        }}
+                      >
+                        Razem
+                      </button>
+                      <button
+                        onClick={() => setHourlyDataMode("all")}
+                        style={{
+                          padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                          background: hourlyDataMode === "all" ? "rgba(245,183,49,0.15)" : "transparent",
+                          color: hourlyDataMode === "all" ? "#f5b731" : "#5a6478",
+                        }}
+                      >
+                        Wszystkie
+                      </button>
+                      <button
+                        onClick={() => setHourlyDataMode("unique")}
+                        style={{
+                          padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                          background: hourlyDataMode === "unique" ? "rgba(16,185,129,0.15)" : "transparent",
+                          color: hourlyDataMode === "unique" ? "#10b981" : "#5a6478",
+                        }}
+                      >
+                        Unikalne
+                      </button>
+                    </div>
+                    {/* View mode toggle */}
+                    <div style={{ display: "flex", background: "#0f1a2e", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45" }}>
+                      <button
+                        onClick={() => setHourlyMode("bars")}
+                        style={{
+                          padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                          background: hourlyMode === "bars" ? "rgba(245,183,49,0.15)" : "transparent",
+                          color: hourlyMode === "bars" ? "#f5b731" : "#5a6478",
+                        }}
+                      >
+                        Histogram
+                      </button>
+                      <button
+                        onClick={() => setHourlyMode("heatmap")}
+                        style={{
+                          padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
+                          background: hourlyMode === "heatmap" ? "rgba(245,183,49,0.15)" : "transparent",
+                          color: hourlyMode === "heatmap" ? "#f5b731" : "#5a6478",
+                        }}
+                      >
+                        Heatmapa
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Legend */}
                 <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
-                  <span style={{ fontSize: 10, color: "#f5b731", display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f5b731", opacity: 0.6, display: "inline-block" }} /> Wszystkie skany
-                  </span>
-                  <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981", display: "inline-block" }} /> Unikalni
-                  </span>
+                  {hourlyDataMode !== "unique" && (
+                    <span style={{ fontSize: 10, color: "#f5b731", display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f5b731", opacity: 0.6, display: "inline-block" }} /> Wszystkie skany
+                    </span>
+                  )}
+                  {hourlyDataMode !== "all" && (
+                    <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981", display: "inline-block" }} /> Unikalni
+                    </span>
+                  )}
                 </div>
 
                 {/* HISTOGRAM MODE */}
                 {hourlyMode === "bars" && (
                   <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 200, paddingTop: 8 }}>
                     {hourly.map((h) => {
-                      const maxH = Math.max(...hourly.map(x => x.count), 1);
+                      const showAll = hourlyDataMode !== "unique";
+                      const showUnique = hourlyDataMode !== "all";
+                      const primaryVal = hourlyDataMode === "unique" ? h.uniqueUsers : h.count;
+                      const maxH = Math.max(...hourly.map(x => hourlyDataMode === "unique" ? x.uniqueUsers : x.count), 1);
                       const barH = (h.count / maxH) * 160;
                       const uBarH = (h.uniqueUsers / maxH) * 160;
-                      const isActive = h.count > 0;
+                      const isActive = primaryVal > 0;
                       return (
                         <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }} title={`${h.hour}:00 - ${h.count} skanow, ${h.uniqueUsers} unikalnych`}>
-                          {isActive && (
+                          {isActive && showAll && (
                             <span style={{ fontSize: 9, fontWeight: 700, color: "#f5b731" }}>{h.count}</span>
                           )}
-                          {isActive && h.uniqueUsers < h.count && (
+                          {isActive && showUnique && (h.uniqueUsers < h.count || !showAll) && (
                             <span style={{ fontSize: 8, fontWeight: 600, color: "#10b981" }}>{h.uniqueUsers}</span>
                           )}
-                          <div style={{ position: "relative", width: "100%", height: Math.max(barH, isActive ? 4 : 2) }}>
+                          <div style={{ position: "relative", width: "100%", height: Math.max(showAll ? barH : uBarH, isActive ? 4 : 2) }}>
                             {/* Total bar */}
-                            <div style={{
-                              position: "absolute", bottom: 0, left: "10%", right: "10%",
-                              height: Math.max(barH, isActive ? 4 : 2),
-                              borderRadius: "3px 3px 0 0",
-                              background: isActive ? "linear-gradient(180deg, rgba(245,183,49,0.7), rgba(230,149,0,0.4))" : "#131b2e",
-                              transition: "height 0.3s ease",
-                            }} />
-                            {/* Unique overlay */}
-                            {h.uniqueUsers > 0 && (
+                            {showAll && (
                               <div style={{
-                                position: "absolute", bottom: 0, left: "25%", right: "25%",
+                                position: "absolute", bottom: 0, left: "10%", right: "10%",
+                                height: Math.max(barH, h.count > 0 ? 4 : 2),
+                                borderRadius: "3px 3px 0 0",
+                                background: h.count > 0 ? "linear-gradient(180deg, rgba(245,183,49,0.7), rgba(230,149,0,0.4))" : "#131b2e",
+                                transition: "height 0.3s ease",
+                              }} />
+                            )}
+                            {/* Unique overlay */}
+                            {showUnique && h.uniqueUsers > 0 && (
+                              <div style={{
+                                position: "absolute", bottom: 0,
+                                left: showAll ? "25%" : "10%",
+                                right: showAll ? "25%" : "10%",
                                 height: Math.max(uBarH, 3),
                                 borderRadius: "2px 2px 0 0",
                                 background: "linear-gradient(180deg, rgba(16,185,129,0.85), rgba(5,150,105,0.5))",
@@ -3424,16 +3543,20 @@ function DashboardPage() {
                             {dayName}
                           </div>
                           {Array.from({ length: 24 }, (_, h) => {
-                            const val = heatmapData[dayIdx]?.[h] || 0;
-                            const intensity = heatmapMax > 0 ? val / heatmapMax : 0;
-                            // Color interpolation: 0 = dark, 1 = bright orange
+                            const isUnique = hourlyDataMode === "unique";
+                            const val = isUnique ? (heatmapUniqueData[dayIdx]?.[h] || 0) : (heatmapData[dayIdx]?.[h] || 0);
+                            const maxVal = isUnique ? heatmapUniqueMax : heatmapMax;
+                            const intensity = maxVal > 0 ? val / maxVal : 0;
+                            // Color interpolation: 0 = dark, unique = green, all/both = orange
                             const bg = val === 0
                               ? "#0c1220"
-                              : `rgba(245, 183, 49, ${0.15 + intensity * 0.85})`;
+                              : isUnique
+                                ? `rgba(16, 185, 129, ${0.15 + intensity * 0.85})`
+                                : `rgba(245, 183, 49, ${0.15 + intensity * 0.85})`;
                             return (
                               <div
                                 key={`cell-${dayIdx}-${h}`}
-                                title={`${dayName} ${h}:00 — ${val} skanow`}
+                                title={`${dayName} ${h}:00 — ${val} ${isUnique ? "unikalnych" : "skanow"}`}
                                 style={{
                                   height: 22,
                                   borderRadius: 2,
@@ -3444,7 +3567,7 @@ function DashboardPage() {
                                   fontSize: 8,
                                   fontWeight: 700,
                                   color: val > 0 ? (intensity > 0.5 ? "#1a1a2e" : "#e8ecf1") : "transparent",
-                                  cursor: val > 0 ? "default" : "default",
+                                  cursor: "default",
                                   transition: "background 0.2s",
                                 }}
                               >
@@ -3460,7 +3583,7 @@ function DashboardPage() {
                       <span style={{ fontSize: 9, color: "#5a6478" }}>Mniej</span>
                       <div style={{ display: "flex", gap: 2 }}>
                         {[0, 0.25, 0.5, 0.75, 1].map((f, i) => (
-                          <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: f === 0 ? "#0c1220" : `rgba(245, 183, 49, ${0.15 + f * 0.85})` }} />
+                          <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: f === 0 ? "#0c1220" : hourlyDataMode === "unique" ? `rgba(16, 185, 129, ${0.15 + f * 0.85})` : `rgba(245, 183, 49, ${0.15 + f * 0.85})` }} />
                         ))}
                       </div>
                       <span style={{ fontSize: 9, color: "#5a6478" }}>Wiecej</span>
@@ -3790,14 +3913,14 @@ function DashboardPage() {
                         <div style={{ display: "flex", gap: 4 }}>
                           <button
                             disabled={scanData.page <= 1}
-                            onClick={() => { setScanPage(scanData.page - 1); fetchScans({ page: scanData.page - 1 }); }}
+                            onClick={() => { const p = scanData.page - 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
                             style={{ background: "#1a253a", border: "1px solid #1e2d45", color: scanData.page <= 1 ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
                           >
                             ← Poprz.
                           </button>
                           <button
                             disabled={scanData.page >= scanData.totalPages}
-                            onClick={() => { setScanPage(scanData.page + 1); fetchScans({ page: scanData.page + 1 }); }}
+                            onClick={() => { const p = scanData.page + 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
                             style={{ background: "#1a253a", border: "1px solid #1e2d45", color: scanData.page >= scanData.totalPages ? "#2a4060" : "#8b95a8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
                           >
                             Nast. →
