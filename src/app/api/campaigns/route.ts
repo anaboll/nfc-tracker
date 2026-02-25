@@ -2,16 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserAccess } from "@/lib/user-access";
 
 // GET all campaigns (optionally filtered by clientId)
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const access = await getUserAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const url = new URL(request.url);
   const clientId = url.searchParams.get("clientId");
 
-  const where = clientId ? { clientId } : {};
+  const where: Record<string, unknown> = clientId ? { clientId } : {};
+  if (!access.isAdmin && access.allowedClientIds) {
+    where.clientId = clientId
+      ? (access.allowedClientIds.includes(clientId) ? clientId : "__none__")
+      : { in: access.allowedClientIds };
+  }
 
   const campaigns = await prisma.campaign.findMany({
     where,
@@ -50,10 +59,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(enriched);
 }
 
-// POST create new campaign
+// POST create new campaign (admin only)
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
   const { name, description, clientId } = body;
@@ -79,10 +90,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(campaign, { status: 201 });
 }
 
-// PUT update campaign
+// PUT update campaign (admin only)
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
   const { id, name, description, isActive } = body;
@@ -101,10 +114,12 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json(campaign);
 }
 
-// DELETE campaign
+// DELETE campaign (admin only)
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const url = new URL(request.url);
   const id = url.searchParams.get("id");

@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserAccess } from "@/lib/user-access";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const access = await getUserAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
   const fromParam = url.searchParams.get("from");
@@ -31,20 +35,33 @@ export async function GET(request: NextRequest) {
     toDate.setHours(23, 59, 59, 999);
   }
 
-  // Build tag ID filter based on client/campaign selection
+  // Build tag ID filter based on client/campaign selection + viewer access
   let filteredTagIds: string[] | null = null;
+
+  // For viewers: always restrict to their allowed clients
+  const viewerClientFilter = (!access.isAdmin && access.allowedClientIds)
+    ? { clientId: { in: access.allowedClientIds } }
+    : {};
+
   if (campaignFilter) {
     const campaignTags = await prisma.tag.findMany({
-      where: { campaignId: campaignFilter },
+      where: { campaignId: campaignFilter, ...viewerClientFilter },
       select: { id: true },
     });
     filteredTagIds = campaignTags.map(t => t.id);
   } else if (clientFilter) {
     const clientTags = await prisma.tag.findMany({
-      where: { clientId: clientFilter },
+      where: { clientId: clientFilter, ...viewerClientFilter },
       select: { id: true },
     });
     filteredTagIds = clientTags.map(t => t.id);
+  } else if (!access.isAdmin && access.allowedClientIds) {
+    // Viewer without specific client/campaign filter — restrict to all their tags
+    const viewerTags = await prisma.tag.findMany({
+      where: viewerClientFilter,
+      select: { id: true },
+    });
+    filteredTagIds = viewerTags.map(t => t.id);
   }
 
   // Base where clause — only include timestamp constraint when caller explicitly provided dates

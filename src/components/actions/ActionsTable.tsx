@@ -73,6 +73,7 @@ export interface ActionsTableProps {
   bulkMsg: string;
 
   onCopySuccess?: () => void;
+  readOnly?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -173,6 +174,7 @@ export function ActionsTable({
   bulkLoading,
   bulkMsg,
   onCopySuccess,
+  readOnly = false,
 }: ActionsTableProps) {
   const allSelected = tags.length > 0 && tags.every((t) => selectedIds.includes(t.id));
   const someSelected = selectedIds.length > 0;
@@ -249,7 +251,7 @@ export function ActionsTable({
   return (
     <div>
       {/* ---- Bulk Action Bar ---- */}
-      {someSelected && (
+      {!readOnly && someSelected && (
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -335,7 +337,7 @@ export function ActionsTable({
         <thead>
           <tr style={{ borderBottom: "1px solid #1e2d45" }}>
             {/* Checkbox header */}
-            <th
+            {!readOnly && <th
               style={{ padding: "8px 8px 8px 16px" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -346,8 +348,8 @@ export function ActionsTable({
                 title="Zaznacz wszystkie"
                 style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
               />
-            </th>
-            {["Nazwa", "Typ", "Status", "Skany", "Linki", "Akcje"].map((h) => (
+            </th>}
+            {(readOnly ? ["Nazwa", "Typ", "Status", "Skany", "Linki"] : ["Nazwa", "Typ", "Status", "Skany", "Linki", "Akcje"]).map((h) => (
               <th
                 key={h}
                 style={{
@@ -379,10 +381,10 @@ export function ActionsTable({
             return (
               <tr
                 key={tag.id}
-                onClick={() => onStartEdit(tag)}
+                onClick={() => !readOnly && onStartEdit(tag)}
                 style={{
                   borderBottom: isLast ? "none" : "1px solid #1a253a",
-                  cursor: "pointer",
+                  cursor: readOnly ? "default" : "pointer",
                   transition: "background 0.12s",
                   background: isSelected ? "rgba(59,130,246,0.06)" : "transparent",
                 }}
@@ -390,7 +392,7 @@ export function ActionsTable({
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isSelected ? "rgba(59,130,246,0.06)" : "transparent"; }}
               >
                 {/* Checkbox */}
-                <td
+                {!readOnly && <td
                   style={{ padding: "10px 8px 10px 16px" }}
                   onClick={(e) => { e.stopPropagation(); toggleOne(tag.id); }}
                 >
@@ -400,7 +402,7 @@ export function ActionsTable({
                     onChange={() => toggleOne(tag.id)}
                     style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
                   />
-                </td>
+                </td>}
 
                 {/* Nazwa */}
                 <td style={{ padding: "10px 12px", fontWeight: 600, overflow: "hidden" }}>
@@ -515,7 +517,7 @@ export function ActionsTable({
                 </td>
 
                 {/* Akcje */}
-                <td
+                {!readOnly && <td
                   style={{ padding: "10px 12px", whiteSpace: "nowrap" }}
                   onClick={(e) => e.stopPropagation()} /* prevent row-click when clicking controls */
                 >
@@ -760,7 +762,7 @@ export function ActionsTable({
                       )}
                     </div>
                   </div>
-                </td>
+                </td>}
               </tr>
             );
           })}

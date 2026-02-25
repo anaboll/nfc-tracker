@@ -360,6 +360,7 @@ function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isAdmin = session?.user?.role === "admin";
 
   /* ---- state ---- */
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -2047,7 +2048,7 @@ function DashboardPage() {
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {isAdmin && <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   {selectedClientId && (
                     <button
                       onClick={() => handleDeleteClient(selectedClientId)}
@@ -2064,7 +2065,7 @@ function DashboardPage() {
                     onMouseEnter={e => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#f5b731"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a4060"; e.currentTarget.style.color = "#5a6478"; }}
                   >+</button>
-                </div>
+                </div>}
               </div>
 
               {/* -- Klienci — always-visible inline list -- */}
@@ -2157,7 +2158,7 @@ function DashboardPage() {
             <div style={{ background: "#0c1220", borderRadius: 14, border: "1px solid #1e2d45", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#5a6478", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
-                {selectedClientId && (
+                {isAdmin && selectedClientId && (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {selectedCampaignId && (
                       <button
@@ -4201,7 +4202,7 @@ function DashboardPage() {
               </div>
 
               {/* ---- "+ Nowa akcja" button — opens drawer ---- */}
-              <div style={{ marginBottom: 20 }}>
+              {isAdmin && <div style={{ marginBottom: 20 }}>
                 <button
                   onClick={() => {
                     setNewTagClient(selectedClientId ?? "");
@@ -4233,7 +4234,7 @@ function DashboardPage() {
                   </svg>
                   Nowa akcja
                 </button>
-              </div>
+              </div>}
               {/* ---- Nowa akcja DRAWER: the actual form JSX is rendered in the fixed overlay below the main layout ---- */}
 
               {/* ---- Tags List ---- */}
@@ -4271,6 +4272,7 @@ function DashboardPage() {
                     onBulkMoveRequest={() => setShowBulkMoveModal(true)}
                     bulkLoading={bulkLoading}
                     bulkMsg={bulkMsg}
+                    readOnly={!isAdmin}
                     onCopySuccess={() => {
                       if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
                       setCopyToast(true);

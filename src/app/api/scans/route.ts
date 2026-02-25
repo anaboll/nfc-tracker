@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserAccess } from "@/lib/user-access";
 
 // GET raw scan data with pagination, sorting, filtering
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const access = await getUserAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
   const page = parseInt(url.searchParams.get("page") || "1");
@@ -40,22 +44,34 @@ export async function GET(request: NextRequest) {
     where.timestamp = ts;
   }
 
+  // Viewer access restriction
+  const viewerClientWhere = (!access.isAdmin && access.allowedClientIds)
+    ? { clientId: { in: access.allowedClientIds } }
+    : {};
+
   if (tagIdsFilter && tagIdsFilter.length > 0) {
     where.tagId = tagIdsFilter.length === 1 ? tagIdsFilter[0] : { in: tagIdsFilter };
   } else if (tagFilter) {
     where.tagId = tagFilter;
   } else if (campaignFilter) {
     const campaignTags = await prisma.tag.findMany({
-      where: { campaignId: campaignFilter },
+      where: { campaignId: campaignFilter, ...viewerClientWhere },
       select: { id: true },
     });
     where.tagId = { in: campaignTags.map(t => t.id) };
   } else if (clientFilter) {
     const clientTags = await prisma.tag.findMany({
-      where: { clientId: clientFilter },
+      where: { clientId: clientFilter, ...viewerClientWhere },
       select: { id: true },
     });
     where.tagId = { in: clientTags.map(t => t.id) };
+  } else if (!access.isAdmin && access.allowedClientIds) {
+    // Viewer without specific filter — restrict to their tags
+    const viewerTags = await prisma.tag.findMany({
+      where: viewerClientWhere,
+      select: { id: true },
+    });
+    where.tagId = { in: viewerTags.map(t => t.id) };
   }
 
   if (nfcFilter) {

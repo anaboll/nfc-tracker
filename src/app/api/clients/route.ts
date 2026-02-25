@@ -2,13 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserAccess } from "@/lib/user-access";
 
 // GET all clients
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const access = await getUserAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const where = access.isAdmin ? {} : { id: { in: access.allowedClientIds || [] } };
+
   const clients = await prisma.client.findMany({
+    where,
     include: {
       // _count counts ALL tags (active + inactive) for the tagCount badge
       _count: { select: { tags: true } },
@@ -45,10 +52,12 @@ export async function GET() {
   return NextResponse.json(enriched);
 }
 
-// POST create new client
+// POST create new client (admin only)
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
   const { name, description, color } = body;
@@ -81,10 +90,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(client, { status: 201 });
 }
 
-// PUT update client
+// PUT update client (admin only)
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
   const { id, name, description, color, isActive } = body;
@@ -104,10 +115,12 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json(client);
 }
 
-// DELETE client
+// DELETE client (admin only)
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const url = new URL(request.url);
   const id = url.searchParams.get("id");

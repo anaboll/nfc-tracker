@@ -5,10 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { safeDeleteVideoFile } from "@/lib/video-utils";
+import { getUserAccess } from "@/lib/user-access";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await getUserAccess();
+  if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   try {
     const formData = await request.formData();
