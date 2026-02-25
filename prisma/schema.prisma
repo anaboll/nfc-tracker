@@ -8,13 +8,27 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String       @id @default(cuid())
+  email          String       @unique
   password       String
   name           String?
-  mustChangePass Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  role           String       @default("admin")   // "admin" | "viewer"
+  mustChangePass Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  clients        UserClient[]
+}
+
+model UserClient {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([userId])
+  @@index([clientId])
 }
 
 model Client {
@@ -28,6 +42,7 @@ model Client {
   updatedAt   DateTime   @updatedAt
   tags        Tag[]
   campaigns   Campaign[]
+  users       UserClient[]
 
   @@index([isActive])
 }

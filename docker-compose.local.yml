@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nfc_local_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nfc_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: nfc_tracker
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+      - ./backup.sql:/docker-entrypoint-initdb.d/backup.sql
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nfc_user -d nfc_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nfc_local_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD}@postgres:5432/nfc_tracker"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "http://localhost:3001"
+      NODE_ENV: production
+      UPLOAD_DIR: /app/public/uploads
+      MAX_FILE_SIZE_MB: "500"
+      IP_HASH_SECRET: "${IP_HASH_SECRET}"
+      IP_HASH_SALT: "${IP_HASH_SALT}"
+    ports:
+      - "3001:3000"
+    volumes:
+      - uploads_local_data:/app/public/uploads
+
+volumes:
+  postgres_local_data:
+  uploads_local_data:

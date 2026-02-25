@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
+import { UsersPanel } from "@/components/users/UsersPanel";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -412,6 +413,9 @@ function DashboardPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
+
+  // users panel
+  const [usersPanelOpen, setUsersPanelOpen] = useState(false);
 
   // create tag
   const [newTagId, setNewTagId] = useState("");
@@ -1215,8 +1219,8 @@ function DashboardPage() {
         name: newTagName,
         description: newTagDesc || undefined,
         tagType: newTagType,
-        ...(newTagClient ? { clientId: newTagClient } : {}),
-        ...(newTagCampaign ? { campaignId: newTagCampaign } : {}),
+        clientId: newTagClient,
+        campaignId: newTagCampaign,
       };
       if (newTagType === "url" || newTagType === "google-review") {
         body.targetUrl = newTagUrl;
@@ -1932,6 +1936,42 @@ function DashboardPage() {
               </svg>
               {refreshing ? "Odswiezanie..." : "Odswiez"}
             </button>
+
+            {session?.user?.role === "admin" && (
+              <button
+                onClick={() => setUsersPanelOpen(true)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #1e2d45",
+                  color: "#8b95a8",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "border-color 0.2s, color 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#3b82f6";
+                  e.currentTarget.style.color = "#60a5fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#1e2d45";
+                  e.currentTarget.style.color = "#8b95a8";
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Uzytkownicy
+              </button>
+            )}
 
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
@@ -5457,6 +5497,13 @@ function DashboardPage() {
         </div>
       )}
       {/* ── END GUEST MODAL ─────────────────────────────────────── */}
+
+      {/* ── USERS PANEL ────────────────────────────────────────── */}
+      <UsersPanel
+        open={usersPanelOpen}
+        onClose={() => setUsersPanelOpen(false)}
+        clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+      />
 
     </div>
   );
