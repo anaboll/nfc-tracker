@@ -29,8 +29,8 @@ export interface UseTagFormReturn {
   setTargetUrl: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
-  channel: "nfc" | "qr";
-  setChannel: (v: "nfc" | "qr") => void;
+  channel: "nfc" | "qr" | "both";
+  setChannel: (v: "nfc" | "qr" | "both") => void;
   clientId: string;
   setClientId: (v: string) => void;
   campaignId: string;
@@ -103,7 +103,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
   const [tagType, setTagType] = useState("url");
   const [targetUrl, setTargetUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [channel, setChannel] = useState<"nfc" | "qr">("nfc");
+  const [channel, setChannel] = useState<"nfc" | "qr" | "both">("both");
   const [clientId, setClientIdRaw] = useState(preselectedClientId || "");
   const [campaignId, setCampaignId] = useState(preselectedCampaignId || "");
   const [links, setLinks] = useState<TagLink[]>([{ ...emptyLink }]);

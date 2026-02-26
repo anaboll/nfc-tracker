@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 interface Props {
   tagId: string;
   tagType: string;
-  channel: "nfc" | "qr";
+  channel: "nfc" | "qr" | "both";
 }
 
 export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props) {

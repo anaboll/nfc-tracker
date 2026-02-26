@@ -430,7 +430,7 @@ function DashboardPage() {
   const [timeFrom, setTimeFrom] = useState("");
   const [timeTo, setTimeTo] = useState("");
   const [tagFilter, setTagFilter] = useState("");
-  const [rangePreset, setRangePreset] = useState<"24h" | "7d" | "30d" | "month" | "custom">("custom");
+  const [rangePreset, setRangePreset] = useState<"today" | "week" | "24h" | "7d" | "30d" | "month" | "custom">("custom");
   const [weekOffset, setWeekOffset] = useState(0);
   // custom range popover
   const [showCustomPopover, setShowCustomPopover] = useState(false);
@@ -816,7 +816,7 @@ function DashboardPage() {
     const urlTo = searchParams.get("to");
     const urlTag = searchParams.get("tag");
     const urlTags = searchParams.get("tags");
-    const urlRange = searchParams.get("range") as "24h" | "7d" | "30d" | "month" | "custom" | null;
+    const urlRange = searchParams.get("range") as "today" | "week" | "24h" | "7d" | "30d" | "month" | "custom" | null;
     const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlTags || urlRange;
     if (hasUrlParams) {
       if (urlClient) setSelectedClientId(urlClient);
@@ -1110,7 +1110,7 @@ function DashboardPage() {
   };
 
   /* ---- range preset helper ---- */
-  const applyPreset = useCallback((preset: "24h" | "7d" | "30d" | "month" | "custom") => {
+  const applyPreset = useCallback((preset: "today" | "week" | "24h" | "7d" | "30d" | "month" | "custom") => {
     setRangePreset(preset);
     if (preset === "custom") return; // keep existing Od/Do inputs as-is
     const now = new Date();
@@ -1118,7 +1118,14 @@ function DashboardPage() {
     const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     let from: Date;
-    if (preset === "24h") {
+    if (preset === "today") {
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    } else if (preset === "week") {
+      // ISO week: Monday 00:01 → now
+      const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const diff = day === 0 ? 6 : day - 1; // days since last Monday
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff, 0, 1, 0);
+    } else if (preset === "24h") {
       from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     } else if (preset === "7d") {
       from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1128,7 +1135,7 @@ function DashboardPage() {
       from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     }
     setDateFrom(toDateStr(from));
-    setTimeFrom(preset === "month" ? "00:00" : toTimeStr(from));
+    setTimeFrom(preset === "month" ? "00:00" : preset === "today" ? "00:00" : preset === "week" ? "00:01" : toTimeStr(from));
     setDateTo(toDateStr(now));
     setTimeTo(toTimeStr(now));
   }, []);
@@ -2475,8 +2482,8 @@ function DashboardPage() {
           {/* Time range preset pills — popover floats, bar height never changes */}
           <div style={{ position: "relative" }}>
             <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-              {(["24h", "7d", "30d", "month", "custom"] as const).map((p) => {
-                const labels: Record<string, string> = { "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
+              {(["today", "week", "24h", "7d", "30d", "month", "custom"] as const).map((p) => {
+                const labels: Record<string, string> = { "today": "Dziś", "week": "Ten tydz.", "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
                 const active = rangePreset === p;
                 return (
                   <button key={p}

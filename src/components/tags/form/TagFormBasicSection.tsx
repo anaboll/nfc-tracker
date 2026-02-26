@@ -12,8 +12,8 @@ interface Props {
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
-  channel: "nfc" | "qr";
-  setChannel: (v: "nfc" | "qr") => void;
+  channel: "nfc" | "qr" | "both";
+  setChannel: (v: "nfc" | "qr" | "both") => void;
   clientId: string;
   setClientId: (v: string) => void;
   campaignId: string;
@@ -128,22 +128,27 @@ export default function TagFormBasicSection({
         </div>
 
         {/* Channel */}
-        <div style={styles.field}>
-          <label style={styles.label}>Kanal (atrybucja)</label>
+        <div style={{ ...styles.field, gridColumn: "1 / -1" }}>
+          <label style={styles.label}>Jak bedzie uzywany ten tag?</label>
           <div style={styles.channelWrap}>
-            {(["nfc", "qr"] as const).map((ch) => (
+            {([
+              { value: "both" as const, label: "NFC + QR", color: "#10b981", desc: "Chip NFC i kod QR" },
+              { value: "nfc" as const, label: "Tylko NFC", color: "#60a5fa", desc: "Brelok / naklejka NFC" },
+              { value: "qr" as const, label: "Tylko QR", color: "#f5b731", desc: "Kod QR do druku" },
+            ]).map((ch) => (
               <button
-                key={ch}
-                onClick={() => !readOnly && setChannel(ch)}
+                key={ch.value}
+                onClick={() => !readOnly && setChannel(ch.value)}
                 disabled={readOnly}
                 style={{
                   ...styles.channelBtn,
-                  background: channel === ch ? (ch === "nfc" ? "rgba(96,165,250,0.15)" : "rgba(245,183,49,0.15)") : "transparent",
-                  borderColor: channel === ch ? (ch === "nfc" ? "#60a5fa" : "#f5b731") : "#1e2d45",
-                  color: channel === ch ? (ch === "nfc" ? "#60a5fa" : "#f5b731") : "#5a6478",
+                  background: channel === ch.value ? `${ch.color}18` : "transparent",
+                  borderColor: channel === ch.value ? ch.color : "#1e2d45",
+                  color: channel === ch.value ? ch.color : "#5a6478",
                 }}
               >
-                {ch.toUpperCase()}
+                <span style={{ fontWeight: 700 }}>{ch.label}</span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>{ch.desc}</span>
               </button>
             ))}
           </div>
