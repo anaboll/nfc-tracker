@@ -2,14 +2,14 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TwojeNFC — Platforma NFC & QR dla biznesu",
+  title: "TwojeNFC — Breloki NFC z analityką dla biznesu",
   description:
-    "Zarządzaj tagami NFC i kodami QR, śledź skany w czasie rzeczywistym, analizuj dane odwiedzających. Profesjonalne rozwiązanie white-label dla Twojej marki.",
+    "Breloki i karty NFC z wizytówką, linkami, analityką skanów. Idealne na targi, eventy i networking. Jedno zamówienie — platforma w cenie.",
   robots: { index: true, follow: true },
 };
 
 /* ------------------------------------------------------------------ */
-/*  Inline SVG icons (no external deps)                                */
+/*  Inline SVG icons                                                   */
 /* ------------------------------------------------------------------ */
 
 const IconNfc = () => (
@@ -48,28 +48,21 @@ const IconUsers = () => (
   </svg>
 );
 
-const IconVideo = () => (
-  <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-  </svg>
-);
-
 const IconCard = () => (
   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
   </svg>
 );
 
-const IconStar = () => (
+const IconKey = () => (
   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
   </svg>
 );
 
-const IconQr = () => (
+const IconPackage = () => (
   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
   </svg>
 );
 
@@ -88,10 +81,10 @@ export default function HomePage() {
             <span className="gradient-text nav-logo-text">TwojeNFC</span>
           </div>
           <div className="nav-links">
-            <a href="#features">Funkcje</a>
-            <a href="#how-it-works">Jak to dziala</a>
-            <a href="#tag-types">Typy tagow</a>
-            <a href="#contact">Kontakt</a>
+            <a href="#dlaczego">Dlaczego NFC</a>
+            <a href="#jak-to-dziala">Jak to działa</a>
+            <a href="#mozliwosci">Możliwości</a>
+            <a href="#kontakt">Kontakt</a>
             <Link href="/login" className="nav-cta">Panel klienta</Link>
           </div>
         </div>
@@ -104,19 +97,20 @@ export default function HomePage() {
         <div className="landing-container hero-inner">
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            Platforma NFC & QR dla biznesu
+            Breloki i karty NFC dla firm
           </div>
           <h1 className="hero-title">
-            Zamien <span className="gradient-text">fizyczny kontakt</span><br />
-            w <span className="gradient-text">cyfrowe dane</span>
+            Rozdaj <span className="gradient-text">500 breloków</span><br />
+            na targach — i&nbsp;sprawdź,<br />
+            kto <span className="gradient-text">naprawdę skanuje</span>
           </h1>
           <p className="hero-subtitle">
-            Tworzenie tagow NFC i kodow QR, sledzenie skanow w czasie rzeczywistym,
-            analityka odwiedzajacych — wszystko pod Twoja domena i marka.
+            Breloki NFC z Twoją wizytówką, linkami do firmy i&nbsp;social mediów.
+            Platforma analityczna w&nbsp;cenie — zero abonamentów, zero ukrytych kosztów.
           </p>
           <div className="hero-actions">
-            <a href="#contact" className="btn-primary hero-btn">
-              Umow prezentacje
+            <a href="#kontakt" className="btn-primary hero-btn">
+              Zamów breloki
             </a>
             <Link href="/login" className="hero-btn-secondary">
               Panel klienta &rarr;
@@ -124,112 +118,114 @@ export default function HomePage() {
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
-              <span className="hero-stat-value">5</span>
-              <span className="hero-stat-label">typow tagow</span>
+              <span className="hero-stat-value">od 8 zł</span>
+              <span className="hero-stat-label">za sztukę</span>
+            </div>
+            <div className="hero-stat-divider" />
+            <div className="hero-stat">
+              <span className="hero-stat-value">0 zł</span>
+              <span className="hero-stat-label">za platformę</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
               <span className="hero-stat-value">Real-time</span>
-              <span className="hero-stat-label">analityka skanow</span>
-            </div>
-            <div className="hero-stat-divider" />
-            <div className="hero-stat">
-              <span className="hero-stat-value">White-label</span>
-              <span className="hero-stat-label">Twoja domena</span>
+              <span className="hero-stat-label">analityka skanów</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --------- FEATURES --------- */}
-      <section id="features" className="features-section">
+      {/* --------- DLACZEGO NFC --------- */}
+      <section id="dlaczego" className="features-section">
         <div className="landing-container">
           <div className="section-header">
-            <span className="section-tag">Funkcje</span>
-            <h2 className="section-title">Wszystko czego potrzebujesz</h2>
+            <span className="section-tag">Dlaczego NFC</span>
+            <h2 className="section-title">Wizytówka, która pracuje za Ciebie</h2>
             <p className="section-subtitle">
-              Kompletne narzedzie do zarzadzania tagami NFC i kodami QR z pelna analityka.
+              Papierowa wizytówka ląduje w koszu. Brelok NFC zostaje na kluczach
+              — i&nbsp;każde przyłożenie telefonu to kontakt z&nbsp;Twoją firmą.
             </p>
           </div>
           <div className="features-grid">
             <FeatureCard
+              icon={<IconKey />}
+              title="Zostaje na kluczach"
+              desc="Brelok NFC to gadżet, który ludzie faktycznie używają. Nie wyrzucą go jak ulotkę — noszą ze sobą codziennie."
+            />
+            <FeatureCard
+              icon={<IconCard />}
+              title="Wizytówka w telefonie"
+              desc="Jedno przyłożenie — i Twoje dane kontaktowe, strona WWW i social media lądują w telefonie klienta."
+            />
+            <FeatureCard
               icon={<IconChart />}
-              title="Zaawansowana analityka"
-              desc="Liczba skanow, unikalni uzytkownicy, geolokalizacja, urzadzenia, jezyki, trendy tygodniowe i godzinowe — wszystko w jednym panelu."
+              title="Wiesz, kto skanuje"
+              desc="Analityka w czasie rzeczywistym: ile osób zeskanowało, skąd są, z jakiego urządzenia — bez zgadywania."
             />
             <FeatureCard
               icon={<IconGlobe />}
               title="Geolokalizacja"
-              desc="Automatyczne rozpoznawanie kraju, miasta i regionu kazdego skanowania. Mapy i statystyki lokalizacji odwiedzajacych."
+              desc="Sprawdź, z jakich miast i krajów przychodzą skany. Idealnie widać, czy targi w Poznaniu dały lepszy efekt niż te w Krakowie."
             />
             <FeatureCard
               icon={<IconLink />}
-              title="Multi-link & vCard"
-              desc="Tagi przekierowujace do wielu linkow, wizytowki kontaktowe, filmy wideo, recenzje Google — jeden tag, wiele mozliwosci."
-            />
-            <FeatureCard
-              icon={<IconUsers />}
-              title="Multi-klient"
-              desc="Zarzadzaj wieloma klientami i kampaniami z jednego panelu. Role uzytkownikow z kontrola dostepu do danych."
+              title="Linki, social media, wszystko"
+              desc="Jeden brelok — a na nim link do strony, Instagram, Facebook, LinkedIn, TikTok. Klient sam wybiera, co go interesuje."
             />
             <FeatureCard
               icon={<IconShield />}
-              title="White-label"
-              desc="Wszystko pod Twoja domena. Brak obcych logoypow czy linkow — klient widzi Twoja marke na kazdym kroku."
-            />
-            <FeatureCard
-              icon={<IconNfc />}
-              title="NFC + QR"
-              desc="Obsluga zarowno tagow NFC jak i kodow QR z jednego systemu. Rozroznianie zrodla skanowania w statystykach."
+              title="Twoja marka, Twoja domena"
+              desc="Żadnych obcych logotypów. Klient widzi Twoją domenę i&nbsp;Twój branding — nie wie, że to nasza platforma."
             />
           </div>
         </div>
       </section>
 
-      {/* --------- HOW IT WORKS --------- */}
-      <section id="how-it-works" className="hiw-section">
+      {/* --------- JAK TO DZIAŁA --------- */}
+      <section id="jak-to-dziala" className="hiw-section">
         <div className="landing-container">
           <div className="section-header">
-            <span className="section-tag">Jak to dziala</span>
-            <h2 className="section-title">3 proste kroki</h2>
+            <span className="section-tag">Jak to działa</span>
+            <h2 className="section-title">Zamów, rozdaj, analizuj</h2>
           </div>
           <div className="hiw-grid">
             <StepCard
               step="01"
-              title="Stworz tag"
-              desc="Wybierz typ tagu — URL, video, multilink, wizytowka lub recenzja Google. Przypisz go do klienta i kampanii."
+              title="Zamów breloki"
+              desc="Powiedz nam, ile sztuk potrzebujesz i co ma się wyświetlić po zeskanowaniu — wizytówkę, stronę WWW, czy listę linków."
             />
             <StepCard
               step="02"
-              title="Udostepnij"
-              desc="Zaprogramuj chip NFC lub wydrukuj kod QR z wygenerowanym linkiem. Dostarczyaj klientowi gotowy produkt."
+              title="Rozdaj na evencie"
+              desc="Targi, konferencja, spotkanie networkingowe — wręcz brelok każdemu, z kim rozmawiasz. Zostanie na kluczach."
             />
             <StepCard
               step="03"
-              title="Analizuj"
-              desc="Sledz skany w czasie rzeczywistym. Sprawdzaj kto, skad, kiedy i jakim urzadzeniem skanowal Twoj tag."
+              title="Sprawdź wyniki"
+              desc="W panelu widzisz kto skanuje, skąd, kiedy i na jakim urządzeniu. Wiesz dokładnie, ile osób zainteresowało się Twoją firmą."
             />
           </div>
         </div>
       </section>
 
-      {/* --------- TAG TYPES --------- */}
-      <section id="tag-types" className="types-section">
+      {/* --------- MOŻLIWOŚCI --------- */}
+      <section id="mozliwosci" className="types-section">
         <div className="landing-container">
           <div className="section-header">
-            <span className="section-tag">Typy tagow</span>
-            <h2 className="section-title">Jeden system, 5 rodzajow tagow</h2>
+            <span className="section-tag">Możliwości</span>
+            <h2 className="section-title">Co może Twój brelok NFC</h2>
             <p className="section-subtitle">
-              Kazdy tag mozna przypisac do klienta i kampanii, sledzic statystyki i edytowac w dowolnym momencie.
+              Zaprogramujemy brelok dokładnie pod Twoje potrzeby.
+              Możesz zmienić zawartość w&nbsp;dowolnym momencie — bez wymiany fizycznego breloka.
             </p>
           </div>
           <div className="types-grid">
-            <TypeCard icon={<IconGlobe />} title="URL" desc="Przekierowanie na dowolna strone WWW z pelnym sledzeniem UTM i parametrow." />
-            <TypeCard icon={<IconVideo />} title="Wideo" desc="Strona z osadzonym filmem i sledzeniem postepow ogladania (25/50/75/100%)." />
-            <TypeCard icon={<IconLink />} title="Multilink" desc="Lista linkow z ikonami — jak Linktree, ale na Twojej domenie z analityka klikniec." />
-            <TypeCard icon={<IconCard />} title="Wizytowka (vCard)" desc="Cyfrowa wizytowka kontaktowa z mozliwoscia pobrania pliku .vcf na telefon." />
-            <TypeCard icon={<IconStar />} title="Google Review" desc="Bezposrednie przekierowanie do formularza opinii Google — idealne dla restauracji i uslug." />
-            <TypeCard icon={<IconQr />} title="QR Code" desc="Kazdy tag automatycznie generuje kod QR do wydruku obok programowania chipu NFC." />
+            <TypeCard icon={<IconCard />} title="Wizytówka" desc="Imię, nazwisko, telefon, email, adres, stanowisko — wszystko trafia do kontaktów w telefonie jednym dotknięciem." />
+            <TypeCard icon={<IconGlobe />} title="Strona WWW" desc="Przekierowanie na dowolną stronę internetową — Twój sklep, portfolio, landing page z ofertą." />
+            <TypeCard icon={<IconLink />} title="Lista linków" desc="Instagram, Facebook, LinkedIn, TikTok, YouTube — wszystkie Twoje kanały w jednym miejscu." />
+            <TypeCard icon={<IconUsers />} title="Wiele kampanii" desc="Osobne breloki na różne eventy? Każda partia to osobna kampania ze swoimi statystykami." />
+            <TypeCard icon={<IconPackage />} title="Analityka w cenie" desc="Nie płacisz za platformę osobno. Zamów breloki — dostęp do panelu analitycznego masz w cenie." />
+            <TypeCard icon={<IconChart />} title="Live statystyki" desc="Panel z danymi w czasie rzeczywistym: skany, geolokalizacja, urządzenia, trendy godzinowe i tygodniowe." />
           </div>
         </div>
       </section>
@@ -239,65 +235,66 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Analityka</span>
-            <h2 className="section-title">Dane, ktore maja znaczenie</h2>
+            <h2 className="section-title">Wiesz dokładnie, kto skanuje</h2>
           </div>
           <div className="analytics-grid">
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(0,200,160,0.15)", color: "#2ee8c0" }}>📊</div>
+                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>📊</div>
                 <span>Skany i unikalni</span>
               </div>
-              <div className="analytics-card-value">1,247</div>
-              <div className="analytics-card-sub">skanow w tym miesiacu &middot; 489 unikalnych</div>
+              <div className="analytics-card-value">1 247</div>
+              <div className="analytics-card-sub">skanów po targach &middot; 489 unikalnych osób</div>
               <div className="analytics-mini-bar">
                 <div className="analytics-mini-fill" style={{ width: "72%" }} />
               </div>
             </div>
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(59,130,246,0.15)", color: "#6366f1" }}>🌍</div>
+                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>🌍</div>
                 <span>Geolokalizacja</span>
               </div>
-              <div className="analytics-card-value">12 krajow</div>
-              <div className="analytics-card-sub">PL 67% &middot; DE 12% &middot; UK 8% &middot; inne 13%</div>
+              <div className="analytics-card-value">12 miast</div>
+              <div className="analytics-card-sub">Poznań 42% &middot; Warszawa 28% &middot; Kraków 15%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "67%", background: "#6366f1" }} />
+                <div className="analytics-mini-fill" style={{ width: "67%" }} />
               </div>
             </div>
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.15)", color: "#34d399" }}>📱</div>
-                <span>Urzadzenia</span>
+                <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>📱</div>
+                <span>Urządzenia</span>
               </div>
-              <div className="analytics-card-value">87% mobile</div>
-              <div className="analytics-card-sub">iOS 52% &middot; Android 35% &middot; Desktop 13%</div>
+              <div className="analytics-card-value">92% mobile</div>
+              <div className="analytics-card-sub">iPhone 54% &middot; Android 38% &middot; inny 8%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "87%", background: "#34d399" }} />
+                <div className="analytics-mini-fill" style={{ width: "92%", background: "#22c55e" }} />
               </div>
             </div>
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>⏰</div>
-                <span>Trendy godzinowe</span>
+                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>⏰</div>
+                <span>Kiedy skanują</span>
               </div>
-              <div className="analytics-card-value">Peak: 12:00</div>
-              <div className="analytics-card-sub">Heatmapa aktywnosci 24h z podzialem na dni tygodnia</div>
+              <div className="analytics-card-value">Szczyt: 14:00</div>
+              <div className="analytics-card-sub">Najwięcej skanów w godzinach targowych 10–16</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "54%", background: "#a855f7" }} />
+                <div className="analytics-mini-fill" style={{ width: "68%" }} />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --------- CTA / CONTACT --------- */}
-      <section id="contact" className="cta-section">
+      {/* --------- CTA / KONTAKT --------- */}
+      <section id="kontakt" className="cta-section">
         <div className="landing-container cta-inner">
           <h2 className="cta-title">
-            Gotowy zaczac <span className="gradient-text">sledzic</span> swoje tagi?
+            Następne targi za rogiem?
           </h2>
           <p className="cta-subtitle">
-            Skontaktuj sie, aby umowic prezentacje platformy lub od razu przejdz do panelu.
+            Zamów breloki NFC z&nbsp;wizytówką i&nbsp;analityką w&nbsp;cenie.
+            Napisz do nas — powiemy Ci ile to kosztuje i&nbsp;kiedy będą gotowe.
           </p>
           <div className="cta-actions">
             <a
@@ -307,7 +304,7 @@ export default function HomePage() {
               kontakt@twojenfc.pl
             </a>
             <Link href="/login" className="hero-btn-secondary">
-              Zaloguj sie &rarr;
+              Panel klienta &rarr;
             </Link>
           </div>
         </div>
@@ -321,10 +318,10 @@ export default function HomePage() {
               <div className="nav-logo-icon small"><IconNfc /></div>
               <span className="gradient-text">TwojeNFC</span>
             </div>
-            <p className="footer-tagline">Platforma NFC & QR dla biznesu</p>
+            <p className="footer-tagline">Breloki NFC z analityką dla biznesu</p>
           </div>
           <div className="footer-copy">
-            &copy; {new Date().getFullYear()} TwojeNFC. Wszelkie prawa zastrzezone.
+            &copy; {new Date().getFullYear()} TwojeNFC. Wszelkie prawa zastrzeżone.
           </div>
         </div>
       </footer>
