@@ -9,6 +9,7 @@ import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
 import { UsersPanel } from "@/components/users/UsersPanel";
+import { useToast } from "@/components/ui/Toast";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -341,16 +342,52 @@ function FilterChipsBar({ chips, onReset, showOverflow, setShowOverflow, overflo
 }
 
 /* ------------------------------------------------------------------ */
+/*  Skeleton loader                                                    */
+/* ------------------------------------------------------------------ */
+
+function DashboardSkeleton() {
+  return (
+    <div style={{ minHeight: "100vh", background: "#06080d" }}>
+      {/* fake header */}
+      <div style={{ height: 56, background: "#0c1220", borderBottom: "1px solid #1e2d45", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
+        <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 10 }} />
+        <div className="skeleton skeleton-text" style={{ width: 100, height: 20, marginBottom: 0 }} />
+      </div>
+      {/* fake content */}
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 24px 64px", display: "flex", gap: 20 }}>
+        {/* sidebar skeleton */}
+        <div style={{ width: 260, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="skeleton skeleton-card" style={{ height: 160 }} />
+          <div className="skeleton skeleton-card" style={{ height: 120 }} />
+          <div className="skeleton skeleton-card" style={{ height: 80 }} />
+        </div>
+        {/* main skeleton */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* KPI row */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} className="skeleton skeleton-card" style={{ height: 100 }} />
+            ))}
+          </div>
+          {/* chart area */}
+          <div className="skeleton skeleton-card" style={{ height: 240 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="skeleton skeleton-card" style={{ height: 180 }} />
+            <div className="skeleton skeleton-card" style={{ height: 180 }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export default function DashboardWrapper() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#06080d" }}>
-        <p style={{ color: "#8b95a8" }}>Ladowanie panelu...</p>
-      </div>
-    }>
+    <Suspense fallback={<DashboardSkeleton />}>
       <DashboardPage />
     </Suspense>
   );
@@ -360,6 +397,7 @@ function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const isAdmin = session?.user?.role === "admin";
 
   /* ---- state ---- */
@@ -1022,10 +1060,10 @@ function DashboardPage() {
         await fetchCampaigns();
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(`Blad tworzenia kampanii: ${errData.error || res.status}`);
+        toast.error(`Blad tworzenia kampanii: ${errData.error || res.status}`);
         console.error("Campaign create error:", res.status, errData);
       }
-    } catch (e) { console.error("Campaign create fetch error:", e); alert("Blad polaczenia"); }
+    } catch (e) { console.error("Campaign create fetch error:", e); toast.error("Blad polaczenia"); }
     finally { setCampaignCreating(false); }
   };
 
@@ -2546,21 +2584,22 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* ---- Loading overlay ---- */}
+        {/* ---- Loading skeleton ---- */}
         {loading && (
-          <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                border: "3px solid #2a2a4a",
-                borderTopColor: "#e69500",
-                animation: "spin 0.8s linear infinite",
-                margin: "0 auto 12px",
-              }}
-            />
-            <p style={{ color: "#8b95a8", fontSize: 14 }}>Ladowanie danych...</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* KPI skeleton */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+              {[1,2,3,4].map(i => (
+                <div key={i} className="skeleton" style={{ height: 100, borderRadius: 14 }} />
+              ))}
+            </div>
+            {/* Content skeleton */}
+            <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="skeleton" style={{ height: 160, borderRadius: 14 }} />
+              <div className="skeleton" style={{ height: 160, borderRadius: 14 }} />
+            </div>
+            <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
           </div>
         )}
 
