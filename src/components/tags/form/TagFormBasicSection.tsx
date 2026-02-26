@@ -43,7 +43,7 @@ export default function TagFormBasicSection({
           {mode === "create" ? (
             <>
               <input
-                style={{ ...styles.input, borderColor: errors.tagId ? "#f87171" : "#1e2d45" }}
+                style={{ ...styles.input, borderColor: errors.tagId ? "#f87171" : "#2a2e38" }}
                 value={tagId}
                 onChange={(e) => {
                   setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-"));
@@ -54,7 +54,7 @@ export default function TagFormBasicSection({
               />
               {tagId && (
                 <div style={styles.hint}>
-                  Link: <span style={{ color: "#f5b731" }}>/s/{tagId}</span>
+                  Link: <span style={{ color: "#2ee8c0" }}>/s/{tagId}</span>
                 </div>
               )}
               {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
@@ -70,7 +70,7 @@ export default function TagFormBasicSection({
             Nazwa <span style={{ color: "#f87171" }}>*</span>
           </label>
           <input
-            style={{ ...styles.input, borderColor: errors.name ? "#f87171" : "#1e2d45" }}
+            style={{ ...styles.input, borderColor: errors.name ? "#f87171" : "#2a2e38" }}
             value={name}
             onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
             placeholder="Nazwa akcji"
@@ -85,7 +85,7 @@ export default function TagFormBasicSection({
             Klient <span style={{ color: "#f87171" }}>*</span>
           </label>
           <select
-            style={{ ...styles.input, borderColor: errors.clientId ? "#f87171" : "#1e2d45" }}
+            style={{ ...styles.input, borderColor: errors.clientId ? "#f87171" : "#2a2e38" }}
             value={clientId}
             onChange={(e) => { setClientId(e.target.value); clearFieldError("clientId"); }}
             disabled={readOnly}
@@ -106,7 +106,7 @@ export default function TagFormBasicSection({
           <select
             style={{
               ...styles.input,
-              borderColor: errors.campaignId ? "#f87171" : "#1e2d45",
+              borderColor: errors.campaignId ? "#f87171" : "#2a2e38",
               opacity: !clientId ? 0.4 : 1,
             }}
             value={campaignId}
@@ -134,7 +134,7 @@ export default function TagFormBasicSection({
             {([
               { value: "both" as const, label: "NFC + QR", color: "#10b981", desc: "Chip NFC i kod QR" },
               { value: "nfc" as const, label: "Tylko NFC", color: "#60a5fa", desc: "Brelok / naklejka NFC" },
-              { value: "qr" as const, label: "Tylko QR", color: "#f5b731", desc: "Kod QR do druku" },
+              { value: "qr" as const, label: "Tylko QR", color: "#2ee8c0", desc: "Kod QR do druku" },
             ]).map((ch) => (
               <button
                 key={ch.value}
@@ -143,8 +143,8 @@ export default function TagFormBasicSection({
                 style={{
                   ...styles.channelBtn,
                   background: channel === ch.value ? `${ch.color}18` : "transparent",
-                  borderColor: channel === ch.value ? ch.color : "#1e2d45",
-                  color: channel === ch.value ? ch.color : "#5a6478",
+                  borderColor: channel === ch.value ? ch.color : "#2a2e38",
+                  color: channel === ch.value ? ch.color : "#555c6e",
                 }}
               >
                 <span style={{ fontWeight: 700 }}>{ch.label}</span>
@@ -176,15 +176,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 12,
-    background: "#0c1220",
-    border: "1px solid #1e2d45",
+    background: "#12151c",
+    border: "1px solid #2a2e38",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#8b95a8",
+    color: "#8a92a4",
     marginBottom: 16,
   },
   grid: {
@@ -200,15 +200,15 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#e8ecf1",
+    color: "#eaf0f6",
   },
   input: {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #1e2d45",
-    background: "#131b2e",
-    color: "#e8ecf1",
+    border: "1px solid #2a2e38",
+    background: "#1a1d26",
+    color: "#eaf0f6",
     fontSize: 14,
     outline: "none",
     transition: "border-color 0.2s",
@@ -217,16 +217,16 @@ const styles: Record<string, React.CSSProperties> = {
   lockedValue: {
     padding: "10px 12px",
     borderRadius: 8,
-    background: "#131b2e",
-    border: "1px solid #1e2d45",
-    color: "#f5b731",
+    background: "#1a1d26",
+    border: "1px solid #2a2e38",
+    color: "#2ee8c0",
     fontSize: 14,
     fontFamily: "monospace",
     opacity: 0.8,
   },
   hint: {
     fontSize: 11,
-    color: "#5a6478",
+    color: "#555c6e",
   },
   error: {
     fontSize: 12,
@@ -241,7 +241,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: "8px 0",
     borderRadius: 8,
-    border: "1.5px solid #1e2d45",
+    border: "1.5px solid #2a2e38",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",

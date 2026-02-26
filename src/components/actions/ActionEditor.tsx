@@ -176,8 +176,8 @@ export function ActionEditor({
   return (
     <div>
       {/* Link publiczny — always visible (read-only friendly) */}
-      <div style={{ marginBottom: 20, padding: "12px 14px", background: "rgba(245,183,49,0.05)", borderRadius: 10, border: "1px solid rgba(245,183,49,0.3)" }}>
-        <label style={{ display: "block", fontSize: 11, color: "#e8ecf1", marginBottom: 8, fontWeight: 700, letterSpacing: 0.3 }}>
+      <div style={{ marginBottom: 20, padding: "12px 14px", background: "rgba(0,200,160,0.05)", borderRadius: 10, border: "1px solid rgba(0,200,160,0.3)" }}>
+        <label style={{ display: "block", fontSize: 11, color: "#eaf0f6", marginBottom: 8, fontWeight: 700, letterSpacing: 0.3 }}>
           Link publiczny
         </label>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -185,7 +185,7 @@ export function ActionEditor({
             readOnly
             className="input-field"
             value={`${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`}
-            style={{ fontSize: 12, padding: "6px 10px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all", flex: 1 }}
+            style={{ fontSize: 12, padding: "6px 10px", color: "#2ee8c0", fontFamily: "monospace", cursor: "text", userSelect: "all", flex: 1 }}
             onFocus={e => e.target.select()}
           />
           <button
@@ -193,9 +193,9 @@ export function ActionEditor({
             onClick={handleCopyLink}
             title="Kopiuj link publiczny"
             style={{
-              background: linkCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
-              border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#2a4060"}`,
-              color: linkCopied ? "#22c55e" : "#e8ecf1",
+              background: linkCopied ? "rgba(34,197,94,0.12)" : "#232730",
+              border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#3d4250"}`,
+              color: linkCopied ? "#34d399" : "#eaf0f6",
               borderRadius: 7,
               padding: "6px 12px",
               cursor: "pointer",
@@ -232,9 +232,9 @@ export function ActionEditor({
             rel="noopener noreferrer"
             title="Otwórz w nowej karcie"
             style={{
-              background: "#1a253a",
-              border: "1px solid #2a4060",
-              color: "#8b95a8",
+              background: "#232730",
+              border: "1px solid #3d4250",
+              color: "#8a92a4",
               borderRadius: 7,
               padding: "6px 10px",
               display: "flex",
@@ -247,8 +247,8 @@ export function ActionEditor({
               whiteSpace: "nowrap",
               transition: "color 0.15s, border-color 0.15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#3a5070"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#2a4060"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#eaf0f6"; e.currentTarget.style.borderColor = "#3a5070"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#8a92a4"; e.currentTarget.style.borderColor = "#3d4250"; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -270,7 +270,7 @@ export function ActionEditor({
         }}
       >
         <div>
-          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+          <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Nazwa
           </label>
           <input
@@ -282,9 +282,9 @@ export function ActionEditor({
           />
         </div>
         <div>
-          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+          <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Typ
-            <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(zablokowany)</span>
+            <span style={{ marginLeft: 4, fontSize: 10, color: "#3d4250", fontWeight: 400 }}>(zablokowany)</span>
           </label>
           <select
             className="input-field"
@@ -301,7 +301,7 @@ export function ActionEditor({
         </div>
         {(editType === "url" || editType === "google-review") && (
           <div>
-            <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+            <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
               {editType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
             </label>
             <input
@@ -315,7 +315,7 @@ export function ActionEditor({
           </div>
         )}
         <div>
-          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+          <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Opis
           </label>
           <input
@@ -327,16 +327,16 @@ export function ActionEditor({
           />
         </div>
         <div>
-          <label style={{ display: "block", fontSize: 11, color: "#8b95a8", marginBottom: 3 }}>
+          <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Kanał
-            <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(atrybucja)</span>
+            <span style={{ marginLeft: 4, fontSize: 10, color: "#3d4250", fontWeight: 400 }}>(atrybucja)</span>
           </label>
-          <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content", ...disabledStyle }}>
+          <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #2a2e38", width: "fit-content", ...disabledStyle }}>
             <button type="button" onClick={() => !readOnly && setEditChannel("nfc")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: readOnly ? "default" : "pointer", background: editChannel === "nfc" ? "#f5b731" : "#1a253a", color: editChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: readOnly ? "default" : "pointer", background: editChannel === "nfc" ? "#2ee8c0" : "#232730", color: editChannel === "nfc" ? "#0b0d12" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
             >NFC</button>
             <button type="button" onClick={() => !readOnly && setEditChannel("qr")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: readOnly ? "default" : "pointer", background: editChannel === "qr" ? "#10b981" : "#1a253a", color: editChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #2a2e38", cursor: readOnly ? "default" : "pointer", background: editChannel === "qr" ? "#10b981" : "#232730", color: editChannel === "qr" ? "#0b0d12" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
             >QR</button>
           </div>
         </div>
@@ -349,15 +349,15 @@ export function ActionEditor({
           padding: 14,
           background: "#0f1524",
           borderRadius: 10,
-          border: "1px solid #1e2d45",
+          border: "1px solid #2a2e38",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1" }}>Linki</h4>
+            <h4 style={{ fontSize: 12, fontWeight: 600, color: "#eaf0f6" }}>Linki</h4>
             {!readOnly && (
               <button
                 type="button"
                 onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
-                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                style={{ background: "#232730", border: "1px solid #2a2e38", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
               >
                 + Dodaj link
               </button>
@@ -396,7 +396,7 @@ export function ActionEditor({
                 <button
                   type="button"
                   onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
-                  style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
+                  style={{ background: "transparent", border: "1px solid #2a2e38", color: "#555c6e", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
                 >
                   X
                 </button>
@@ -407,7 +407,7 @@ export function ActionEditor({
       )}
 
       {editType === "video" && (
-        <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 12 }}>
+        <p style={{ fontSize: 11, color: "#555c6e", marginBottom: 12 }}>
           URL zostanie ustawiony automatycznie na /watch/{tagId}. Wgraj video po zapisaniu.
         </p>
       )}
@@ -419,9 +419,9 @@ export function ActionEditor({
           padding: 14,
           background: "#0f1524",
           borderRadius: 10,
-          border: "1px solid #1e2d45",
+          border: "1px solid #2a2e38",
         }}>
-          <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1", marginBottom: 10 }}>Dane wizytowki</h4>
+          <h4 style={{ fontSize: 12, fontWeight: 600, color: "#eaf0f6", marginBottom: 10 }}>Dane wizytowki</h4>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
             {[
               { key: "firstName", label: "Imie" },
@@ -442,7 +442,7 @@ export function ActionEditor({
               { key: "note", label: "Notatka" },
             ].map(field => (
               <div key={field.key}>
-                <label style={{ display: "block", fontSize: 10, color: "#8b95a8", marginBottom: 2 }}>{field.label}</label>
+                <label style={{ display: "block", fontSize: 10, color: "#8a92a4", marginBottom: 2 }}>{field.label}</label>
                 <input
                   className="input-field"
                   value={(editVCard as unknown as Record<string, string>)[field.key] || ""}
@@ -463,16 +463,16 @@ export function ActionEditor({
           padding: 14,
           background: "#0f1524",
           borderRadius: 10,
-          border: "1px solid #1e2d45",
+          border: "1px solid #2a2e38",
         }}>
-          <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f5b731" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <h4 style={{ fontSize: 12, fontWeight: 600, color: "#eaf0f6", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2ee8c0" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
             </svg>
             Link edycji wizytowki
           </h4>
-          <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 10, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11, color: "#555c6e", marginBottom: 10, lineHeight: 1.5 }}>
             Wygeneruj link, ktory pozwoli wlascicielowi wizytowki samodzielnie edytowac swoje dane.
           </p>
           {editTokenUrl ? (
@@ -481,7 +481,7 @@ export function ActionEditor({
                 readOnly
                 className="input-field"
                 value={editTokenUrl}
-                style={{ fontSize: 11, padding: "6px 10px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
+                style={{ fontSize: 11, padding: "6px 10px", color: "#2ee8c0", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
                 onFocus={e => e.target.select()}
               />
               <div style={{ display: "flex", gap: 6 }}>
@@ -489,9 +489,9 @@ export function ActionEditor({
                   type="button"
                   onClick={handleCopyEditToken}
                   style={{
-                    background: editTokenCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
-                    border: `1px solid ${editTokenCopied ? "rgba(34,197,94,0.4)" : "#1e2d45"}`,
-                    color: editTokenCopied ? "#22c55e" : "#e8ecf1",
+                    background: editTokenCopied ? "rgba(34,197,94,0.12)" : "#232730",
+                    border: `1px solid ${editTokenCopied ? "rgba(34,197,94,0.4)" : "#2a2e38"}`,
+                    color: editTokenCopied ? "#34d399" : "#eaf0f6",
                     borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600,
                   }}
                 >
@@ -512,7 +512,7 @@ export function ActionEditor({
               onClick={handleGenerateEditToken}
               disabled={editTokenLoading}
               style={{
-                background: "#1a253a", border: "1px solid #1e2d45", color: "#f5b731",
+                background: "#232730", border: "1px solid #2a2e38", color: "#2ee8c0",
                 borderRadius: 6, padding: "6px 14px", fontSize: 11, cursor: "pointer", fontWeight: 600,
                 opacity: editTokenLoading ? 0.6 : 1,
               }}
@@ -537,9 +537,9 @@ export function ActionEditor({
         <button
           onClick={onCancel}
           style={{
-            background: "#1a253a",
-            border: "1px solid #1e2d45",
-            color: "#8b95a8",
+            background: "#232730",
+            border: "1px solid #2a2e38",
+            color: "#8a92a4",
             borderRadius: 8,
             padding: "7px 18px",
             fontSize: 12,
@@ -553,14 +553,14 @@ export function ActionEditor({
       {/* Advanced section — hidden for viewers */}
       {!readOnly && (
         <details style={{ marginTop: 4 }} open={resetTagConfirm === tagId || undefined}>
-          <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <summary style={{ fontSize: 11, color: "#555c6e", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
             <span className="adv-arrow">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
             </span>
             Zaawansowane (reset / usuń)
           </summary>
           <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: 10, color: "#5a6478", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
+            <span style={{ fontSize: 10, color: "#555c6e", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
             {resetTagConfirm === tagId ? (
               <>
                 <button
@@ -572,7 +572,7 @@ export function ActionEditor({
                 </button>
                 <button
                   onClick={() => setResetTagConfirm(null)}
-                  style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
+                  style={{ background: "#232730", border: "1px solid #2a2e38", color: "#8a92a4", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
                 >
                   Nie
                 </button>

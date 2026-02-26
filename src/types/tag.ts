@@ -66,7 +66,7 @@ export const TYPE_LABELS: Record<string, string> = {
 export const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   url:             { bg: "rgba(96,165,250,0.12)",  color: "#60a5fa" },
   video:           { bg: "rgba(159,103,255,0.12)", color: "#9f67ff" },
-  multilink:       { bg: "rgba(245,183,49,0.12)",  color: "#f5b731" },
+  multilink:       { bg: "rgba(0,200,160,0.12)",  color: "#2ee8c0" },
   vcard:           { bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
   "google-review": { bg: "rgba(251,146,60,0.12)",  color: "#fb923c" },
 };

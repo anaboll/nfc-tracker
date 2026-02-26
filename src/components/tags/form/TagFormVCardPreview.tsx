@@ -59,7 +59,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           <div style={styles.links}>
             {contactItems.map((item) => {
               const IconComp = SOCIAL_ICONS[item.key];
-              const color = SOCIAL_COLORS[item.key] || "#8b95a8";
+              const color = SOCIAL_COLORS[item.key] || "#8a92a4";
               const value = (deferred as unknown as Record<string, string>)[item.key];
               return (
                 <div key={item.key} style={styles.linkItem}>
@@ -76,7 +76,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           <div style={styles.socialRow}>
             {socialLinks.map((s) => {
               const IconComp = SOCIAL_ICONS[s.key];
-              const color = SOCIAL_COLORS[s.key] || "#8b95a8";
+              const color = SOCIAL_COLORS[s.key] || "#8a92a4";
               return (
                 <div key={s.key} style={{ ...styles.socialIcon, background: `${color}15` }} title={s.label}>
                   {IconComp && <IconComp size={16} color={color} />}
@@ -115,7 +115,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#5a6478",
+    color: "#555c6e",
     marginBottom: 10,
     textAlign: "center" as const,
   },
@@ -123,7 +123,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "linear-gradient(135deg, #0f0f1a 0%, #16213e 100%)",
     borderRadius: 16,
     padding: "28px 20px 16px",
-    border: "1px solid #1e2d45",
+    border: "1px solid #2a2e38",
     textAlign: "center" as const,
   },
   avatar: {
@@ -144,16 +144,16 @@ const styles: Record<string, React.CSSProperties> = {
   name: {
     fontSize: 17,
     fontWeight: 800,
-    color: "#e8ecf1",
+    color: "#eaf0f6",
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    color: "#8b95a8",
+    color: "#8a92a4",
   },
   company: {
     fontSize: 12,
-    color: "#5a6478",
+    color: "#555c6e",
     marginTop: 2,
   },
   links: {
@@ -172,7 +172,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   linkText: {
     fontSize: 12,
-    color: "#8b95a8",
+    color: "#8a92a4",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap" as const,
@@ -194,7 +194,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   note: {
     fontSize: 11,
-    color: "#5a6478",
+    color: "#555c6e",
     marginTop: 14,
     padding: "8px 10px",
     borderRadius: 8,
@@ -216,7 +216,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   previewUrl: {
     fontSize: 10,
-    color: "#5a6478",
+    color: "#555c6e",
     marginTop: 10,
     fontFamily: "monospace",
   },

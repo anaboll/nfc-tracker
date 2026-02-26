@@ -244,7 +244,7 @@ export default function HomePage() {
           <div className="analytics-grid">
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(230,149,0,0.15)", color: "#f5b731" }}>📊</div>
+                <div className="analytics-card-icon" style={{ background: "rgba(0,200,160,0.15)", color: "#2ee8c0" }}>📊</div>
                 <span>Skany i unikalni</span>
               </div>
               <div className="analytics-card-value">1,247</div>
@@ -255,24 +255,24 @@ export default function HomePage() {
             </div>
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(59,130,246,0.15)", color: "#3b82f6" }}>🌍</div>
+                <div className="analytics-card-icon" style={{ background: "rgba(59,130,246,0.15)", color: "#6366f1" }}>🌍</div>
                 <span>Geolokalizacja</span>
               </div>
               <div className="analytics-card-value">12 krajow</div>
               <div className="analytics-card-sub">PL 67% &middot; DE 12% &middot; UK 8% &middot; inne 13%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "67%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)" }} />
+                <div className="analytics-mini-fill" style={{ width: "67%", background: "linear-gradient(90deg, #6366f1, #60a5fa)" }} />
               </div>
             </div>
             <div className="analytics-card">
               <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>📱</div>
+                <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.15)", color: "#34d399" }}>📱</div>
                 <span>Urzadzenia</span>
               </div>
               <div className="analytics-card-value">87% mobile</div>
               <div className="analytics-card-sub">iOS 52% &middot; Android 35% &middot; Desktop 13%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "87%", background: "linear-gradient(90deg, #22c55e, #4ade80)" }} />
+                <div className="analytics-mini-fill" style={{ width: "87%", background: "linear-gradient(90deg, #34d399, #4ade80)" }} />
               </div>
             </div>
             <div className="analytics-card">

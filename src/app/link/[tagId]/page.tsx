@@ -45,7 +45,7 @@ export default async function MultiLinkPage({ params }: { params: { tagId: strin
   return (
     <main
       className="min-h-screen flex flex-col items-center px-4 py-12"
-      style={{ background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)" }}
+      style={{ background: "linear-gradient(135deg, #0f0f1a 0%, #12151c 50%, #16213e 100%)" }}
     >
       <div className="w-full max-w-md">
         {/* Header */}

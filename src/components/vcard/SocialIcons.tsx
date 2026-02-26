@@ -103,8 +103,8 @@ export const NoteIcon = ({ size = defaults.size, color = defaults.color, classNa
 /* ------------------------------------------------------------------ */
 
 export const SOCIAL_COLORS: Record<string, string> = {
-  phone: "#22c55e",
-  email: "#3b82f6",
+  phone: "#34d399",
+  email: "#6366f1",
   website: "#8b5cf6",
   address: "#f59e0b",
   instagram: "#e4405f",
@@ -114,7 +114,7 @@ export const SOCIAL_COLORS: Record<string, string> = {
   tiktok: "#ff0050",
   youtube: "#ff0000",
   telegram: "#0088cc",
-  note: "#8b95a8",
+  note: "#8a92a4",
 };
 
 export const SOCIAL_ICONS: Record<string, React.FC<IconProps>> = {

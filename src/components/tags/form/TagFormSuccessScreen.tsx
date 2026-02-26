@@ -48,7 +48,7 @@ export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props)
 
       <h2 style={styles.title}>Akcja utworzona!</h2>
       <p style={styles.subtitle}>
-        Tag <span style={{ color: "#f5b731", fontWeight: 700 }}>{tagId}</span> jest gotowy do uzycia.
+        Tag <span style={{ color: "#2ee8c0", fontWeight: 700 }}>{tagId}</span> jest gotowy do uzycia.
       </p>
 
       {/* Public URL */}
@@ -123,12 +123,12 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 24,
     fontWeight: 800,
-    color: "#e8ecf1",
+    color: "#eaf0f6",
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: "#8b95a8",
+    color: "#8a92a4",
     marginBottom: 24,
   },
   urlBox: {
@@ -138,17 +138,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     padding: "10px 16px",
     borderRadius: 10,
-    background: "rgba(245,183,49,0.08)",
-    border: "1px solid rgba(245,183,49,0.2)",
+    background: "rgba(0,200,160,0.08)",
+    border: "1px solid rgba(0,200,160,0.2)",
     marginBottom: 28,
   },
   urlLabel: {
     fontSize: 12,
-    color: "#8b95a8",
+    color: "#8a92a4",
   },
   urlCode: {
     fontSize: 13,
-    color: "#f5b731",
+    color: "#2ee8c0",
     fontFamily: "monospace",
   },
   qrSection: {
@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#8b95a8",
+    color: "#8a92a4",
     marginBottom: 12,
   },
   qrGrid: {
@@ -170,8 +170,8 @@ const styles: Record<string, React.CSSProperties> = {
   qrBtn: {
     padding: "14px 10px",
     borderRadius: 10,
-    border: "1px solid #1e2d45",
-    background: "#0c1220",
+    border: "1px solid #2a2e38",
+    background: "#12151c",
     cursor: "pointer",
     transition: "all 0.15s",
     textAlign: "center" as const,
@@ -179,12 +179,12 @@ const styles: Record<string, React.CSSProperties> = {
   qrBtnLabel: {
     fontSize: 13,
     fontWeight: 700,
-    color: "#e8ecf1",
+    color: "#eaf0f6",
     marginBottom: 2,
   },
   qrBtnDesc: {
     fontSize: 11,
-    color: "#5a6478",
+    color: "#555c6e",
   },
   actions: {
     display: "flex",
@@ -194,9 +194,9 @@ const styles: Record<string, React.CSSProperties> = {
   secondaryBtn: {
     padding: "10px 20px",
     borderRadius: 8,
-    border: "1px solid #1e2d45",
+    border: "1px solid #2a2e38",
     background: "transparent",
-    color: "#8b95a8",
+    color: "#8a92a4",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -206,8 +206,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 24px",
     borderRadius: 8,
     border: "none",
-    background: "linear-gradient(135deg, #e69500, #f5b731)",
-    color: "#1a1a2e",
+    background: "linear-gradient(135deg, #00c8a0, #2ee8c0)",
+    color: "#12151c",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",

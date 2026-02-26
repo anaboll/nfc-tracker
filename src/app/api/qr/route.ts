@@ -91,17 +91,17 @@ export async function GET(req: NextRequest) {
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Helvetica,Arial,sans-serif;background:#fff;color:#111}
   .page{width:210mm;min-height:297mm;padding:20mm 20mm 16mm;display:flex;flex-direction:column;align-items:center}
-  .header{width:100%;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #f5b731;padding-bottom:10px;margin-bottom:24px}
-  .logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#0c1220}
-  .logo span{color:#f5b731}
-  .subtitle{font-size:10px;color:#8b95a8;margin-top:2px}
-  .tag-name{font-size:20px;font-weight:700;color:#0c1220;margin-bottom:4px;text-align:center}
-  .tag-id{font-size:10px;color:#8b95a8;margin-bottom:24px;font-family:monospace}
+  .header{width:100%;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #2ee8c0;padding-bottom:10px;margin-bottom:24px}
+  .logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#12151c}
+  .logo span{color:#2ee8c0}
+  .subtitle{font-size:10px;color:#8a92a4;margin-top:2px}
+  .tag-name{font-size:20px;font-weight:700;color:#12151c;margin-bottom:4px;text-align:center}
+  .tag-id{font-size:10px;color:#8a92a4;margin-bottom:24px;font-family:monospace}
   .qr-box{width:200px;height:200px;margin-bottom:18px}
   .qr-box svg{width:200px!important;height:200px!important;display:block;image-rendering:crisp-edges}
-  .url-box{font-size:8px;color:#5a6478;font-family:monospace;margin-bottom:20px;text-align:center;word-break:break-all;max-width:200px}
+  .url-box{font-size:8px;color:#555c6e;font-family:monospace;margin-bottom:20px;text-align:center;word-break:break-all;max-width:200px}
   .instruction{background:#f8f9fa;border:1px solid #e5e7eb;border-radius:8px;padding:14px 20px;width:100%;max-width:360px;margin-bottom:auto}
-  .instruction h3{font-size:12px;font-weight:700;color:#0c1220;margin-bottom:6px}
+  .instruction h3{font-size:12px;font-weight:700;color:#12151c;margin-bottom:6px}
   .instruction ol{padding-left:16px}
   .instruction li{font-size:10.5px;color:#374151;margin-bottom:3px;line-height:1.5}
   .footer{width:100%;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:24px;display:flex;justify-content:space-between;font-size:8px;color:#9ca3af}
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
       <div class="logo">Twoje<span>NFC</span></div>
       <div class="subtitle">Karta wydruku akcji</div>
     </div>
-    <div style="text-align:right;font-size:9px;color:#8b95a8">
+    <div style="text-align:right;font-size:9px;color:#8a92a4">
       Error correction: H (30%)<br>
       Quiet zone: 4 moduły
     </div>

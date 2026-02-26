@@ -49,7 +49,7 @@ const TYPES = [
         <line x1="3" y1="18" x2="3.01" y2="18" />
       </svg>
     ),
-    color: "#f5b731",
+    color: "#2ee8c0",
   },
   {
     value: "video",
@@ -90,17 +90,17 @@ export default function TagFormTypeSelector({ value, onChange, disabled }: Props
               disabled={disabled}
               style={{
                 ...styles.card,
-                borderColor: selected ? t.color : "#1e2d45",
-                background: selected ? `${t.color}10` : "#0c1220",
+                borderColor: selected ? t.color : "#2a2e38",
+                background: selected ? `${t.color}10` : "#12151c",
                 opacity: disabled ? 0.5 : 1,
                 cursor: disabled ? "not-allowed" : "pointer",
               }}
             >
-              <div style={{ color: selected ? t.color : "#5a6478", transition: "color 0.2s" }}>
+              <div style={{ color: selected ? t.color : "#555c6e", transition: "color 0.2s" }}>
                 {t.icon}
               </div>
               <div>
-                <div style={{ ...styles.cardLabel, color: selected ? "#e8ecf1" : "#8b95a8" }}>
+                <div style={{ ...styles.cardLabel, color: selected ? "#eaf0f6" : "#8a92a4" }}>
                   {t.label}
                 </div>
                 <div style={styles.cardDesc}>{t.desc}</div>
@@ -123,7 +123,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#8b95a8",
+    color: "#8a92a4",
     marginBottom: 12,
   },
   grid: {
@@ -137,7 +137,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     padding: "14px 16px",
     borderRadius: 10,
-    border: "1.5px solid #1e2d45",
+    border: "1.5px solid #2a2e38",
     textAlign: "left" as const,
     transition: "all 0.2s",
   },
@@ -148,7 +148,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardDesc: {
     fontSize: 11,
-    color: "#5a6478",
+    color: "#555c6e",
     marginTop: 2,
     lineHeight: 1.3,
   },

@@ -91,7 +91,7 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   url:             { bg: "rgba(96,165,250,0.12)",  color: "#60a5fa" },
   video:           { bg: "rgba(159,103,255,0.12)", color: "#9f67ff" },
-  multilink:       { bg: "rgba(245,183,49,0.12)",  color: "#f5b731" },
+  multilink:       { bg: "rgba(0,200,160,0.12)",  color: "#2ee8c0" },
   vcard:           { bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
   "google-review": { bg: "rgba(251,146,60,0.12)",  color: "#fb923c" },
 };
@@ -134,8 +134,8 @@ export function CtxMenuPortal({ anchorRect, onClose, children }: CtxMenuPortalPr
         className="ctx-menu"
         style={{
           ...style,
-          background: "#0d1526",
-          border: "1px solid #1e2d45",
+          background: "#14171e",
+          border: "1px solid #2a2e38",
           borderRadius: 10,
           boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
           overflow: "hidden",
@@ -241,7 +241,7 @@ export function ActionsTable({
     textAlign: "left" as const,
   });
 
-  const hoverIn = (e: React.MouseEvent<HTMLElement>, bg = "#1a253a") => {
+  const hoverIn = (e: React.MouseEvent<HTMLElement>, bg = "#232730") => {
     (e.currentTarget as HTMLElement).style.background = bg;
   };
   const hoverOut = (e: React.MouseEvent<HTMLElement>) => {
@@ -257,14 +257,14 @@ export function ActionsTable({
           alignItems: "center",
           gap: 10,
           padding: "10px 16px",
-          borderBottom: "1px solid #1e2d45",
+          borderBottom: "1px solid #2a2e38",
           background: "rgba(59,130,246,0.06)",
           flexWrap: "wrap",
         }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa" }}>
             Zaznaczono: {selectedIds.length}
           </span>
-          <div style={{ width: 1, height: 16, background: "#1e2d45" }} />
+          <div style={{ width: 1, height: 16, background: "#2a2e38" }} />
           {/* Przenieś */}
           <button
             onClick={onBulkMoveRequest}
@@ -299,14 +299,14 @@ export function ActionsTable({
             Usuń
           </button>
           {bulkLoading && (
-            <span style={{ fontSize: 11, color: "#5a6478" }}>Trwa operacja...</span>
+            <span style={{ fontSize: 11, color: "#555c6e" }}>Trwa operacja...</span>
           )}
           {bulkMsg && !bulkLoading && (
             <span style={{ fontSize: 11, color: "#10b981" }}>{bulkMsg}</span>
           )}
           <button
             onClick={() => setSelectedIds([])}
-            style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 6, border: "1px solid #1e2d45", background: "transparent", color: "#5a6478", fontSize: 11, cursor: "pointer" }}
+            style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 6, border: "1px solid #2a2e38", background: "transparent", color: "#555c6e", fontSize: 11, cursor: "pointer" }}
           >
             Odznacz wszystkie
           </button>
@@ -320,7 +320,7 @@ export function ActionsTable({
           width: "100%",
           borderCollapse: "collapse",
           fontSize: 13,
-          color: "#e8ecf1",
+          color: "#eaf0f6",
           tableLayout: "fixed",
         }}
       >
@@ -335,7 +335,7 @@ export function ActionsTable({
         </colgroup>
         {/* ---- HEAD ---- */}
         <thead>
-          <tr style={{ borderBottom: "1px solid #1e2d45" }}>
+          <tr style={{ borderBottom: "1px solid #2a2e38" }}>
             {/* Checkbox header */}
             {!readOnly && <th
               style={{ padding: "8px 8px 8px 16px" }}
@@ -346,7 +346,7 @@ export function ActionsTable({
                 checked={allSelected}
                 onChange={toggleAll}
                 title="Zaznacz wszystkie"
-                style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+                style={{ cursor: "pointer", accentColor: "#6366f1", width: 14, height: 14 }}
               />
             </th>}
             {(readOnly ? ["Nazwa", "Typ", "Status", "Skany", "Linki"] : ["Nazwa", "Typ", "Status", "Skany", "Linki", "Akcje"]).map((h) => (
@@ -357,7 +357,7 @@ export function ActionsTable({
                   textAlign: "left",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#5a6478",
+                  color: "#555c6e",
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
@@ -373,7 +373,7 @@ export function ActionsTable({
         {/* ---- BODY ---- */}
         <tbody>
           {tags.map((tag, idx) => {
-            const typeStyle = TYPE_COLORS[tag.tagType] ?? { bg: "rgba(139,149,168,0.12)", color: "#8b95a8" };
+            const typeStyle = TYPE_COLORS[tag.tagType] ?? { bg: "rgba(139,149,168,0.12)", color: "#8a92a4" };
             const isLast = idx === tags.length - 1;
 
             const isSelected = selectedIds.includes(tag.id);
@@ -383,12 +383,12 @@ export function ActionsTable({
                 key={tag.id}
                 onClick={() => !readOnly && onStartEdit(tag)}
                 style={{
-                  borderBottom: isLast ? "none" : "1px solid #1a253a",
+                  borderBottom: isLast ? "none" : "1px solid #232730",
                   cursor: readOnly ? "default" : "pointer",
                   transition: "background 0.12s",
                   background: isSelected ? "rgba(59,130,246,0.06)" : "transparent",
                 }}
-                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#0f1a2e"; }}
+                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#1a1d26"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isSelected ? "rgba(59,130,246,0.06)" : "transparent"; }}
               >
                 {/* Checkbox */}
@@ -400,7 +400,7 @@ export function ActionsTable({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleOne(tag.id)}
-                    style={{ cursor: "pointer", accentColor: "#3b82f6", width: 14, height: 14 }}
+                    style={{ cursor: "pointer", accentColor: "#6366f1", width: 14, height: 14 }}
                   />
                 </td>}
 
@@ -410,7 +410,7 @@ export function ActionsTable({
                     {tag.name}
                   </div>
                   {tag.description && (
-                    <div style={{ fontSize: 11, color: "#5a6478", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.description}>
+                    <div style={{ fontSize: 11, color: "#555c6e", fontWeight: 400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.description}>
                       {tag.description}
                     </div>
                   )}
@@ -449,7 +449,7 @@ export function ActionsTable({
                 </td>
 
                 {/* Skany */}
-                <td style={{ padding: "10px 12px", fontWeight: 700, color: "#f5b731", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "10px 12px", fontWeight: 700, color: "#2ee8c0", whiteSpace: "nowrap" }}>
                   {tag._count.scans}
                 </td>
 
@@ -463,22 +463,22 @@ export function ActionsTable({
                       alignItems: "center",
                       gap: 5,
                       width: "100%",
-                      background: copiedId === tag.id ? "rgba(34,197,94,0.1)" : "rgba(245,183,49,0.08)",
-                      border: `1px solid ${copiedId === tag.id ? "rgba(34,197,94,0.3)" : "rgba(245,183,49,0.2)"}`,
+                      background: copiedId === tag.id ? "rgba(34,197,94,0.1)" : "rgba(0,200,160,0.08)",
+                      border: `1px solid ${copiedId === tag.id ? "rgba(34,197,94,0.3)" : "rgba(0,200,160,0.2)"}`,
                       borderRadius: 6,
                       padding: "3px 7px 3px 6px",
                       cursor: "pointer",
                       minWidth: 0,
                       transition: "background 0.15s, border-color 0.15s",
                     }}
-                    onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.14)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.35)"; } }}
-                    onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(245,183,49,0.08)"; e.currentTarget.style.borderColor = "rgba(245,183,49,0.2)"; } }}
+                    onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(0,200,160,0.14)"; e.currentTarget.style.borderColor = "rgba(0,200,160,0.35)"; } }}
+                    onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.background = "rgba(0,200,160,0.08)"; e.currentTarget.style.borderColor = "rgba(0,200,160,0.2)"; } }}
                   >
                     <span
                       style={{
                         fontFamily: "monospace",
                         fontSize: 11,
-                        color: copiedId === tag.id ? "#22c55e" : "#f5b731",
+                        color: copiedId === tag.id ? "#34d399" : "#2ee8c0",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -488,7 +488,7 @@ export function ActionsTable({
                     >
                       /s/{tag.id}
                     </span>
-                    <span style={{ color: copiedId === tag.id ? "#22c55e" : "#8b95a8", display: "inline-flex", flexShrink: 0 }}>
+                    <span style={{ color: copiedId === tag.id ? "#34d399" : "#8a92a4", display: "inline-flex", flexShrink: 0 }}>
                       {copiedId === tag.id
                         ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -502,7 +502,7 @@ export function ActionsTable({
                       <div
                         style={{
                           fontSize: 11,
-                          color: "#5a6478",
+                          color: "#555c6e",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -530,7 +530,7 @@ export function ActionsTable({
                         width: 44,
                         height: 24,
                         borderRadius: 12,
-                        background: tag.isActive ? "#10b981" : "#2a4060",
+                        background: tag.isActive ? "#10b981" : "#3d4250",
                         border: "none",
                         cursor: "pointer",
                         position: "relative",
@@ -557,9 +557,9 @@ export function ActionsTable({
                       onClick={() => copyLink(tag.id)}
                       title="Kopiuj link publiczny"
                       style={{
-                        background: "#1a253a",
-                        border: "1px solid #1e2d45",
-                        color: copiedId === tag.id ? "#22c55e" : "#8b95a8",
+                        background: "#232730",
+                        border: "1px solid #2a2e38",
+                        color: copiedId === tag.id ? "#34d399" : "#8a92a4",
                         borderRadius: 6,
                         width: 28,
                         height: 28,
@@ -570,8 +570,8 @@ export function ActionsTable({
                         flexShrink: 0,
                         transition: "color 0.15s, border-color 0.15s",
                       }}
-                      onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#f5b731"; e.currentTarget.style.borderColor = "#e69500"; } }}
-                      onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; } }}
+                      onMouseEnter={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#2ee8c0"; e.currentTarget.style.borderColor = "#00c8a0"; } }}
+                      onMouseLeave={e => { if (copiedId !== tag.id) { e.currentTarget.style.color = "#8a92a4"; e.currentTarget.style.borderColor = "#2a2e38"; } }}
                     >
                       {copiedId === tag.id
                         ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -584,9 +584,9 @@ export function ActionsTable({
                       onClick={() => onStartEdit(tag)}
                       title="Edytuj akcję"
                       style={{
-                        background: "#1a253a",
-                        border: "1px solid #1e2d45",
-                        color: "#8b95a8",
+                        background: "#232730",
+                        border: "1px solid #2a2e38",
+                        color: "#8a92a4",
                         borderRadius: 6,
                         width: 28,
                         height: 28,
@@ -597,8 +597,8 @@ export function ActionsTable({
                         flexShrink: 0,
                         transition: "color 0.15s, border-color 0.15s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.color = "#e8ecf1"; e.currentTarget.style.borderColor = "#e69500"; }}
-                      onMouseLeave={e => { e.currentTarget.style.color = "#8b95a8"; e.currentTarget.style.borderColor = "#1e2d45"; }}
+                      onMouseEnter={e => { e.currentTarget.style.color = "#eaf0f6"; e.currentTarget.style.borderColor = "#00c8a0"; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = "#8a92a4"; e.currentTarget.style.borderColor = "#2a2e38"; }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -612,9 +612,9 @@ export function ActionsTable({
                         onClick={(e) => openMenu(tag.id, e)}
                         title="Więcej opcji"
                         style={{
-                          background: "#1a253a",
-                          border: "1px solid #1e2d45",
-                          color: "#8b95a8",
+                          background: "#232730",
+                          border: "1px solid #2a2e38",
+                          color: "#8a92a4",
                           borderRadius: 6,
                           width: 32,
                           height: 32,
@@ -628,8 +628,8 @@ export function ActionsTable({
                           flexShrink: 0,
                           transition: "border-color 0.15s, color 0.15s",
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e69500"; e.currentTarget.style.color = "#e8ecf1"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#00c8a0"; e.currentTarget.style.color = "#eaf0f6"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a2e38"; e.currentTarget.style.color = "#8a92a4"; }}
                       >
                         ⋯
                       </button>
@@ -685,7 +685,7 @@ export function ActionsTable({
                           {/* Pobierz PDF */}
                           <button
                             onClick={() => { closeMenu(); window.open(`/api/qr?tagId=${encodeURIComponent(tag.id)}&format=pdf`, "_blank"); }}
-                            style={menuItem("#f5b731")}
+                            style={menuItem("#2ee8c0")}
                             onMouseEnter={hoverIn}
                             onMouseLeave={hoverOut}
                           >
@@ -698,7 +698,7 @@ export function ActionsTable({
                           {/* Video items */}
                           {tag.tagType === "video" && (
                             <>
-                              <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+                              <div style={{ height: 1, background: "#2a2e38", margin: "0 10px" }} />
                               <label
                                 style={{ ...menuItem("#9f67ff"), display: "flex" }}
                                 onMouseEnter={hoverIn}
@@ -719,7 +719,7 @@ export function ActionsTable({
                                 <button
                                   onClick={() => { closeMenu(); onRemoveVideo(tag.id); }}
                                   style={menuItem("#f87171")}
-                                  onMouseEnter={(e) => hoverIn(e, "#1a253a")}
+                                  onMouseEnter={(e) => hoverIn(e, "#232730")}
                                   onMouseLeave={hoverOut}
                                 >
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -731,7 +731,7 @@ export function ActionsTable({
                             </>
                           )}
 
-                          <div style={{ height: 1, background: "#1e2d45", margin: "0 10px" }} />
+                          <div style={{ height: 1, background: "#2a2e38", margin: "0 10px" }} />
 
                           {/* Reset statystyk */}
                           <button

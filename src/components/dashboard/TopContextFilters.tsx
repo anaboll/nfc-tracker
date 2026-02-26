@@ -108,7 +108,7 @@ function Combobox({
   };
 
   const triggerLabel = selected ? selected.label : placeholder;
-  const accent = selected?.accent ?? "#5a6478";
+  const accent = selected?.accent ?? "#555c6e";
 
   return (
     <div
@@ -116,7 +116,7 @@ function Combobox({
       style={{ position: "relative", width, flexShrink: 0 }}
     >
       {/* Label above */}
-      <div style={{ fontSize: 11, color: "#8b95a8", fontWeight: 500, marginBottom: 4 }}>
+      <div style={{ fontSize: 11, color: "#8a92a4", fontWeight: 500, marginBottom: 4 }}>
         {label}
       </div>
 
@@ -134,11 +134,11 @@ function Combobox({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 6,
-          background: "var(--surface-2, #0c1220)",
-          border: `1px solid ${open ? "#e69500" : "#1e2d45"}`,
+          background: "var(--surface-2, #12151c)",
+          border: `1px solid ${open ? "#00c8a0" : "#2a2e38"}`,
           borderRadius: 8,
           padding: "7px 10px",
-          color: disabled ? "#3a4a60" : (selected ? accent : "#5a6478"),
+          color: disabled ? "#3a4a60" : (selected ? accent : "#555c6e"),
           fontSize: 13,
           fontWeight: selected ? 600 : 400,
           cursor: disabled ? "not-allowed" : "pointer",
@@ -152,7 +152,7 @@ function Combobox({
           if (!disabled && !open) e.currentTarget.style.borderColor = "#3a4a60";
         }}
         onMouseLeave={(e) => {
-          if (!open) e.currentTarget.style.borderColor = "#1e2d45";
+          if (!open) e.currentTarget.style.borderColor = "#2a2e38";
         }}
       >
         {/* Dot accent for selected */}
@@ -184,7 +184,7 @@ function Combobox({
             flexShrink: 0,
             transition: "transform 0.15s",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            color: "#5a6478",
+            color: "#555c6e",
           }}
         >
           <polyline points="6 9 12 15 18 9" />
@@ -200,8 +200,8 @@ function Combobox({
             left: 0,
             minWidth: "100%",
             width: Math.max(width, 200),
-            background: "#0d1526",
-            border: "1px solid #1e2d45",
+            background: "#14171e",
+            border: "1px solid #2a2e38",
             borderRadius: 10,
             boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
             zIndex: 9000,
@@ -216,7 +216,7 @@ function Combobox({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                background: "#1a253a",
+                background: "#232730",
                 border: "1px solid #2a3a52",
                 borderRadius: 7,
                 padding: "5px 8px",
@@ -227,7 +227,7 @@ function Combobox({
                 height="12"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#5a6478"
+                stroke="#555c6e"
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -247,7 +247,7 @@ function Combobox({
                   background: "transparent",
                   border: "none",
                   outline: "none",
-                  color: "#e8ecf1",
+                  color: "#eaf0f6",
                   fontSize: 12,
                   width: "100%",
                 }}
@@ -256,7 +256,7 @@ function Combobox({
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  style={{ background: "transparent", border: "none", color: "#5a6478", cursor: "pointer", padding: 0, lineHeight: 1 }}
+                  style={{ background: "transparent", border: "none", color: "#555c6e", cursor: "pointer", padding: 0, lineHeight: 1 }}
                 >
                   ×
                 </button>
@@ -267,7 +267,7 @@ function Combobox({
           {/* Options list */}
           <div style={{ maxHeight: 240, overflowY: "auto" }}>
             {filtered.length === 0 ? (
-              <div style={{ padding: "10px 14px", color: "#5a6478", fontSize: 12, textAlign: "center" }}>
+              <div style={{ padding: "10px 14px", color: "#555c6e", fontSize: 12, textAlign: "center" }}>
                 Brak wyników
               </div>
             ) : (
@@ -284,9 +284,9 @@ function Combobox({
                       gap: 8,
                       width: "100%",
                       padding: "9px 14px",
-                      background: isSelected ? "rgba(245,183,49,0.08)" : "transparent",
+                      background: isSelected ? "rgba(0,200,160,0.08)" : "transparent",
                       border: "none",
-                      color: isSelected ? (opt.accent ?? "#f5b731") : "#c8d0dc",
+                      color: isSelected ? (opt.accent ?? "#2ee8c0") : "#c8d0dc",
                       fontSize: 13,
                       fontWeight: isSelected ? 600 : 400,
                       cursor: "pointer",
@@ -294,10 +294,10 @@ function Combobox({
                       transition: "background 0.1s",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#1a253a";
+                      if (!isSelected) e.currentTarget.style.background = "#232730";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = isSelected ? "rgba(245,183,49,0.08)" : "transparent";
+                      e.currentTarget.style.background = isSelected ? "rgba(0,200,160,0.08)" : "transparent";
                     }}
                   >
                     {/* Colour dot for real options (non-null id) */}
@@ -307,7 +307,7 @@ function Combobox({
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          background: opt.accent ?? "#5a6478",
+                          background: opt.accent ?? "#555c6e",
                           flexShrink: 0,
                         }}
                       />
@@ -318,7 +318,7 @@ function Combobox({
                           width: 8,
                           height: 2,
                           borderRadius: 1,
-                          background: "#5a6478",
+                          background: "#555c6e",
                           flexShrink: 0,
                         }}
                       />
@@ -333,7 +333,7 @@ function Combobox({
                         height="12"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke={opt.accent ?? "#f5b731"}
+                        stroke={opt.accent ?? "#2ee8c0"}
                         strokeWidth={2.5}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -370,7 +370,7 @@ export function TopContextFilters({
     ...clients.map((c) => ({
       id: c.id,
       label: c.name,
-      accent: c.color ?? "#e69500",
+      accent: c.color ?? "#00c8a0",
     })),
   ];
 
