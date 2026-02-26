@@ -80,6 +80,8 @@ export interface ActionEditorProps {
   onCancel: () => void;
   onResetStats: (tagId: string) => void;
   onDeleteTag: (tagId: string) => void;
+
+  readOnly?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -108,8 +110,49 @@ export function ActionEditor({
   onCancel,
   onResetStats,
   onDeleteTag,
+  readOnly = false,
 }: ActionEditorProps) {
   const [linkCopied, setLinkCopied] = useState(false);
+  const [editTokenUrl, setEditTokenUrl] = useState<string | null>(null);
+  const [editTokenLoading, setEditTokenLoading] = useState(false);
+  const [editTokenCopied, setEditTokenCopied] = useState(false);
+
+  const handleGenerateEditToken = async () => {
+    setEditTokenLoading(true);
+    try {
+      const res = await fetch("/api/tags/edit-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tagId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEditTokenUrl(data.editUrl);
+      }
+    } catch { /* ignore */ }
+    finally { setEditTokenLoading(false); }
+  };
+
+  const handleRevokeEditToken = async () => {
+    try {
+      await fetch("/api/tags/edit-token", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tagId }),
+      });
+      setEditTokenUrl(null);
+    } catch { /* ignore */ }
+  };
+
+  const handleCopyEditToken = () => {
+    if (!editTokenUrl) return;
+    navigator.clipboard.writeText(editTokenUrl).then(() => {
+      setEditTokenCopied(true);
+      setTimeout(() => setEditTokenCopied(false), 1500);
+    });
+  };
+
+  const disabledStyle: React.CSSProperties = readOnly ? { opacity: 0.55, cursor: "default", pointerEvents: "none" } : {};
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/s/${tagId}`;
@@ -132,7 +175,7 @@ export function ActionEditor({
 
   return (
     <div>
-      {/* Link publiczny */}
+      {/* Link publiczny — always visible (read-only friendly) */}
       <div style={{ marginBottom: 20, padding: "12px 14px", background: "rgba(245,183,49,0.05)", borderRadius: 10, border: "1px solid rgba(245,183,49,0.3)" }}>
         <label style={{ display: "block", fontSize: 11, color: "#e8ecf1", marginBottom: 8, fontWeight: 700, letterSpacing: 0.3 }}>
           Link publiczny
@@ -216,6 +259,8 @@ export function ActionEditor({
           </a>
         </div>
       </div>
+
+      {/* Fields */}
       <div
         style={{
           display: "grid",
@@ -232,6 +277,8 @@ export function ActionEditor({
             className="input-field"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
+            disabled={readOnly}
+            style={readOnly ? { opacity: 0.55, cursor: "default" } : {}}
           />
         </div>
         <div>
@@ -262,6 +309,8 @@ export function ActionEditor({
               value={editUrl}
               onChange={(e) => setEditUrl(e.target.value)}
               placeholder={editType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"}
+              disabled={readOnly}
+              style={readOnly ? { opacity: 0.55, cursor: "default" } : {}}
             />
           </div>
         )}
@@ -273,6 +322,8 @@ export function ActionEditor({
             className="input-field"
             value={editDesc}
             onChange={(e) => setEditDesc(e.target.value)}
+            disabled={readOnly}
+            style={readOnly ? { opacity: 0.55, cursor: "default" } : {}}
           />
         </div>
         <div>
@@ -280,17 +331,18 @@ export function ActionEditor({
             Kanał
             <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(atrybucja)</span>
           </label>
-          <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
-            <button type="button" onClick={() => setEditChannel("nfc")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer", background: editChannel === "nfc" ? "#f5b731" : "#1a253a", color: editChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+          <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content", ...disabledStyle }}>
+            <button type="button" onClick={() => !readOnly && setEditChannel("nfc")}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: readOnly ? "default" : "pointer", background: editChannel === "nfc" ? "#f5b731" : "#1a253a", color: editChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
             >NFC</button>
-            <button type="button" onClick={() => setEditChannel("qr")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: editChannel === "qr" ? "#10b981" : "#1a253a", color: editChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
+            <button type="button" onClick={() => !readOnly && setEditChannel("qr")}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: readOnly ? "default" : "pointer", background: editChannel === "qr" ? "#10b981" : "#1a253a", color: editChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
             >QR</button>
           </div>
         </div>
       </div>
-      {/* Multilink editor in edit mode */}
+
+      {/* Multilink editor */}
       {editType === "multilink" && (
         <div style={{
           marginBottom: 12,
@@ -301,13 +353,15 @@ export function ActionEditor({
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1" }}>Linki</h4>
-            <button
-              type="button"
-              onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
-              style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
-            >
-              + Dodaj link
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
+                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+              >
+                + Dodaj link
+              </button>
+            )}
           </div>
           {editTagLinks.map((link, idx) => (
             <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
@@ -316,6 +370,7 @@ export function ActionEditor({
                 value={link.icon}
                 onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], icon: e.target.value }; setEditTagLinks(u); }}
                 style={{ padding: "5px 6px", width: 120, fontSize: 11 }}
+                disabled={readOnly}
               >
                 {iconOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -327,6 +382,7 @@ export function ActionEditor({
                 value={link.label}
                 onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], label: e.target.value }; setEditTagLinks(u); }}
                 style={{ flex: "1 1 100px", minWidth: 80, fontSize: 11, padding: "5px 8px" }}
+                disabled={readOnly}
               />
               <input
                 className="input-field"
@@ -334,23 +390,29 @@ export function ActionEditor({
                 value={link.url}
                 onChange={(e) => { const u = [...editTagLinks]; u[idx] = { ...u[idx], url: e.target.value }; setEditTagLinks(u); }}
                 style={{ flex: "2 1 160px", minWidth: 120, fontSize: 11, padding: "5px 8px" }}
+                disabled={readOnly}
               />
-              <button
-                type="button"
-                onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
-                style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
-              >
-                X
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => { const u = editTagLinks.filter((_, i) => i !== idx); setEditTagLinks(u.length ? u : [{ label: "", url: "", icon: "link" }]); }}
+                  style={{ background: "transparent", border: "1px solid #1e2d45", color: "#5a6478", borderRadius: 6, width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}
+                >
+                  X
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
+
       {editType === "video" && (
         <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 12 }}>
           URL zostanie ustawiony automatycznie na /watch/{tagId}. Wgraj video po zapisaniu.
         </p>
       )}
+
+      {/* vCard editor */}
       {editType === "vcard" && (
         <div style={{
           marginBottom: 12,
@@ -386,20 +448,92 @@ export function ActionEditor({
                   value={(editVCard as unknown as Record<string, string>)[field.key] || ""}
                   onChange={(e) => setEditVCard({ ...editVCard, [field.key]: e.target.value })}
                   style={{ fontSize: 11, padding: "5px 8px" }}
+                  disabled={readOnly}
                 />
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Self-service edit link — vCard + admin only */}
+      {editType === "vcard" && !readOnly && (
+        <div style={{
+          marginBottom: 14,
+          padding: 14,
+          background: "#0f1524",
+          borderRadius: 10,
+          border: "1px solid #1e2d45",
+        }}>
+          <h4 style={{ fontSize: 12, fontWeight: 600, color: "#e8ecf1", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f5b731" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+            </svg>
+            Link edycji wizytowki
+          </h4>
+          <p style={{ fontSize: 11, color: "#5a6478", marginBottom: 10, lineHeight: 1.5 }}>
+            Wygeneruj link, ktory pozwoli wlascicielowi wizytowki samodzielnie edytowac swoje dane.
+          </p>
+          {editTokenUrl ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                readOnly
+                className="input-field"
+                value={editTokenUrl}
+                style={{ fontSize: 11, padding: "6px 10px", color: "#f5b731", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
+                onFocus={e => e.target.select()}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={handleCopyEditToken}
+                  style={{
+                    background: editTokenCopied ? "rgba(34,197,94,0.12)" : "#1a253a",
+                    border: `1px solid ${editTokenCopied ? "rgba(34,197,94,0.4)" : "#1e2d45"}`,
+                    color: editTokenCopied ? "#22c55e" : "#e8ecf1",
+                    borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600,
+                  }}
+                >
+                  {editTokenCopied ? "✓ Skopiowano" : "Kopiuj link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRevokeEditToken}
+                  style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}
+                >
+                  Uniewaznij
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGenerateEditToken}
+              disabled={editTokenLoading}
+              style={{
+                background: "#1a253a", border: "1px solid #1e2d45", color: "#f5b731",
+                borderRadius: 6, padding: "6px 14px", fontSize: 11, cursor: "pointer", fontWeight: 600,
+                opacity: editTokenLoading ? 0.6 : 1,
+              }}
+            >
+              {editTokenLoading ? "Generowanie..." : "Wygeneruj link edycji"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons — Save only for admin, Close always visible */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button
-          className="btn-primary"
-          onClick={() => onSave(tagId)}
-          style={{ padding: "7px 18px", fontSize: 12 }}
-        >
-          Zapisz
-        </button>
+        {!readOnly && (
+          <button
+            className="btn-primary"
+            onClick={() => onSave(tagId)}
+            style={{ padding: "7px 18px", fontSize: 12 }}
+          >
+            Zapisz
+          </button>
+        )}
         <button
           onClick={onCancel}
           style={{
@@ -412,51 +546,54 @@ export function ActionEditor({
             cursor: "pointer",
           }}
         >
-          Anuluj
+          {readOnly ? "Zamknij" : "Anuluj"}
         </button>
       </div>
-      {/* Advanced section */}
-      <details style={{ marginTop: 4 }} open={resetTagConfirm === tagId || undefined}>
-        <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
-          <span className="adv-arrow">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-          </span>
-          Zaawansowane (reset / usuń)
-        </summary>
-        <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: "#5a6478", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
-          {resetTagConfirm === tagId ? (
-            <>
+
+      {/* Advanced section — hidden for viewers */}
+      {!readOnly && (
+        <details style={{ marginTop: 4 }} open={resetTagConfirm === tagId || undefined}>
+          <summary style={{ fontSize: 11, color: "#5a6478", cursor: "pointer", userSelect: "none", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="adv-arrow">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+            </span>
+            Zaawansowane (reset / usuń)
+          </summary>
+          <div style={{ marginTop: 10, padding: "12px 14px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: "#5a6478", flexBasis: "100%", marginBottom: 4 }}>Operacje nieodwracalne — działaj ostrożnie</span>
+            {resetTagConfirm === tagId ? (
+              <>
+                <button
+                  onClick={() => onResetStats(tagId)}
+                  disabled={resetting}
+                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                >
+                  {resetting ? "..." : "Potwierdź reset"}
+                </button>
+                <button
+                  onClick={() => setResetTagConfirm(null)}
+                  style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
+                >
+                  Nie
+                </button>
+              </>
+            ) : (
               <button
-                onClick={() => onResetStats(tagId)}
-                disabled={resetting}
-                style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                onClick={() => setResetTagConfirm(tagId)}
+                style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f59e0b", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
               >
-                {resetting ? "..." : "Potwierdź reset"}
+                Reset statystyk
               </button>
-              <button
-                onClick={() => setResetTagConfirm(null)}
-                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}
-              >
-                Nie
-              </button>
-            </>
-          ) : (
+            )}
             <button
-              onClick={() => setResetTagConfirm(tagId)}
-              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f59e0b", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
+              onClick={() => onDeleteTag(tagId)}
+              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
             >
-              Reset statystyk
+              Usuń akcję
             </button>
-          )}
-          <button
-            onClick={() => onDeleteTag(tagId)}
-            style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
-          >
-            Usuń akcję
-          </button>
-        </div>
-      </details>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

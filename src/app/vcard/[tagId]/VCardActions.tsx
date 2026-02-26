@@ -3,11 +3,11 @@
 interface Props {
   vcfBase64: string;
   fullName: string;
+  primaryColor?: string;
 }
 
-export default function VCardActions({ vcfBase64, fullName }: Props) {
+export default function VCardActions({ vcfBase64, fullName, primaryColor = "#7c3aed" }: Props) {
   const handleSaveContact = () => {
-    // Decode base64 to blob and trigger download
     const byteString = atob(vcfBase64);
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
@@ -28,16 +28,25 @@ export default function VCardActions({ vcfBase64, fullName }: Props) {
   return (
     <button
       onClick={handleSaveContact}
-      className="w-full py-4 rounded-xl font-bold text-white text-base transition-all duration-200 hover:opacity-90 hover:scale-[1.01]"
       style={{
-        background: "linear-gradient(135deg, #7c3aed, #10b981)",
+        width: "100%",
+        padding: "14px 0",
+        borderRadius: 14,
+        fontWeight: 700,
+        color: "#fff",
+        fontSize: 15,
+        background: primaryColor,
         border: "none",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
+        transition: "opacity 0.2s, transform 0.2s",
+        boxShadow: `0 4px 20px ${primaryColor}40`,
       }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "scale(1.01)"; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "scale(1)"; }}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" />

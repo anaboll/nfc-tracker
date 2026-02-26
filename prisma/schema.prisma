@@ -70,7 +70,9 @@ model Tag {
   targetUrl   String
   description String?
   videoFile   String?
-  links       Json?     // For multilink: [{ label, url, icon }]
+  links       Json?     // For multilink: [{ label, url, icon }], for vcard: VCardData object
+  editToken     String?   // Self-service edit token for vCard owners
+  editTokenExp  DateTime? // Optional token expiration
   isActive    Boolean   @default(true)
   clientId    String?
   client      Client?   @relation(fields: [clientId], references: [id])

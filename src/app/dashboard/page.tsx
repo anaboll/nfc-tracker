@@ -4426,7 +4426,8 @@ function DashboardPage() {
 
                           {/* Right: actions */}
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            {/* Active toggle */}
+                            {/* Active toggle — admin only */}
+                            {isAdmin && (
                             <button
                               onClick={() => handleToggleActive(tag)}
                               title={tag.isActive ? "Dezaktywuj" : "Aktywuj"}
@@ -4455,6 +4456,7 @@ function DashboardPage() {
                                 }}
                               />
                             </button>
+                            )}
 
                             {/* Quick: Kopiuj link publiczny */}
                             <button
@@ -4483,10 +4485,10 @@ function DashboardPage() {
                               }
                             </button>
 
-                            {/* Quick: Edytuj */}
+                            {/* Quick: Edytuj / Podglad */}
                             <button
                               onClick={e => { e.stopPropagation(); startEdit(tag); }}
-                              title="Edytuj akcję"
+                              title={isAdmin ? "Edytuj akcje" : "Podglad"}
                               style={{
                                 background: "#1a253a",
                                 border: "1px solid #1e2d45",
@@ -4510,7 +4512,8 @@ function DashboardPage() {
                               </svg>
                             </button>
 
-                            {/* ⋯ menu */}
+                            {/* ⋯ menu — admin only */}
+                            {isAdmin && (
                             <div style={{ position: "relative" }}>
                               <button
                                 onClick={(e) => openCardMenu(tag.id, e)}
@@ -4660,6 +4663,7 @@ function DashboardPage() {
                                 </CtxMenuPortal>
                               )}
                             </div>
+                            )}
                           </div>
                         </div>
 
@@ -5345,7 +5349,7 @@ function DashboardPage() {
               zIndex: 1,
             }}>
               <div>
-                <div style={{ fontSize: 11, color: "#5a6478", marginBottom: 2 }}>Edycja akcji</div>
+                <div style={{ fontSize: 11, color: "#5a6478", marginBottom: 2 }}>{isAdmin ? "Edycja akcji" : "Szczegoly akcji"}</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "#e8ecf1" }}>{editingAction.name}</div>
               </div>
               <button
@@ -5394,6 +5398,7 @@ function DashboardPage() {
                 onCancel={() => setEditingAction(null)}
                 onResetStats={handleResetStats}
                 onDeleteTag={handleDeleteTag}
+                readOnly={!isAdmin}
               />
             </div>
           </div>
