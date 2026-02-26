@@ -237,7 +237,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   skeleton: {
     height: 200,
-    borderRadius: 12,
+    borderRadius: 8,
     background: "linear-gradient(90deg, #12151c 25%, #1a1d26 50%, #12151c 75%)",
     backgroundSize: "400% 100%",
     animation: "skeleton-shimmer 1.5s ease-in-out infinite",

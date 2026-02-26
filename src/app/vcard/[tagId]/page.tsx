@@ -149,14 +149,14 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
                     rel="noopener noreferrer"
                     style={{
                       display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 16px", borderRadius: 14,
+                      padding: "14px 16px", borderRadius: 8,
                       background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
                       textDecoration: "none", transition: "all 0.2s",
                       backdropFilter: "blur(8px)",
                     }}
                   >
                     <div style={{
-                      width: 44, height: 44, borderRadius: 12,
+                      width: 44, height: 44, borderRadius: 8,
                       background: `${color}15`, border: `1px solid ${color}30`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
@@ -199,14 +199,14 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
                     rel="noopener noreferrer"
                     style={{
                       display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 16px", borderRadius: 14,
+                      padding: "14px 16px", borderRadius: 8,
                       background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
                       textDecoration: "none", transition: "all 0.2s",
                       backdropFilter: "blur(8px)",
                     }}
                   >
                     <div style={{
-                      width: 44, height: 44, borderRadius: 12,
+                      width: 44, height: 44, borderRadius: 8,
                       background: `${color}15`, border: `1px solid ${color}30`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
@@ -240,7 +240,7 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
               O mnie
             </div>
             <div style={{
-              padding: "16px 18px", borderRadius: 14,
+              padding: "16px 18px", borderRadius: 8,
               background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
               fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.7)",
               whiteSpace: "pre-wrap",

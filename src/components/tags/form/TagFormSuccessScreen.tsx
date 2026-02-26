@@ -206,7 +206,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 24px",
     borderRadius: 8,
     border: "none",
-    background: "linear-gradient(135deg, #00c8a0, #2ee8c0)",
+    background: "#00c8a0",
     color: "#12151c",
     fontSize: 13,
     fontWeight: 700,

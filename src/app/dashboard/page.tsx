@@ -1915,7 +1915,7 @@ function DashboardPage() {
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: "linear-gradient(135deg, #00c8a0, #2ee8c0)",
+                background: "#00c8a0",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1936,7 +1936,7 @@ function DashboardPage() {
               </svg>
             </div>
             <span style={{ fontSize: 20, fontWeight: 700 }}>
-              <span className="gradient-text">TwojeNFC</span>
+              <span style={{ color: "#00c8a0", fontWeight: 800 }}>TwojeNFC</span>
             </span>
           </div>
 
@@ -2090,7 +2090,7 @@ function DashboardPage() {
             }}
           >
             {/* -- Klienci block -- */}
-            <div style={{ background: "#12151c", borderRadius: 14, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
+            <div style={{ background: "#12151c", borderRadius: 8, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#555c6e", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
                 {isAdmin && <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2200,7 +2200,7 @@ function DashboardPage() {
             </div>
 
             {/* -- Kampanie block — always-visible list (no dropdown) -- */}
-            <div style={{ background: "#12151c", borderRadius: 14, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
+            <div style={{ background: "#12151c", borderRadius: 8, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#555c6e", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
                 {isAdmin && selectedClientId && (
@@ -2324,7 +2324,7 @@ function DashboardPage() {
             </div>
 
             {/* -- Akcje — always-visible list, only active when campaign is selected -- */}
-            <div style={{ background: "#12151c", borderRadius: 14, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
+            <div style={{ background: "#12151c", borderRadius: 8, border: "1px solid #2a2e38", padding: "14px 14px 10px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#555c6e", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
@@ -2517,7 +2517,7 @@ function DashboardPage() {
             {showCustomPopover && (
               <div ref={customPopoverRef} style={{
                 position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
-                background: "#161a22", border: "1px solid #363b48", borderRadius: 12,
+                background: "#161a22", border: "1px solid #363b48", borderRadius: 8,
                 padding: "16px 18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                 display: "flex", flexDirection: "column", gap: 12, minWidth: 320,
               }}>
@@ -2586,7 +2586,7 @@ function DashboardPage() {
 
         {/* ---- Error display ---- */}
         {fetchError && (
-          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 12, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "monospace", wordBreak: "break-all" }}>
+          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "monospace", wordBreak: "break-all" }}>
             {fetchError}
           </div>
         )}
@@ -2597,16 +2597,16 @@ function DashboardPage() {
             {/* KPI skeleton */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
               {[1,2,3,4].map(i => (
-                <div key={i} className="skeleton" style={{ height: 100, borderRadius: 14 }} />
+                <div key={i} className="skeleton" style={{ height: 100, borderRadius: 8 }} />
               ))}
             </div>
             {/* Content skeleton */}
-            <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
+            <div className="skeleton" style={{ height: 200, borderRadius: 8 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="skeleton" style={{ height: 160, borderRadius: 14 }} />
-              <div className="skeleton" style={{ height: 160, borderRadius: 14 }} />
+              <div className="skeleton" style={{ height: 160, borderRadius: 8 }} />
+              <div className="skeleton" style={{ height: 160, borderRadius: 8 }} />
             </div>
-            <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
+            <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           </div>
         )}
 
@@ -2763,67 +2763,34 @@ function DashboardPage() {
               }}
             >
               {/* Total Scans */}
-              <div className="card card-hover" style={{ position: "relative", overflow: "hidden", borderLeft: "3px solid #00c8a0" }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -20,
-                    right: -20,
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "rgba(0,200,160,0.08)",
-                  }}
-                />
-                <p style={{ fontSize: 12, color: "#8a92a4", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+              <div className="card card-hover" style={{ borderLeft: "3px solid #00c8a0" }}>
+                <p style={{ fontSize: 11, color: "#8a92a4", fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Wszystkie skany
                 </p>
-                <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
+                <p style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.1, color: "#eaf0f6" }}>
                   {kpi?.totalScans.toLocaleString("pl-PL") ?? "0"}
                 </p>
                 <p style={{ fontSize: 11, color: "#555c6e", marginTop: 4 }}>
-                  Lacznie zarejestrowanych skanow
+                  Łącznie zarejestrowanych
                 </p>
               </div>
 
               {/* Unique Users */}
-              <div className="card card-hover" style={{ position: "relative", overflow: "hidden", borderLeft: "3px solid #6366f1" }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -20,
-                    right: -20,
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "rgba(99,102,241,0.08)",
-                  }}
-                />
-                <p style={{ fontSize: 12, color: "#8a92a4", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
-                  Unikalni uzytkownicy
+              <div className="card card-hover" style={{ borderLeft: "3px solid #6366f1" }}>
+                <p style={{ fontSize: 11, color: "#8a92a4", fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Unikalni użytkownicy
                 </p>
-                <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }} className="gradient-text">
+                <p style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.1, color: "#eaf0f6" }}>
                   {kpi?.uniqueUsers.toLocaleString("pl-PL") ?? "0"}
                 </p>
                 <p style={{ fontSize: 11, color: "#555c6e", marginTop: 4 }}>
-                  Rozne urzadzenia / osoby
+                  Różne urządzenia / osoby
                 </p>
               </div>
 
               {/* Last Scan */}
-              <div className="card card-hover" style={{ position: "relative", overflow: "hidden", borderLeft: "3px solid #34d399" }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -20,
-                    right: -20,
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "rgba(52,211,153,0.08)",
-                  }}
-                />
-                <p style={{ fontSize: 12, color: "#8a92a4", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+              <div className="card card-hover" style={{ borderLeft: "3px solid #34d399" }}>
+                <p style={{ fontSize: 11, color: "#8a92a4", fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Ostatni skan
                 </p>
                 <p style={{ fontSize: 18, fontWeight: 700, color: "#eaf0f6" }}>
@@ -2832,26 +2799,15 @@ function DashboardPage() {
               </div>
 
               {/* Avg Scans Per User */}
-              <div className="card card-hover" style={{ position: "relative", overflow: "hidden", borderLeft: "3px solid #f59e0b" }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -20,
-                    right: -20,
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "rgba(52,211,153,0.08)",
-                  }}
-                />
-                <p style={{ fontSize: 12, color: "#8a92a4", fontWeight: 500, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
-                  Sr. skanow / osoba
+              <div className="card card-hover" style={{ borderLeft: "3px solid #f59e0b" }}>
+                <p style={{ fontSize: 11, color: "#8a92a4", fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Śr. skanów / osoba
                 </p>
-                <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1, color: "#10b981" }}>
+                <p style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.1, color: "#10b981" }}>
                   {kpi?.avgScansPerUser ?? 0}x
                 </p>
                 <p style={{ fontSize: 11, color: "#555c6e", marginTop: 4 }}>
-                  {(kpi?.avgScansPerUser ?? 0) <= 1.2 ? "Wiekszosc skanuje raz" : "Uzytkownicy wracaja"}
+                  {(kpi?.avgScansPerUser ?? 0) <= 1.2 ? "Większość skanuje raz" : "Użytkownicy wracają"}
                 </p>
               </div>
             </section>
@@ -3072,7 +3028,7 @@ function DashboardPage() {
                           width: 24,
                           height: 24,
                           borderRadius: 6,
-                          background: "linear-gradient(135deg, #00c8a0, #2ee8c0)",
+                          background: "#00c8a0",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -3354,7 +3310,7 @@ function DashboardPage() {
                               right: 0,
                               height: Math.max(barH, 4),
                               borderRadius: "6px 6px 2px 2px",
-                              background: d.count > 0 ? "linear-gradient(180deg, #2ee8c0, #00c8a0)" : "#232730",
+                              background: d.count > 0 ? "#00c8a0" : "#232730",
                               transition: "height 0.4s ease",
                               opacity: 0.35,
                             }}
@@ -3368,7 +3324,7 @@ function DashboardPage() {
                               right: "15%",
                               height: Math.max(uBarH, d.uniqueUsers > 0 ? 4 : 0),
                               borderRadius: "4px 4px 2px 2px",
-                              background: d.uniqueUsers > 0 ? "linear-gradient(180deg, #10b981, #059669)" : "transparent",
+                              background: d.uniqueUsers > 0 ? "#10b981" : "transparent",
                               transition: "height 0.4s ease",
                             }}
                           />
@@ -3586,7 +3542,7 @@ function DashboardPage() {
                                 position: "absolute", bottom: 0, left: "10%", right: "10%",
                                 height: Math.max(barH, h.count > 0 ? 4 : 2),
                                 borderRadius: "3px 3px 0 0",
-                                background: h.count > 0 ? "linear-gradient(180deg, rgba(0,200,160,0.7), rgba(0,200,160,0.4))" : "#1a1d26",
+                                background: h.count > 0 ? "rgba(0,200,160,0.6)" : "#1a1d26",
                                 transition: "height 0.3s ease",
                               }} />
                             )}
@@ -3598,7 +3554,7 @@ function DashboardPage() {
                                 right: showAll ? "25%" : "10%",
                                 height: Math.max(uBarH, 3),
                                 borderRadius: "2px 2px 0 0",
-                                background: "linear-gradient(180deg, rgba(16,185,129,0.85), rgba(5,150,105,0.5))",
+                                background: "rgba(16,185,129,0.7)",
                                 transition: "height 0.3s ease",
                               }} />
                             )}
@@ -3728,7 +3684,7 @@ function DashboardPage() {
                             <td style={{ padding: "8px 12px", textAlign: "right" }}>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
                                 <div style={{ width: 50, height: 4, background: "#232730", borderRadius: 2, overflow: "hidden" }}>
-                                  <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", borderRadius: 2 }} />
+                                  <div style={{ width: `${pct}%`, height: "100%", background: "#8b5cf6", borderRadius: 2 }} />
                                 </div>
                                 <span style={{ color: "#8a92a4", minWidth: 30 }}>{pct}%</span>
                               </div>
@@ -3778,7 +3734,7 @@ function DashboardPage() {
                       >{t.tagName}</button>
                       <span style={{ fontSize: 11, color: "#eaf0f6", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{t.count}</span>
                       <div style={{ width: 60, height: 4, background: "#232730", borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
-                        <div style={{ width: `${t.percent}%`, height: "100%", background: "linear-gradient(90deg, #10b981, #34d399)", borderRadius: 2 }} />
+                        <div style={{ width: `${t.percent}%`, height: "100%", background: "#10b981", borderRadius: 2 }} />
                       </div>
                       <span style={{ fontSize: 10, color: "#555c6e", minWidth: 28 }}>{t.percent}%</span>
                     </div>
@@ -3890,9 +3846,9 @@ function DashboardPage() {
                           </thead>
                           <tbody>
                             {scanData.rows.map((scan, idx) => (
-                              <tr key={scan.id} style={{ borderBottom: "1px solid #1a1d26", transition: "background 0.15s", background: idx % 2 === 1 ? "#14171e" : "transparent" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,200,160,0.06)")}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 1 ? "#14171e" : "transparent")}
+                              <tr key={scan.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "background 0.15s" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                               >
                                 <td style={{ padding: "6px 8px", color: "#555c6e", fontWeight: 600, fontFamily: "monospace" }}>
                                   {scan.seq}
@@ -4158,7 +4114,7 @@ function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <h2 style={{ fontSize: 22, fontWeight: 800 }}>
-                    <span className="gradient-text">Akcje</span>
+                    <span style={{ color: "#eaf0f6" }}>Akcje</span>
                   </h2>
                   <span
                     style={{
@@ -4258,7 +4214,7 @@ function DashboardPage() {
                     router.push(`/dashboard/tags/new${qs ? `?${qs}` : ""}`);
                   }}
                   style={{
-                    background: "linear-gradient(135deg, #00c8a0, #2ee8c0)",
+                    background: "#00c8a0",
                     border: "none",
                     color: "#0b0d12",
                     borderRadius: 10,
@@ -4441,7 +4397,7 @@ function DashboardPage() {
                               style={{
                                 width: 44,
                                 height: 24,
-                                borderRadius: 12,
+                                borderRadius: 8,
                                 background: tag.isActive ? "#10b981" : "#3d4250",
                                 border: "none",
                                 cursor: "pointer",
@@ -4790,7 +4746,7 @@ function DashboardPage() {
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                                           <div style={{ width: 60, height: 4, background: "#232730", borderRadius: 2, overflow: "hidden" }}>
-                                            <div style={{ width: `${lc.percent}%`, height: "100%", background: "linear-gradient(90deg, #60a5fa, #6366f1)", borderRadius: 2 }} />
+                                            <div style={{ width: `${lc.percent}%`, height: "100%", background: "#6366f1", borderRadius: 2 }} />
                                           </div>
                                           <span style={{ fontSize: 12, fontWeight: 700, color: "#eaf0f6", minWidth: 24, textAlign: "right" }}>{lc.clicks}</span>
                                           <span style={{ fontSize: 10, color: "#555c6e", minWidth: 28, textAlign: "right" }}>{lc.percent}%</span>
@@ -4960,7 +4916,7 @@ function DashboardPage() {
                 right: 0,
                 height: 3,
                 borderRadius: "12px 12px 0 0",
-                background: "linear-gradient(90deg, #00c8a0, #10b981)",
+                background: "#00c8a0",
               }}
             />
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "#eaf0f6" }}>
@@ -5042,7 +4998,7 @@ function DashboardPage() {
             transform: "translate(-50%,-50%)",
             background: "#14171e",
             border: "1px solid #2a2e38",
-            borderRadius: 14,
+            borderRadius: 8,
             padding: "28px 32px",
             zIndex: 1101,
             minWidth: 360,
@@ -5130,7 +5086,7 @@ function DashboardPage() {
             style={{
               background: "#14171e",
               border: "1px solid #2a2e38",
-              borderRadius: 12,
+              borderRadius: 8,
               width: "min(760px, 95vw)",
               maxHeight: "80vh",
               display: "flex",

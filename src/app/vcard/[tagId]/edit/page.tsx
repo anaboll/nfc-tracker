@@ -215,7 +215,7 @@ export default function VCardEditPage() {
           style={{
             width: "100%",
             padding: "14px 0",
-            borderRadius: 12,
+            borderRadius: 8,
             border: "none",
             background: saving ? "#a78bfa" : "#7c3aed",
             color: "#fff",

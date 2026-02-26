@@ -205,7 +205,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   };
 
   const btnPrimary: React.CSSProperties = {
-    background: "linear-gradient(135deg, #2ee8c0 0%, #e8a020 100%)",
+    background: "#00c8a0",
     color: "#0b0d12",
     border: "none",
     borderRadius: 8,

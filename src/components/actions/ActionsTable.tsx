@@ -529,7 +529,7 @@ export function ActionsTable({
                       style={{
                         width: 44,
                         height: 24,
-                        borderRadius: 12,
+                        borderRadius: 8,
                         background: tag.isActive ? "#10b981" : "#3d4250",
                         border: "none",
                         cursor: "pointer",

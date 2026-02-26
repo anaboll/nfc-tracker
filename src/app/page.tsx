@@ -261,7 +261,7 @@ export default function HomePage() {
               <div className="analytics-card-value">12 krajow</div>
               <div className="analytics-card-sub">PL 67% &middot; DE 12% &middot; UK 8% &middot; inne 13%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "67%", background: "linear-gradient(90deg, #6366f1, #60a5fa)" }} />
+                <div className="analytics-mini-fill" style={{ width: "67%", background: "#6366f1" }} />
               </div>
             </div>
             <div className="analytics-card">
@@ -272,7 +272,7 @@ export default function HomePage() {
               <div className="analytics-card-value">87% mobile</div>
               <div className="analytics-card-sub">iOS 52% &middot; Android 35% &middot; Desktop 13%</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "87%", background: "linear-gradient(90deg, #34d399, #4ade80)" }} />
+                <div className="analytics-mini-fill" style={{ width: "87%", background: "#34d399" }} />
               </div>
             </div>
             <div className="analytics-card">
@@ -283,7 +283,7 @@ export default function HomePage() {
               <div className="analytics-card-value">Peak: 12:00</div>
               <div className="analytics-card-sub">Heatmapa aktywnosci 24h z podzialem na dni tygodnia</div>
               <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "54%", background: "linear-gradient(90deg, #a855f7, #c084fc)" }} />
+                <div className="analytics-mini-fill" style={{ width: "54%", background: "#a855f7" }} />
               </div>
             </div>
           </div>

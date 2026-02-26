@@ -172,7 +172,7 @@ const styles: Record<string, React.CSSProperties> = {
   section: {
     marginBottom: 28,
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 8,
     background: "#12151c",
     border: "1px solid #2a2e38",
   },

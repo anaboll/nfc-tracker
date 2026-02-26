@@ -31,7 +31,7 @@ export default function VCardActions({ vcfBase64, fullName, primaryColor = "#7c3
       style={{
         width: "100%",
         padding: "14px 0",
-        borderRadius: 14,
+        borderRadius: 8,
         fontWeight: 700,
         color: "#fff",
         fontSize: 15,

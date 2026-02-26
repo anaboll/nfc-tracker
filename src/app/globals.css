@@ -7,7 +7,8 @@
   --surface: #12151c;
   --surface-2: #1a1d26;
   --surface-3: #232730;
-  --border: #2a2e38;
+  --border: rgba(255,255,255,0.06);
+  --border-visible: #2a2e38;
   --border-hover: #3d4250;
   --accent: #00c8a0;
   --accent-light: #2ee8c0;
@@ -25,6 +26,7 @@ body {
   background: var(--bg);
   color: var(--txt);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -37,25 +39,16 @@ body {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .card-hover {
-  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  transition: border-color 0.15s ease;
 }
 .card-hover:hover {
-  border-color: var(--accent-dim);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 200, 160, 0.06), 0 2px 8px rgba(0,0,0,0.4);
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #2ee8c0, #00c8a0);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  border-color: var(--border-hover);
 }
 
 .progress-bar {
@@ -67,24 +60,27 @@ body {
 .progress-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  background: var(--accent);
   transition: width 0.5s ease;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #00c8a0, #2ee8c0);
+  background: var(--accent);
   color: #0b0d12;
-  font-weight: 700;
+  font-weight: 600;
   border: none;
-  border-radius: 10px;
-  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  padding: 0.625rem 1.25rem;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 2px 12px rgba(0, 200, 160, 0.2);
+  transition: background 0.15s ease;
+  box-shadow: none;
 }
 .btn-primary:hover {
-  box-shadow: 0 4px 20px rgba(0, 200, 160, 0.35);
-  transform: translateY(-1px);
+  background: var(--accent-light);
+}
+
+.gradient-text {
+  color: var(--accent);
 }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
 
@@ -92,16 +88,15 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--txt);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
   outline: none;
   width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.15s;
 }
 .input-field:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 200, 160, 0.12);
 }
 .input-field::placeholder { color: var(--txt-muted); }
 
@@ -117,7 +112,7 @@ input[type="date"] {
 }
 input[type="date"]:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 200, 160, 0.12);
+  /* focus ring removed — border-color only */
 }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
@@ -133,7 +128,7 @@ input[type="time"] {
 }
 input[type="time"]:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 200, 160, 0.12);
+  /* focus ring removed — border-color only */
 }
 input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
@@ -186,7 +181,7 @@ select {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +297,7 @@ select {
 .hero-btn {
   font-size: 1.05rem;
   padding: 0.9rem 2rem;
-  border-radius: 12px;
+  border-radius: 8px;
   text-decoration: none;
 }
 .hero-btn-secondary {
@@ -311,7 +306,7 @@ select {
   font-weight: 600;
   font-size: 1.05rem;
   padding: 0.9rem 2rem;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   transition: all 0.2s;
 }
@@ -392,7 +387,7 @@ select {
 .feature-icon {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 8px;
   background: rgba(0, 200, 160, 0.1);
   color: var(--accent-light);
   display: flex;
@@ -430,10 +425,7 @@ select {
 .step-number {
   font-size: 3rem;
   font-weight: 900;
-  background: linear-gradient(135deg, var(--accent), var(--accent-light));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent);
   margin-bottom: 1rem;
   line-height: 1;
 }
@@ -466,7 +458,7 @@ select {
 .type-icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-2);
   color: var(--accent-light);
   display: flex;
@@ -499,7 +491,7 @@ select {
 .analytics-card {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 1.5rem;
 }
 .analytics-card-header {
@@ -539,7 +531,7 @@ select {
 .analytics-mini-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  background: var(--accent);
 }
 
 /* -- CTA -- */
@@ -615,7 +607,7 @@ select {
   align-items: center;
   gap: 0.75rem;
   padding: 0.875rem 1.25rem;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
@@ -681,7 +673,7 @@ select {
 }
 .skeleton-card {
   height: 120px;
-  border-radius: 14px;
+  border-radius: 8px;
 }
 
 /* ================================================================== */
