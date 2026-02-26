@@ -4240,15 +4240,15 @@ function DashboardPage() {
                 </div>
               </div>
 
-              {/* ---- "+ Nowa akcja" button — opens drawer ---- */}
+              {/* ---- "+ Nowa akcja" button — navigates to full page ---- */}
               {isAdmin && <div style={{ marginBottom: 20 }}>
                 <button
                   onClick={() => {
-                    setNewTagClient(selectedClientId ?? "");
-                    setNewTagCampaign(selectedCampaignId ?? "");
-                    setShowNewTagDrawer(true);
-                    setTagCreateSuccess("");
-                    setTagCreateError("");
+                    const params = new URLSearchParams();
+                    if (selectedClientId) params.set("clientId", selectedClientId);
+                    if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
+                    const qs = params.toString();
+                    router.push(`/dashboard/tags/new${qs ? `?${qs}` : ""}`);
                   }}
                   style={{
                     background: "linear-gradient(135deg, #e69500, #f5b731)",
@@ -4298,7 +4298,7 @@ function DashboardPage() {
                     uploadingTagId={uploadingTagId}
                     uploadProgress={uploadProgress}
                     onToggleActive={handleToggleActive}
-                    onStartEdit={startEdit}
+                    onStartEdit={(tag) => router.push(`/dashboard/tags/${tag.id}/edit`)}
                     onDeleteTag={handleDeleteTag}
                     onResetStats={handleResetStats}
                     onVideoUpload={handleVideoUpload}
@@ -4487,7 +4487,7 @@ function DashboardPage() {
 
                             {/* Quick: Edytuj / Podglad */}
                             <button
-                              onClick={e => { e.stopPropagation(); startEdit(tag); }}
+                              onClick={e => { e.stopPropagation(); router.push(`/dashboard/tags/${tag.id}/edit`); }}
                               title={isAdmin ? "Edytuj akcje" : "Podglad"}
                               style={{
                                 background: "#1a253a",
@@ -4637,7 +4637,7 @@ function DashboardPage() {
 
                                   {/* Reset statystyk */}
                                   <button
-                                    onClick={() => { closeCardMenu(); setResetTagConfirm(tag.id); startEdit(tag); }}
+                                    onClick={() => { closeCardMenu(); router.push(`/dashboard/tags/${tag.id}/edit`); }}
                                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#f59e0b", fontSize: 13, cursor: "pointer", textAlign: "left" }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -4917,227 +4917,7 @@ function DashboardPage() {
         </div>{/* end sidebar+content flex */}
       </main>
 
-      {/* ============================================================ */}
-      {/*  NOWA AKCJA DRAWER (right-side slide panel)                  */}
-      {/* ============================================================ */}
-
-      {showNewTagDrawer && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setShowNewTagDrawer(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
-          />
-          {/* Panel */}
-          <div style={{
-            position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 91,
-            width: "min(520px, 92vw)",
-            background: "#0c1220",
-            borderLeft: "1px solid #1e2d45",
-            display: "flex", flexDirection: "column",
-            boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
-            animation: "slideInRight 0.22s ease",
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          }}>
-            <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
-
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid #1e2d45", flexShrink: 0 }}>
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8ecf1", margin: 0 }}>
-                  <span className="gradient-text">Nowa akcja</span>
-                </h2>
-                <p style={{ fontSize: 12, color: "#5a6478", margin: "2px 0 0" }}>Uzupelnij dane i kliknij &quot;Utworz akcje&quot;</p>
-              </div>
-              <button
-                onClick={() => setShowNewTagDrawer(false)}
-                style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 0.2s, color 0.2s", flexShrink: 0 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e2d45"; e.currentTarget.style.color = "#8b95a8"; }}
-              >✕</button>
-            </div>
-
-            {/* Scrollable form body */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px" }}>
-              <form onSubmit={handleCreateTag}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>ID akcji</label>
-                    <input className="input-field" value={newTagId} onChange={(e) => setNewTagId(e.target.value)} placeholder="np. moja-wizytowka" />
-                    {newTagId && (
-                      <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4, fontFamily: "monospace" }}>
-                        URL: twojenfc.pl/s/{newTagId.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-")}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Nazwa</label>
-                    <input className="input-field" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Moja Wizytówka" />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Typ akcji</label>
-                    <select className="input-field" value={newTagType} onChange={(e) => setNewTagType(e.target.value)} style={{ padding: "8px 12px" }}>
-                      <option value="url">Przekierowanie URL</option>
-                      <option value="video">Video player</option>
-                      <option value="multilink">Multi-link</option>
-                      <option value="vcard">Wizytówka (vCard)</option>
-                      <option value="google-review">Recenzja Google</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                      Kanał
-                      <span style={{ marginLeft: 4, fontSize: 10, color: "#3a4460", fontWeight: 400 }}>(do atrybucji skanów)</span>
-                    </label>
-                    <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1e2d45", width: "fit-content" }}>
-                      <button type="button" onClick={() => setNewTagChannel("nfc")}
-                        style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: newTagChannel === "nfc" ? "#f5b731" : "#1a253a", color: newTagChannel === "nfc" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
-                        title="Breloczek / naklejka NFC — skany przez NFC chip"
-                      >NFC</button>
-                      <button type="button" onClick={() => setNewTagChannel("qr")}
-                        style={{ padding: "8px 18px", fontSize: 12, fontWeight: 600, border: "none", borderLeft: "1px solid #1e2d45", cursor: "pointer", background: newTagChannel === "qr" ? "#10b981" : "#1a253a", color: newTagChannel === "qr" ? "#06080d" : "#8b95a8", transition: "background 0.15s, color 0.15s" }}
-                        title="Kod QR — skany przez aparat"
-                      >QR</button>
-                    </div>
-                    <p style={{ fontSize: 10, color: "#3a4460", marginTop: 3 }}>
-                      {newTagChannel === "nfc"
-                        ? "Kanał główny: NFC · QR dostępne do druku/testów"
-                        : "Kanał główny: QR · skany śledzone jako źródło QR"}
-                    </p>
-                  </div>
-                  {(newTagType === "url" || newTagType === "google-review") && (
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>
-                        {newTagType === "google-review" ? "Link do recenzji Google" : "Docelowy URL"}
-                      </label>
-                      <input className="input-field" value={newTagUrl} onChange={(e) => setNewTagUrl(e.target.value)}
-                        placeholder={newTagType === "google-review" ? "https://search.google.com/local/writereview?placeid=..." : "https://example.com"} />
-                      {newTagType === "google-review" && (
-                        <p style={{ fontSize: 10, color: "#5a6478", marginTop: 4 }}>Wklej link do opinii Google z Google Maps</p>
-                      )}
-                    </div>
-                  )}
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Klient</label>
-                    <select className="input-field" value={newTagClient} onChange={(e) => { setNewTagClient(e.target.value); setNewTagCampaign(""); }}
-                      style={{ padding: "8px 12px", borderColor: (!newTagClient && !drawerIsClosing) ? "#f87171" : undefined }}>
-                      <option value="">-- wybierz klienta (wymagane) --</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    {!newTagClient && !drawerIsClosing && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Klient jest wymagany</p>}
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Kampania</label>
-                    <select className="input-field" value={newTagCampaign} onChange={(e) => setNewTagCampaign(e.target.value)}
-                      style={{ padding: "8px 12px", borderColor: (!newTagCampaign && !drawerIsClosing) ? "#f87171" : undefined }}>
-                      <option value="">-- wybierz kampanię (wymagane) --</option>
-                      {campaigns.filter(c => !newTagClient || c.clientId === newTagClient).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    {!newTagCampaign && !drawerIsClosing && <p style={{ fontSize: 11, color: "#f87171", marginTop: 3 }}>Kampania jest wymagana</p>}
-                  </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={{ display: "block", fontSize: 12, color: "#8b95a8", marginBottom: 4, fontWeight: 500 }}>Opis (opcjonalnie)</label>
-                    <input className="input-field" value={newTagDesc} onChange={(e) => setNewTagDesc(e.target.value)} placeholder="Krotki opis..." />
-                  </div>
-                </div>
-
-                {/* Multilink links editor */}
-                {newTagType === "multilink" && (
-                  <div style={{ marginBottom: 16, padding: 16, background: "#0f1524", borderRadius: 10, border: "1px solid #1e2d45" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                      <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1" }}>Linki</h4>
-                      <button type="button" onClick={() => setNewTagLinks([...newTagLinks, { label: "", url: "", icon: "link" }])}
-                        style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                        + Dodaj link
-                      </button>
-                    </div>
-                    {newTagLinks.map((link, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        <select className="input-field" value={link.icon} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],icon:e.target.value}; setNewTagLinks(u); }} style={{ padding: "6px 8px", width: 110, fontSize: 12 }}>
-                          {iconOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                        </select>
-                        <input className="input-field" placeholder="Etykieta" value={link.label} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],label:e.target.value}; setNewTagLinks(u); }} style={{ flex:"1 1 100px", minWidth:90, fontSize:12, padding:"6px 10px" }} />
-                        <input className="input-field" placeholder="https://..." value={link.url} onChange={(e) => { const u=[...newTagLinks]; u[idx]={...u[idx],url:e.target.value}; setNewTagLinks(u); }} style={{ flex:"2 1 150px", minWidth:120, fontSize:12, padding:"6px 10px" }} />
-                        <button type="button" onClick={() => { const u=newTagLinks.filter((_,i)=>i!==idx); setNewTagLinks(u.length?u:[{label:"",url:"",icon:"link"}]); }}
-                          style={{ background:"transparent", border:"1px solid #1e2d45", color:"#5a6478", borderRadius:6, width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, flexShrink:0 }}
-                          onMouseEnter={(e)=>{e.currentTarget.style.borderColor="#ef4444";e.currentTarget.style.color="#f87171";}}
-                          onMouseLeave={(e)=>{e.currentTarget.style.borderColor="#1e2d45";e.currentTarget.style.color="#6060a0";}}>X</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* vCard editor */}
-                {newTagType === "vcard" && (
-                  <div style={{ marginBottom: 16, padding: 14, background: "#0f1524", borderRadius: 10, border: "1px solid #1e2d45" }}>
-                    <h4 style={{ fontSize: 13, fontWeight: 600, color: "#e8ecf1", marginBottom: 10 }}>Dane wizytowki</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Imie *</label><input className="input-field" value={newVCard.firstName} onChange={(e)=>setNewVCard({...newVCard,firstName:e.target.value})} placeholder="Jan" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Nazwisko *</label><input className="input-field" value={newVCard.lastName} onChange={(e)=>setNewVCard({...newVCard,lastName:e.target.value})} placeholder="Kowalski" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Firma</label><input className="input-field" value={newVCard.company||""} onChange={(e)=>setNewVCard({...newVCard,company:e.target.value})} placeholder="Nazwa firmy" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Stanowisko</label><input className="input-field" value={newVCard.jobTitle||""} onChange={(e)=>setNewVCard({...newVCard,jobTitle:e.target.value})} placeholder="CEO / Manager" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Telefon</label><input className="input-field" value={newVCard.phone||""} onChange={(e)=>setNewVCard({...newVCard,phone:e.target.value})} placeholder="+48 123 456 789" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Email</label><input className="input-field" value={newVCard.email||""} onChange={(e)=>setNewVCard({...newVCard,email:e.target.value})} placeholder="jan@firma.pl" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Strona WWW</label><input className="input-field" value={newVCard.website||""} onChange={(e)=>setNewVCard({...newVCard,website:e.target.value})} placeholder="https://firma.pl" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Adres</label><input className="input-field" value={newVCard.address||""} onChange={(e)=>setNewVCard({...newVCard,address:e.target.value})} placeholder="ul. Przykladowa 1" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                    </div>
-                    <p style={{ fontSize:11, color:"#5a6478", margin:"10px 0 6px", fontWeight:500 }}>Media spolecznosciowe (opcjonalnie):</p>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Instagram</label><input className="input-field" value={newVCard.instagram||""} onChange={(e)=>setNewVCard({...newVCard,instagram:e.target.value})} placeholder="@profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Facebook</label><input className="input-field" value={newVCard.facebook||""} onChange={(e)=>setNewVCard({...newVCard,facebook:e.target.value})} placeholder="Profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>LinkedIn</label><input className="input-field" value={newVCard.linkedin||""} onChange={(e)=>setNewVCard({...newVCard,linkedin:e.target.value})} placeholder="Profil lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>WhatsApp</label><input className="input-field" value={newVCard.whatsapp||""} onChange={(e)=>setNewVCard({...newVCard,whatsapp:e.target.value})} placeholder="+48123456789" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>TikTok</label><input className="input-field" value={newVCard.tiktok||""} onChange={(e)=>setNewVCard({...newVCard,tiktok:e.target.value})} placeholder="@profil" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>YouTube</label><input className="input-field" value={newVCard.youtube||""} onChange={(e)=>setNewVCard({...newVCard,youtube:e.target.value})} placeholder="@kanal lub URL" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                      <div><label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Telegram</label><input className="input-field" value={newVCard.telegram||""} onChange={(e)=>setNewVCard({...newVCard,telegram:e.target.value})} placeholder="@profil" style={{fontSize:12,padding:"6px 10px"}} /></div>
-                    </div>
-                    <div style={{ marginTop:8 }}>
-                      <label style={{ display:"block", fontSize:11, color:"#8b95a8", marginBottom:3 }}>Notatka</label>
-                      <input className="input-field" value={newVCard.note||""} onChange={(e)=>setNewVCard({...newVCard,note:e.target.value})} placeholder="Dodatkowa informacja..." style={{fontSize:12,padding:"6px 10px"}} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Submit row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", paddingTop: 4 }}>
-                  <button type="submit" className="btn-primary" disabled={tagCreating || !newTagClient || !newTagCampaign} style={{ padding: "10px 24px", fontSize: 13 }}>
-                    {tagCreating ? "Tworzenie akcji..." : "Utworz akcje"}
-                  </button>
-                  <button type="button" onClick={() => setShowNewTagDrawer(false)}
-                    style={{ background: "#1a253a", border: "1px solid #1e2d45", color: "#8b95a8", borderRadius: 8, padding: "10px 18px", fontSize: 13, cursor: "pointer" }}>
-                    Anuluj
-                  </button>
-                  {tagCreateError && <span style={{ fontSize: 13, color: "#f87171" }}>{tagCreateError}</span>}
-                  {tagCreateSuccess && <span style={{ fontSize: 13, color: "#10b981" }}>{tagCreateSuccess}</span>}
-                  {tagCreateSuccess && lastCreatedId && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: "#8b95a8" }}>Pobierz QR:</span>
-                      {(["png","svg","pdf"] as const).map((fmt) => (
-                        <button key={fmt} type="button"
-                          onClick={async () => {
-                            if (!lastCreatedId) return;
-                            if (fmt === "pdf") { window.open(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}&format=pdf`, "_blank"); return; }
-                            const res = await fetch(`/api/qr?tagId=${encodeURIComponent(lastCreatedId)}&format=${fmt}`);
-                            if (!res.ok) return;
-                            const blob = await res.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url; a.download = `qr-${lastCreatedId}.${fmt}`; a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          style={{ background: fmt === "pdf" ? "#1a253a" : "#10b981", border: fmt === "pdf" ? "1px solid #f5b731" : "none", color: fmt === "pdf" ? "#f5b731" : "#06080d", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                        >
-                          {fmt === "png" ? "PNG 1024×1024" : fmt === "svg" ? "SVG (wektor)" : "Drukuj PDF"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-        </>
-      )}
+      {/* New Tag Drawer — REPLACED with full-page editor at /dashboard/tags/new */}
 
       {/* ============================================================ */}
       {/*  CHANGE PASSWORD MODAL                                       */}
@@ -5304,106 +5084,7 @@ function DashboardPage() {
         </>
       )}
 
-      {/* ============================================================ */}
-      {/*  EDIT ACTION DRAWER                                          */}
-      {/* ============================================================ */}
-      {editingAction && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setEditingAction(null)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.55)",
-              zIndex: 1000,
-            }}
-          />
-          {/* Panel */}
-          <div
-            className="drawer-panel"
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "min(520px, 100vw)",
-              background: "#0d1526",
-              borderLeft: "1px solid #1e2d45",
-              zIndex: 1001,
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-            }}
-          >
-            {/* Header */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px 20px",
-              borderBottom: "1px solid #1e2d45",
-              position: "sticky",
-              top: 0,
-              background: "#0d1526",
-              zIndex: 1,
-            }}>
-              <div>
-                <div style={{ fontSize: 11, color: "#5a6478", marginBottom: 2 }}>{isAdmin ? "Edycja akcji" : "Szczegoly akcji"}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#e8ecf1" }}>{editingAction.name}</div>
-              </div>
-              <button
-                onClick={() => setEditingAction(null)}
-                title="Zamknij"
-                style={{
-                  background: "transparent",
-                  border: "1px solid #1e2d45",
-                  color: "#8b95a8",
-                  borderRadius: 8,
-                  width: 32,
-                  height: 32,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 16,
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            {/* Body */}
-            <div style={{ padding: "20px 20px 32px" }}>
-              <ActionEditor
-                tagId={editingAction.id}
-                editName={editName}
-                setEditName={setEditName}
-                editType={editType}
-                editUrl={editUrl}
-                setEditUrl={setEditUrl}
-                editDesc={editDesc}
-                setEditDesc={setEditDesc}
-                editChannel={editChannel}
-                setEditChannel={setEditChannel}
-                editTagLinks={editTagLinks}
-                setEditTagLinks={setEditTagLinks}
-                editVCard={editVCard}
-                setEditVCard={setEditVCard}
-                resetTagConfirm={resetTagConfirm}
-                setResetTagConfirm={setResetTagConfirm}
-                resetting={resetting}
-                onSave={handleSaveEdit}
-                onCancel={() => setEditingAction(null)}
-                onResetStats={handleResetStats}
-                onDeleteTag={handleDeleteTag}
-                readOnly={!isAdmin}
-              />
-            </div>
-          </div>
-        </>
-      )}
+      {/* Edit Action Drawer — REPLACED with full-page editor at /dashboard/tags/[id]/edit */}
 
       {/* ============================================================ */}
       {/*  COPY LINK TOAST                                             */}
