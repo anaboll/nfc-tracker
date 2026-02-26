@@ -191,8 +191,8 @@ export default function TagFormLayout({ form }: Props) {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "#0b0d12",
-    color: "#eaf0f6",
+    background: "#0B0F1A",
+    color: "#F1F5F9",
     fontFamily: "'Inter', system-ui, sans-serif",
   },
   container: {
@@ -232,13 +232,13 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(159,103,255,0.08)",
     border: "1px solid rgba(159,103,255,0.2)",
     fontSize: 13,
-    color: "#8a92a4",
+    color: "#94A3B8",
     marginBottom: 28,
   },
   skeleton: {
     height: 200,
     borderRadius: 8,
-    background: "linear-gradient(90deg, #12151c 25%, #1a1d26 50%, #12151c 75%)",
+    background: "linear-gradient(90deg, #151D35 25%, #1C2541 50%, #151D35 75%)",
     backgroundSize: "400% 100%",
     animation: "skeleton-shimmer 1.5s ease-in-out infinite",
     marginBottom: 20,

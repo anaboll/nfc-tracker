@@ -110,7 +110,7 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
             </div>
           )}
 
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#fff", marginBottom: 4, letterSpacing: "-0.01em" }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: "#fff", marginBottom: 4, letterSpacing: "-0.01em" }}>
             {fullName}
           </h1>
           {vcard.jobTitle && (

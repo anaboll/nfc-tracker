@@ -29,7 +29,7 @@ export default function TagFormUrlSection({
           URL <span style={{ color: "#f87171" }}>*</span>
         </label>
         <input
-          style={{ ...styles.input, borderColor: errors.targetUrl ? "#f87171" : "#2a2e38" }}
+          style={{ ...styles.input, borderColor: errors.targetUrl ? "#f87171" : "#1C2541" }}
           type="url"
           value={targetUrl}
           onChange={(e) => { setTargetUrl(e.target.value); clearFieldError("targetUrl"); }}
@@ -53,15 +53,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 8,
-    background: "#12151c",
-    border: "1px solid #2a2e38",
+    background: "#151D35",
+    border: "1px solid #1C2541",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#8a92a4",
+    color: "#94A3B8",
     marginBottom: 12,
   },
   field: {
@@ -72,15 +72,15 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#eaf0f6",
+    color: "#F1F5F9",
   },
   input: {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #2a2e38",
-    background: "#1a1d26",
-    color: "#eaf0f6",
+    border: "1px solid #1C2541",
+    background: "#1C2541",
+    color: "#F1F5F9",
     fontSize: 14,
     outline: "none",
     transition: "border-color 0.2s",
@@ -88,7 +88,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   hint: {
     fontSize: 11,
-    color: "#555c6e",
+    color: "#64748B",
     marginTop: 2,
   },
   error: {

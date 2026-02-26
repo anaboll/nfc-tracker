@@ -137,7 +137,7 @@ export default function VCardEditPage() {
         <div style={styles.container}>
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: "#12151c", marginBottom: 8 }}>Brak dostepu</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "#151D35", marginBottom: 8 }}>Brak dostepu</h1>
             <p style={{ color: "#666", fontSize: 14 }}>{error}</p>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function VCardEditPage() {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Edycja wizytowki</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#12151c" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#151D35" }}>
             {vcard.firstName || ""} {vcard.lastName || ""}
           </h1>
           {tagName && (
@@ -291,7 +291,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: "1px solid #e0e0e8",
     fontSize: 14,
-    color: "#12151c",
+    color: "#151D35",
     background: "#fff",
     outline: "none",
     transition: "border-color 0.2s, box-shadow 0.2s",

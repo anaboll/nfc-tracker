@@ -181,7 +181,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
     width: "min(520px, 100vw)",
     height: "100vh",
     background: "#0a0f1c",
-    borderLeft: "1px solid #2a2e38",
+    borderLeft: "1px solid #1C2541",
     zIndex: 9999,
     display: "flex",
     flexDirection: "column",
@@ -197,7 +197,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
 
   const headerStyle: React.CSSProperties = {
     padding: "18px 20px",
-    borderBottom: "1px solid #2a2e38",
+    borderBottom: "1px solid #1C2541",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -205,8 +205,8 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   };
 
   const btnPrimary: React.CSSProperties = {
-    background: "#00c8a0",
-    color: "#0b0d12",
+    background: "#38BDF8",
+    color: "#0B0F1A",
     border: "none",
     borderRadius: 8,
     padding: "8px 16px",
@@ -216,9 +216,9 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   };
 
   const btnSecondary: React.CSSProperties = {
-    background: "#232730",
-    border: "1px solid #2a2e38",
-    color: "#8a92a4",
+    background: "#243052",
+    border: "1px solid #1C2541",
+    color: "#94A3B8",
     borderRadius: 8,
     padding: "8px 16px",
     fontSize: 12,
@@ -228,8 +228,8 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
 
   const inputStyle: React.CSSProperties = {
     background: "#0f1524",
-    border: "1px solid #2a2e38",
-    color: "#eaf0f6",
+    border: "1px solid #1C2541",
+    color: "#F1F5F9",
     borderRadius: 8,
     padding: "8px 12px",
     fontSize: 13,
@@ -240,7 +240,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   const labelStyle: React.CSSProperties = {
     display: "block",
     fontSize: 11,
-    color: "#8a92a4",
+    color: "#94A3B8",
     marginBottom: 4,
     fontWeight: 600,
   };
@@ -251,7 +251,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
       <div style={panelStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "#eaf0f6", margin: 0 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", margin: 0 }}>
             {mode === "list" && "Użytkownicy"}
             {mode === "create" && "Nowy użytkownik"}
             {mode === "edit" && "Edytuj użytkownika"}
@@ -294,9 +294,9 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
         <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
           {mode === "list" && (
             <>
-              {loading && <p style={{ color: "#555c6e", fontSize: 13 }}>Ładowanie...</p>}
+              {loading && <p style={{ color: "#64748B", fontSize: 13 }}>Ładowanie...</p>}
               {!loading && users.length === 0 && (
-                <p style={{ color: "#555c6e", fontSize: 13 }}>Brak użytkowników.</p>
+                <p style={{ color: "#64748B", fontSize: 13 }}>Brak użytkowników.</p>
               )}
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {users.map((u) => (
@@ -304,18 +304,18 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                     key={u.id}
                     style={{
                       background: "#0f1524",
-                      border: "1px solid #2a2e38",
+                      border: "1px solid #1C2541",
                       borderRadius: 10,
                       padding: "14px 16px",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                       <div>
-                        <span style={{ color: "#eaf0f6", fontWeight: 600, fontSize: 14 }}>
+                        <span style={{ color: "#F1F5F9", fontWeight: 600, fontSize: 14 }}>
                           {u.name || u.email}
                         </span>
                         {u.name && (
-                          <span style={{ color: "#555c6e", fontSize: 12, marginLeft: 8 }}>
+                          <span style={{ color: "#64748B", fontSize: 12, marginLeft: 8 }}>
                             {u.email}
                           </span>
                         )}
@@ -327,7 +327,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                           padding: "3px 8px",
                           borderRadius: 6,
                           background: u.role === "admin" ? "rgba(0,200,160,0.15)" : "rgba(59,130,246,0.15)",
-                          color: u.role === "admin" ? "#2ee8c0" : "#6366f1",
+                          color: u.role === "admin" ? "#7dd3fc" : "#38BDF8",
                           textTransform: "uppercase",
                           letterSpacing: 0.5,
                         }}
@@ -338,7 +338,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
 
                     {u.role === "viewer" && u.clients.length > 0 && (
                       <div style={{ marginBottom: 8 }}>
-                        <span style={{ fontSize: 10, color: "#555c6e" }}>Klienci: </span>
+                        <span style={{ fontSize: 10, color: "#64748B" }}>Klienci: </span>
                         {u.clients.map((c) => (
                           <span
                             key={c.id}
@@ -431,7 +431,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
 
               <div>
                 <label style={labelStyle}>Rola</label>
-                <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #2a2e38", width: "fit-content" }}>
+                <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #1C2541", width: "fit-content" }}>
                   <button
                     type="button"
                     onClick={() => setFormRole("admin")}
@@ -441,8 +441,8 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                       fontWeight: 600,
                       border: "none",
                       cursor: "pointer",
-                      background: formRole === "admin" ? "#2ee8c0" : "#232730",
-                      color: formRole === "admin" ? "#0b0d12" : "#8a92a4",
+                      background: formRole === "admin" ? "#7dd3fc" : "#243052",
+                      color: formRole === "admin" ? "#0B0F1A" : "#94A3B8",
                       transition: "background 0.15s, color 0.15s",
                     }}
                   >
@@ -456,17 +456,17 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                       fontSize: 12,
                       fontWeight: 600,
                       border: "none",
-                      borderLeft: "1px solid #2a2e38",
+                      borderLeft: "1px solid #1C2541",
                       cursor: "pointer",
-                      background: formRole === "viewer" ? "#6366f1" : "#232730",
-                      color: formRole === "viewer" ? "#fff" : "#8a92a4",
+                      background: formRole === "viewer" ? "#38BDF8" : "#243052",
+                      color: formRole === "viewer" ? "#fff" : "#94A3B8",
                       transition: "background 0.15s, color 0.15s",
                     }}
                   >
                     Viewer
                   </button>
                 </div>
-                <p style={{ fontSize: 10, color: "#555c6e", marginTop: 4 }}>
+                <p style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>
                   {formRole === "admin"
                     ? "Admin — pełny dostęp do wszystkich klientów i ustawień"
                     : "Viewer — widzi tylko przypisanych klientów (bez edycji)"}
@@ -477,7 +477,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                 <div>
                   <label style={labelStyle}>Przypisani klienci</label>
                   {clients.length === 0 ? (
-                    <p style={{ fontSize: 11, color: "#555c6e" }}>Brak klientów do przypisania</p>
+                    <p style={{ fontSize: 11, color: "#64748B" }}>Brak klientów do przypisania</p>
                   ) : (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
                       {clients.map((c) => {
@@ -493,9 +493,9 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                               fontWeight: 600,
                               borderRadius: 6,
                               cursor: "pointer",
-                              border: selected ? "1px solid #10b981" : "1px solid #2a2e38",
-                              background: selected ? "rgba(16,185,129,0.15)" : "#232730",
-                              color: selected ? "#10b981" : "#8a92a4",
+                              border: selected ? "1px solid #10b981" : "1px solid #1C2541",
+                              background: selected ? "rgba(16,185,129,0.15)" : "#243052",
+                              color: selected ? "#10b981" : "#94A3B8",
                               transition: "all 0.15s",
                             }}
                           >

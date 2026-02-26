@@ -170,15 +170,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 8,
-    background: "#12151c",
-    border: "1px solid #2a2e38",
+    background: "#151D35",
+    border: "1px solid #1C2541",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#8a92a4",
+    color: "#94A3B8",
     marginBottom: 16,
   },
   block: {
@@ -187,12 +187,12 @@ const styles: Record<string, React.CSSProperties> = {
   blockLabel: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#eaf0f6",
+    color: "#F1F5F9",
     marginBottom: 4,
   },
   blockHint: {
     fontSize: 11,
-    color: "#555c6e",
+    color: "#64748B",
     marginBottom: 8,
   },
   linkRow: {
@@ -204,9 +204,9 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #2a2e38",
-    background: "#1a1d26",
-    color: "#2ee8c0",
+    border: "1px solid #1C2541",
+    background: "#1C2541",
+    color: "#7dd3fc",
     fontSize: 12,
     fontFamily: "monospace",
     outline: "none",
@@ -215,9 +215,9 @@ const styles: Record<string, React.CSSProperties> = {
   copyBtn: {
     padding: "8px 14px",
     borderRadius: 8,
-    border: "1px solid #2a2e38",
-    background: "#1a1d26",
-    color: "#8a92a4",
+    border: "1px solid #1C2541",
+    background: "#1C2541",
+    color: "#94A3B8",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
@@ -227,9 +227,9 @@ const styles: Record<string, React.CSSProperties> = {
   openBtn: {
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #2a2e38",
-    background: "#1a1d26",
-    color: "#8a92a4",
+    border: "1px solid #1C2541",
+    background: "#1C2541",
+    color: "#94A3B8",
     fontSize: 14,
     textDecoration: "none",
     display: "flex",
@@ -259,7 +259,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dangerDetails: {
     marginTop: 8,
-    borderTop: "1px solid #2a2e38",
+    borderTop: "1px solid #1C2541",
     paddingTop: 8,
   },
   dangerSummary: {
@@ -284,11 +284,11 @@ const styles: Record<string, React.CSSProperties> = {
   dangerLabel: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#eaf0f6",
+    color: "#F1F5F9",
   },
   dangerHint: {
     fontSize: 11,
-    color: "#555c6e",
+    color: "#64748B",
   },
   dangerBtn: {
     padding: "6px 14px",
