@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TwojeNFC — Inteligentne breloki i karty NFC",
+  title: "TwojeNFC — Wizytówka, której nikt nie wyrzuci",
   description:
-    "Breloki i karty NFC z wizytówką, linkami do social mediów i stroną WWW. Jeden dotyk telefonu — i klient ma wszystko. Dla firm, freelancerów i każdego, kto chce się wyróżnić.",
+    "Breloki i karty NFC z wizytówką, social mediami i stroną WWW. Jedno dotknięcie telefonu — i klient ma wszystko. Dla handlowców, restauracji, salonów i każdego, kto chce się wyróżnić.",
   robots: { index: true, follow: true },
 };
 
@@ -27,12 +27,6 @@ const IconChart = () => (
 const IconGlobe = () => (
   <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-2.247m0 0A9 9 0 013 12c0-1.605.42-3.113 1.157-4.418" />
-  </svg>
-);
-
-const IconShield = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
   </svg>
 );
 
@@ -72,6 +66,12 @@ const IconStar = () => (
   </svg>
 );
 
+const IconBriefcase = () => (
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0" />
+  </svg>
+);
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
@@ -88,7 +88,7 @@ export default function HomePage() {
           </div>
           <div className="nav-links">
             <a href="#jak-to-dziala">Jak to działa</a>
-            <a href="#zastosowania">Zastosowania</a>
+            <a href="#dla-kogo">Zastosowania</a>
             <a href="#mozliwosci">Możliwości</a>
             <a href="#kontakt">Kontakt</a>
             <Link href="/login" className="nav-cta">Panel klienta</Link>
@@ -103,16 +103,15 @@ export default function HomePage() {
         <div className="landing-container hero-inner">
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            Breloki i karty NFC
+            Zbliżeniowa wizytówka NFC
           </div>
           <h1 className="hero-title">
-            Klient przykłada telefon<br />
-            do breloka — i&nbsp;ma<br />
-            <span className="gradient-text">wszystko o&nbsp;Twojej firmie</span>
+            Wizytówka, której<br />
+            <span className="gradient-text">nikt nie wyrzuci</span>
           </h1>
           <p className="hero-subtitle">
-            Wizytówka, strona WWW, social media, recenzje Google
-            — wszystko w&nbsp;jednym breloku NFC, który zostaje na kluczach.
+            Brelok na kluczach klienta z&nbsp;Twoim numerem, stroną i&nbsp;social mediami.
+            Jedno dotknięcie telefonem — i&nbsp;ma do Ciebie kontakt na zawsze.
           </p>
           <div className="hero-actions">
             <a href="#kontakt" className="btn-primary hero-btn">
@@ -124,18 +123,18 @@ export default function HomePage() {
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
-              <span className="hero-stat-value">1 sek.</span>
-              <span className="hero-stat-label">czas skanowania</span>
-            </div>
-            <div className="hero-stat-divider" />
-            <div className="hero-stat">
-              <span className="hero-stat-value">iPhone + Android</span>
-              <span className="hero-stat-label">pełna kompatybilność</span>
+              <span className="hero-stat-value">Każdy telefon</span>
+              <span className="hero-stat-label">iPhone i Android</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
               <span className="hero-stat-value">Bez aplikacji</span>
-              <span className="hero-stat-label">wystarczy przyłożyć</span>
+              <span className="hero-stat-label">wystarczy dotknąć</span>
+            </div>
+            <div className="hero-stat-divider" />
+            <div className="hero-stat">
+              <span className="hero-stat-value">Zmieniasz zdalnie</span>
+              <span className="hero-stat-label">bez wymiany breloka</span>
             </div>
           </div>
         </div>
@@ -146,69 +145,69 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Jak to działa</span>
-            <h2 className="section-title">Prościej się nie da</h2>
+            <h2 className="section-title">Prościej niż wizytówka papierowa</h2>
           </div>
           <div className="hiw-grid">
             <StepCard
               step="01"
-              title="Wybierasz, co wyświetlić"
-              desc="Wizytówkę z danymi kontaktowymi? Linklista z social mediami? Stronę WWW? A może wszystko naraz — Ty decydujesz."
+              title="Mówisz, co chcesz"
+              desc="Wizytówkę z numerem telefonu? Link do strony? Social media? Wybierasz — my programujemy brelok pod Ciebie."
             />
             <StepCard
               step="02"
-              title="Klient przykłada telefon"
-              desc="Wystarczy przyłożyć iPhone'a lub Androida do breloka. Bez instalowania aplikacji, bez skanowania kodów — jedno dotknięcie."
+              title="Wręczasz brelok"
+              desc="Klient zakłada go na klucze. Nie zgubi, nie wyrzuci, nie zapomni w szufladzie — nosi ze sobą codziennie."
             />
             <StepCard
               step="03"
-              title="Ma Twoje dane w&nbsp;telefonie"
-              desc="Wizytówka zapisuje się w kontaktach, strona otwiera się w przeglądarce. Klient ma do Ciebie drogę w&nbsp;kieszeni."
+              title="Klient skanuje, kiedy chce"
+              desc="Przyłoży telefon do breloka — i Twoje dane zapisują się w jego kontaktach. Tydzień, miesiąc, rok później."
             />
           </div>
         </div>
       </section>
 
-      {/* --------- ZASTOSOWANIA --------- */}
-      <section id="zastosowania" className="features-section">
+      {/* --------- DLA KOGO --------- */}
+      <section id="dla-kogo" className="features-section">
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Zastosowania</span>
-            <h2 className="section-title">Dla kogo są breloki NFC?</h2>
+            <h2 className="section-title">Kto korzysta z breloków NFC?</h2>
             <p className="section-subtitle">
-              Wszędzie tam, gdzie chcesz, żeby klient zapamiętał Twoją firmę
-              — i&nbsp;miał do niej łatwy powrót.
+              Wszędzie tam, gdzie papierowa wizytówka ląduje w&nbsp;koszu —
+              brelok NFC zostaje.
             </p>
           </div>
           <div className="features-grid">
             <FeatureCard
-              icon={<IconUsers />}
-              title="Networking i eventy"
-              desc="Konferencja, targi, spotkanie branżowe — wręcz brelok zamiast papierowej wizytówki. Nikt go nie wyrzuci."
+              icon={<IconBriefcase />}
+              title="Handlowcy i sprzedaż"
+              desc="Kończysz spotkanie — wręczasz brelok. Klient ma Twój numer i ofertę w telefonie, zanim jeszcze wyjdziesz za drzwi."
             />
             <FeatureCard
               icon={<IconStar />}
               title="Restauracje i kawiarnie"
-              desc="Brelok na stolik lub do rachunku — klient od razu zostawi recenzję Google lub zobaczy menu."
+              desc="Brelok do rachunku albo na stolik. Klient skanuje i zostawia recenzję Google — albo widzi menu i rezerwuje kolejną wizytę."
             />
             <FeatureCard
               icon={<IconCard />}
               title="Salony i usługi"
-              desc="Fryzjer, kosmetyczka, mechanik — klient przykłada telefon i ma numer, adres, cennik i link do rezerwacji."
-            />
-            <FeatureCard
-              icon={<IconGlobe />}
-              title="Agenci i handlowcy"
-              desc="Nieruchomości, ubezpieczenia, B2B — profesjonalna wizytówka cyfrowa, która robi wrażenie i zostaje."
+              desc="Fryzjer, kosmetyczka, fizjoterapeuta — klientka przykłada telefon i ma numer, cennik i link do rezerwacji wizyty."
             />
             <FeatureCard
               icon={<IconLink />}
-              title="Influencerzy i twórcy"
-              desc="Instagram, TikTok, YouTube, Spotify — wszystkie kanały w jednym miejscu. Fani skanują i od razu obserwują."
+              title="Twórcy i influencerzy"
+              desc="Instagram, TikTok, YouTube, Spotify — wszystko w jednym breloku. Fan skanuje i od razu Cię obserwuje."
             />
             <FeatureCard
               icon={<IconKey />}
-              title="Gadżety firmowe"
-              desc="Brelok z logiem firmy na kluczach klienta. Codziennie go widzi, a jak potrzebuje — skanuje i ma kontakt."
+              title="Firmowe gadżety"
+              desc="Brelok z logiem na kluczach klienta. Widzi go codziennie, a jak potrzebuje — skanuje i ma kontakt do Twojej firmy."
+            />
+            <FeatureCard
+              icon={<IconUsers />}
+              title="Eventy i networking"
+              desc="Konferencja, branżówka, targi — dajesz brelok zamiast kartki. Nikt go nie zgubi i&nbsp;nie zapomni, kto go wręczył."
             />
           </div>
         </div>
@@ -219,19 +218,19 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Możliwości</span>
-            <h2 className="section-title">Co może Twój brelok NFC</h2>
+            <h2 className="section-title">Jeden brelok, wiele funkcji</h2>
             <p className="section-subtitle">
-              Zaprogramujemy brelok dokładnie pod Twoje potrzeby.
-              Możesz zmienić zawartość w&nbsp;dowolnym momencie — bez wymiany breloka.
+              Programujemy brelok pod Ciebie. Zmienisz treść w&nbsp;każdej chwili
+              — brelok natychmiast pokazuje nowe dane.
             </p>
           </div>
           <div className="types-grid">
-            <TypeCard icon={<IconCard />} title="Wizytówka kontaktowa" desc="Imię, telefon, email, adres, stanowisko — wszystko zapisuje się w kontaktach jednym dotknięciem." />
-            <TypeCard icon={<IconGlobe />} title="Strona internetowa" desc="Przekierowanie na dowolną stronę — Twój sklep, portfolio, ofertę, rezerwację wizyt." />
-            <TypeCard icon={<IconLink />} title="Lista linków" desc="Instagram, Facebook, LinkedIn, TikTok, YouTube, Spotify — wszystkie kanały w jednym miejscu." />
-            <TypeCard icon={<IconStar />} title="Recenzje Google" desc="Klient skanuje i od razu pisze opinię. Idealne dla restauracji, salonów i usług lokalnych." />
-            <TypeCard icon={<IconRefresh />} title="Zmiana bez wymiany" desc="Chcesz zmienić stronę lub dane? Zmieniasz w panelu — brelok natychmiast pokazuje nową treść." />
-            <TypeCard icon={<IconChart />} title="Analityka skanów" desc="Sprawdź ile osób skanuje Twoje breloki, skąd są i kiedy to robią. Opcjonalny panel z danymi." />
+            <TypeCard icon={<IconCard />} title="Wizytówka kontaktowa" desc="Imię, telefon, email, adres, stanowisko — jedno dotknięcie i dane zapisują się w kontaktach klienta." />
+            <TypeCard icon={<IconGlobe />} title="Strona internetowa" desc="Przekierowanie na Twoją stronę — sklep, portfolio, ofertę, rezerwację wizyt, cokolwiek potrzebujesz." />
+            <TypeCard icon={<IconLink />} title="Lista linków" desc="Instagram, Facebook, LinkedIn, TikTok, YouTube — wszystkie kanały w jednym miejscu, jak Linktree ale Twoje." />
+            <TypeCard icon={<IconStar />} title="Recenzje Google" desc="Klient skanuje i od razu pisze opinię. Bez szukania, bez wpisywania — pięć sekund i gotowe." />
+            <TypeCard icon={<IconRefresh />} title="Zdalna zmiana treści" desc="Nowy numer? Nowa strona? Zmieniasz w panelu — brelok natychmiast wyświetla nową treść. Bez wymiany." />
+            <TypeCard icon={<IconChart />} title="Statystyki skanów" desc="Ile osób skanuje, skąd są, kiedy to robią — panel analityczny pokazuje wszystko w czasie rzeczywistym." />
           </div>
         </div>
       </section>
@@ -241,10 +240,10 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Analityka</span>
-            <h2 className="section-title">Opcjonalnie — sprawdź kto skanuje</h2>
+            <h2 className="section-title">Wiesz, co działa</h2>
             <p className="section-subtitle">
-              Dla tych, którzy chcą wiedzieć więcej. Panel analityczny pokazuje
-              szczegóły każdego skanowania.
+              Opcjonalny panel z&nbsp;danymi. Sprawdź, ile osób skanuje Twoje breloki
+              i&nbsp;co ich interesuje.
             </p>
           </div>
           <div className="analytics-grid">
@@ -284,7 +283,7 @@ export default function HomePage() {
             <div className="analytics-card">
               <div className="analytics-card-header">
                 <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>⏰</div>
-                <span>Kiedy skanują</span>
+                <span>O której skanują</span>
               </div>
               <div className="analytics-card-value">Szczyt: 14:00</div>
               <div className="analytics-card-sub">Rozkład aktywności w ciągu dnia i tygodnia</div>
@@ -300,11 +299,11 @@ export default function HomePage() {
       <section id="kontakt" className="cta-section">
         <div className="landing-container cta-inner">
           <h2 className="cta-title">
-            Chcesz, żeby klienci wracali?
+            Porozmawiajmy o&nbsp;Twoich brelokach
           </h2>
           <p className="cta-subtitle">
-            Napisz do nas — powiemy Ci, jakie breloki sprawdzą się
-            w&nbsp;Twojej branży i&nbsp;co na nich umieścić.
+            Powiedz nam, czym się zajmujesz — dobierzemy formę breloka
+            i&nbsp;to, co wyświetli się po zeskanowaniu.
           </p>
           <div className="cta-actions">
             <a
@@ -328,7 +327,7 @@ export default function HomePage() {
               <div className="nav-logo-icon small"><IconNfc /></div>
               <span className="gradient-text">TwojeNFC</span>
             </div>
-            <p className="footer-tagline">Inteligentne breloki i karty NFC</p>
+            <p className="footer-tagline">Zbliżeniowe wizytówki NFC</p>
           </div>
           <div className="footer-copy">
             &copy; {new Date().getFullYear()} TwojeNFC. Wszelkie prawa zastrzeżone.
