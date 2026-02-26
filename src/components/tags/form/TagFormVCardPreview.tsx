@@ -218,6 +218,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     color: "#555c6e",
     marginTop: 10,
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
   },
 };

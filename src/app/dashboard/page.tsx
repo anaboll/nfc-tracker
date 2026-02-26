@@ -289,7 +289,7 @@ function FilterChipsBar({ chips, onReset, showOverflow, setShowOverflow, overflo
   if (chips.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#151D35", border: "1px solid rgba(148,163,184,0.15)", minWidth: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#151D35", border: "1px solid rgba(148,163,184,0.08)", minWidth: 0 }}>
       <span style={{ fontSize: 10, color: "#64748B", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>Filtry:</span>
 
       {/* Chip row — flex-wrap:wrap so all chips are rendered; we measure which ones overflow */}
@@ -349,7 +349,7 @@ function DashboardSkeleton() {
   return (
     <div style={{ minHeight: "100vh", background: "#0B0F1A" }}>
       {/* fake header */}
-      <div style={{ height: 56, background: "#151D35", borderBottom: "1px solid rgba(148,163,184,0.15)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
+      <div style={{ height: 56, background: "#151D35", borderBottom: "1px solid rgba(148,163,184,0.08)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
         <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 10 }} />
         <div className="skeleton skeleton-text" style={{ width: 100, height: 20, marginBottom: 0 }} />
       </div>
@@ -1895,7 +1895,7 @@ function DashboardPage() {
           zIndex: 50,
           background: "rgba(8,11,20,0.88)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(148,163,184,0.15)",
+          boxShadow: "0 1px 0 rgba(148,163,184,0.06)",
           padding: "12px 24px",
         }}
       >
@@ -1909,36 +1909,10 @@ function DashboardPage() {
           }}
         >
           {/* logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: "#38BDF8",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                fill="none"
-                stroke="white"
-                viewBox="0 0 24 24"
-                strokeWidth={2.2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-              </svg>
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 700 }}>
-              <span style={{ color: "#38BDF8", fontWeight: 700 }}>TwojeNFC</span>
-            </span>
-          </div>
+          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>
+            <span style={{ color: "#38BDF8" }}>Twoje</span>
+            <span style={{ color: "#F1F5F9" }}>NFC</span>
+          </span>
 
           {/* actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1946,8 +1920,8 @@ function DashboardPage() {
               onClick={handleRefresh}
               disabled={refreshing}
               style={{
-                background: "#1C2541",
-                border: "1px solid rgba(148,163,184,0.15)",
+                background: "transparent",
+                border: "none",
                 color: "#F1F5F9",
                 borderRadius: 8,
                 padding: "8px 16px",
@@ -1958,10 +1932,10 @@ function DashboardPage() {
                 alignItems: "center",
                 gap: 6,
                 opacity: refreshing ? 0.6 : 1,
-                transition: "border-color 0.2s",
+                transition: "color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#38BDF8")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#38BDF8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#F1F5F9")}
             >
               <svg
                 width="14"
@@ -1988,24 +1962,22 @@ function DashboardPage() {
                 onClick={() => setUsersPanelOpen(true)}
                 style={{
                   background: "transparent",
-                  border: "1px solid rgba(148,163,184,0.15)",
+                  border: "none",
                   color: "#94A3B8",
                   borderRadius: 8,
                   padding: "8px 16px",
                   fontSize: 13,
                   fontWeight: 500,
                   cursor: "pointer",
-                  transition: "border-color 0.2s, color 0.2s",
+                  transition: "color 0.2s",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#38BDF8";
                   e.currentTarget.style.color = "#60a5fa";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)";
                   e.currentTarget.style.color = "#94A3B8";
                 }}
               >
@@ -2023,22 +1995,20 @@ function DashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
               style={{
                 background: "transparent",
-                border: "1px solid rgba(148,163,184,0.15)",
+                border: "none",
                 color: "#94A3B8",
                 borderRadius: 8,
                 padding: "8px 16px",
                 fontSize: 13,
                 fontWeight: 500,
                 cursor: "pointer",
-                transition: "border-color 0.2s, color 0.2s",
+                transition: "color 0.2s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#ef4444";
                 e.currentTarget.style.color = "#f87171";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)";
-                e.currentTarget.style.color = "#a0a0c0";
+                e.currentTarget.style.color = "#94A3B8";
               }}
             >
               Wyloguj
@@ -2086,11 +2056,11 @@ function DashboardPage() {
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 4,
             }}
           >
             {/* -- Klienci block -- */}
-            <div style={{ background: "#151D35", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", padding: "14px 14px 10px" }}>
+            <div style={{ padding: "0 0 12px", borderBottom: "1px solid rgba(148,163,184,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Klient</span>
                 {isAdmin && <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2115,7 +2085,7 @@ function DashboardPage() {
 
               {/* -- Klienci — always-visible inline list -- */}
               {/* search bar */}
-              <div style={{ display: "flex", alignItems: "center", background: "#1C2541", border: "1px solid rgba(148,163,184,0.15)", borderRadius: 8, padding: "6px 10px", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", background: "transparent", border: "none", borderBottom: "1px solid rgba(148,163,184,0.08)", borderRadius: 0, padding: "6px 0", marginBottom: 6 }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3d4250" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginRight: 6 }}>
                   <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
@@ -2146,7 +2116,7 @@ function DashboardPage() {
                 >
                   <span style={{
                     width: 14, height: 14, borderRadius: 3, border: `1px solid ${!selectedClientId ? "#7dd3fc" : "#363b48"}`,
-                    background: !selectedClientId ? "rgba(0,200,160,0.15)" : "transparent",
+                    background: !selectedClientId ? "rgba(56,189,248,0.12)" : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>
                     {!selectedClientId && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -2187,20 +2157,20 @@ function DashboardPage() {
 
               {/* Add client inline form */}
               {showAddClient && (
-                <div style={{ marginTop: 8, padding: "10px", background: "#1C2541", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ marginTop: 8, padding: "10px", background: "#1C2541", borderRadius: 8, border: "1px solid rgba(148,163,184,0.08)", display: "flex", flexDirection: "column", gap: 8 }}>
                   <input className="input-field" value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Nazwa klienta" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <input className="input-field" value={newClientDesc} onChange={e => setNewClientDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input type="color" value={newClientColor} onChange={e => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid rgba(148,163,184,0.15)", borderRadius: 4, background: "#1C2541", cursor: "pointer", flexShrink: 0 }} />
+                    <input type="color" value={newClientColor} onChange={e => setNewClientColor(e.target.value)} style={{ width: 32, height: 28, border: "1px solid rgba(148,163,184,0.08)", borderRadius: 4, background: "#1C2541", cursor: "pointer", flexShrink: 0 }} />
                     <button className="btn-primary" onClick={handleCreateClient} disabled={clientCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{clientCreating ? "..." : "Dodaj"}</button>
-                    <button onClick={() => setShowAddClient(false)} style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: "#94A3B8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                    <button onClick={() => setShowAddClient(false)} style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
                   </div>
                 </div>
               )}
             </div>
 
             {/* -- Kampanie block — always-visible list (no dropdown) -- */}
-            <div style={{ background: "#151D35", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", padding: "14px 14px 10px" }}>
+            <div style={{ padding: "0 0 12px", borderBottom: "1px solid rgba(148,163,184,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Kampania</span>
                 {isAdmin && selectedClientId && (
@@ -2312,19 +2282,19 @@ function DashboardPage() {
 
               {/* Add campaign inline form */}
               {selectedClientId && showAddCampaign && (
-                <div style={{ marginTop: 8, padding: "10px", background: "#1C2541", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ marginTop: 8, padding: "10px", background: "#1C2541", borderRadius: 8, border: "1px solid rgba(148,163,184,0.08)", display: "flex", flexDirection: "column", gap: 8 }}>
                   <input className="input-field" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Nazwa kampanii" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <input className="input-field" value={newCampaignDesc} onChange={e => setNewCampaignDesc(e.target.value)} placeholder="Opis (opcjonalnie)" style={{ fontSize: 12, padding: "6px 10px" }} />
                   <div style={{ display: "flex", gap: 6 }}>
                     <button className="btn-primary" onClick={handleCreateCampaign} disabled={campaignCreating} style={{ flex: 1, padding: "6px 0", fontSize: 12 }}>{campaignCreating ? "..." : "Dodaj"}</button>
-                    <button onClick={() => setShowAddCampaign(false)} style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: "#94A3B8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
+                    <button onClick={() => setShowAddCampaign(false)} style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 6, padding: "6px 8px", fontSize: 11, cursor: "pointer" }}>✕</button>
                   </div>
                 </div>
               )}
             </div>
 
             {/* -- Akcje — always-visible list, only active when campaign is selected -- */}
-            <div style={{ background: "#151D35", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", padding: "14px 14px 10px" }}>
+            <div style={{ padding: "0 0 12px", borderBottom: "1px solid rgba(148,163,184,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Akcje</span>
@@ -2359,8 +2329,8 @@ function DashboardPage() {
                   {/* search bar */}
                   <div style={{
                     display: "flex", alignItems: "center", gap: 6,
-                    background: "#1C2541", border: "1px solid rgba(148,163,184,0.15)",
-                    borderRadius: 8, padding: "6px 10px", marginBottom: 6,
+                    background: "transparent", border: "none",
+                    borderBottom: "1px solid rgba(148,163,184,0.08)", borderRadius: 0, padding: "6px 0", marginBottom: 6,
                   }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                       <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
@@ -2476,12 +2446,11 @@ function DashboardPage() {
 
         {/* ---- Filter Bar — stała wysokość niezależna od trybu ---- */}
         <section
-          className="card"
-          style={{ marginBottom: 16, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
+          style={{ marginBottom: 16, padding: "10px 0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid rgba(148,163,184,0.06)" }}
         >
           {/* Time range preset pills — popover floats, bar height never changes */}
           <div style={{ position: "relative" }}>
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
               {(["today", "week", "24h", "7d", "30d", "month", "custom"] as const).map((p) => {
                 const labels: Record<string, string> = { "today": "Dziś", "week": "Ten tydz.", "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
                 const active = rangePreset === p;
@@ -2502,11 +2471,11 @@ function DashboardPage() {
                       }
                     }}
                     style={{
-                      padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      border: `1px solid ${active ? "rgba(0,200,160,0.5)" : "rgba(148,163,184,0.15)"}`,
-                      background: active ? "rgba(0,200,160,0.12)" : "transparent",
-                      color: active ? "#38BDF8" : "#94A3B8",
-                      transition: "border-color 0.15s, color 0.15s, background 0.15s",
+                      padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: active ? 600 : 500, cursor: "pointer",
+                      border: "none",
+                      background: active ? "#1C2541" : "transparent",
+                      color: active ? "#F1F5F9" : "#64748B",
+                      transition: "color 0.15s, background 0.15s",
                     }}
                   >{labels[p]}</button>
                 );
@@ -2540,7 +2509,7 @@ function DashboardPage() {
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button onClick={() => setShowCustomPopover(false)}
-                    style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.15)", color: "#94A3B8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                    style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
                   >Anuluj</button>
                   <button
                     onClick={async () => {
@@ -2564,20 +2533,17 @@ function DashboardPage() {
           <div style={{ width: 1, height: 20, background: "rgba(148,163,184,0.15)", flexShrink: 0 }} />
 
           {/* Source filter — Wszystkie / NFC / QR */}
-          <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: "1px solid rgba(148,163,184,0.15)" }}>
+          <div style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
             {(["all", "nfc", "qr"] as const).map(src => (
               <button key={src} type="button"
                 onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
                 style={{
-                  padding: "4px 10px", fontSize: 11, fontWeight: 600, border: "none",
-                  borderLeft: src !== "all" ? "1px solid rgba(148,163,184,0.15)" : "none",
+                  padding: "4px 10px", fontSize: 11, fontWeight: scanSourceFilter === src ? 600 : 500, border: "none",
+                  borderRadius: 6,
                   cursor: "pointer",
-                  background: scanSourceFilter === src
-                    ? (src === "qr" ? "rgba(16,185,129,0.2)" : src === "nfc" ? "rgba(0,200,160,0.2)" : "rgba(139,149,168,0.15)")
-                    : "#243052",
-                  color: scanSourceFilter === src
-                    ? (src === "qr" ? "#10b981" : src === "nfc" ? "#7dd3fc" : "#F1F5F9")
-                    : "#64748B",
+                  background: scanSourceFilter === src ? "#1C2541" : "transparent",
+                  color: scanSourceFilter === src ? "#F1F5F9" : "#64748B",
+                  transition: "color 0.15s, background 0.15s",
                 }}
               >{src === "all" ? "Wszystkie" : src.toUpperCase()}</button>
             ))}
@@ -2586,7 +2552,7 @@ function DashboardPage() {
 
         {/* ---- Error display ---- */}
         {fetchError && (
-          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "monospace", wordBreak: "break-all" }}>
+          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
             {fetchError}
           </div>
         )}
@@ -2823,7 +2789,7 @@ function DashboardPage() {
               <section className="card" style={{ marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9" }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
                       Retencja video
                     </h3>
                     <p style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
@@ -2961,27 +2927,27 @@ function DashboardPage() {
             >
               {/* Devices */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#F1F5F9" }}>
+                <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 16, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Urzadzenia
                 </h3>
 
                 {[
                   { label: "iOS", value: devices?.iOS ?? 0, percent: iosPercent, color: "#38BDF8" },
                   { label: "Android", value: devices?.Android ?? 0, percent: androidPercent, color: "#10b981" },
-                  { label: "Desktop", value: devices?.Desktop ?? 0, percent: desktopPercent, color: "#7dd3fc" },
+                  { label: "Desktop", value: devices?.Desktop ?? 0, percent: desktopPercent, color: "#94A3B8" },
                 ].map((d) => (
-                  <div key={d.label} style={{ marginBottom: 16 }}>
+                  <div key={d.label} style={{ marginBottom: 14 }}>
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        marginBottom: 6,
-                        fontSize: 13,
+                        marginBottom: 5,
+                        fontSize: 12,
                       }}
                     >
                       <span style={{ color: "#F1F5F9", fontWeight: 500 }}>{d.label}</span>
-                      <span style={{ color: "#94A3B8" }}>
-                        {d.value} ({d.percent}%)
+                      <span style={{ color: "#94A3B8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                        {d.value} <span style={{ color: "#64748B" }}>({d.percent}%)</span>
                       </span>
                     </div>
                     <div className="progress-bar">
@@ -2989,15 +2955,15 @@ function DashboardPage() {
                         className="progress-fill"
                         style={{
                           width: `${d.percent}%`,
-                          background: `linear-gradient(90deg, ${d.color}, ${d.color}88)`,
+                          background: d.color,
                         }}
                       />
                     </div>
                   </div>
                 ))}
 
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
-                  <span style={{ fontSize: 12, color: "#64748B" }}>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(148,163,184,0.06)" }}>
+                  <span style={{ fontSize: 11, color: "#64748B", fontFamily: "var(--font-mono)" }}>
                     Razem: {devices?.total.toLocaleString("pl-PL") ?? 0}
                   </span>
                 </div>
@@ -3005,14 +2971,11 @@ function DashboardPage() {
 
               {/* Top Tags */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#F1F5F9" }}>
-                  Najczesciej skanowane akcje
+                <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 14, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Najczesciej skanowane
                 </h3>
-                <p style={{ fontSize: 11, color: "#64748B", marginBottom: 16 }}>
-                  Skany = lacznie | Unikalni = rozne osoby/urzadzenia
-                </p>
                 {topTags.length === 0 && (
-                  <p style={{ color: "#64748B", fontSize: 14 }}>Brak danych</p>
+                  <p style={{ color: "#64748B", fontSize: 13 }}>Brak danych</p>
                 )}
                 {topTags.map((t, i) => (
                   <div
@@ -3021,48 +2984,39 @@ function DashboardPage() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 0",
-                      borderBottom: i < topTags.length - 1 ? "1px solid rgba(148,163,184,0.15)" : "none",
+                      padding: "8px 0",
+                      borderBottom: i < topTags.length - 1 ? "1px solid rgba(148,163,184,0.04)" : "none",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span
                         style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 6,
-                          background: "#38BDF8",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
                           fontSize: 11,
-                          fontWeight: 700,
-                          color: "#fff",
+                          fontWeight: 500,
+                          color: "#64748B",
+                          fontFamily: "var(--font-mono)",
+                          width: 16,
+                          textAlign: "right",
                           flexShrink: 0,
                         }}
                       >
                         {i + 1}
                       </span>
                       <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9" }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: "#F1F5F9" }}>
                           {t.tagName}
                         </p>
-                        <p style={{ fontSize: 11, color: "#64748B" }}>{t.tagId}</p>
+                        <p style={{ fontSize: 10, color: "#64748B", fontFamily: "var(--font-mono)" }}>{t.tagId}</p>
                       </div>
                     </div>
-                    <div style={{ textAlign: "right", display: "flex", gap: 16, alignItems: "center" }}>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#F1F5F9" }}>
-                          {t.count}
-                        </p>
-                        <p style={{ fontSize: 10, color: "#94A3B8" }}>skanow</p>
-                      </div>
-                      <div style={{ borderLeft: "1px solid rgba(148,163,184,0.15)", paddingLeft: 16 }}>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>
-                          {t.uniqueUsers}
-                        </p>
-                        <p style={{ fontSize: 10, color: "#94A3B8" }}>unikalnych</p>
-                      </div>
+                    <div style={{ textAlign: "right", display: "flex", gap: 14, alignItems: "baseline" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                        {t.count}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#64748B" }}>|</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#38BDF8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                        {t.uniqueUsers}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -3083,7 +3037,7 @@ function DashboardPage() {
             >
               {/* Countries */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#F1F5F9" }}>
+                <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 14, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Kraje
                 </h3>
                 {topCountries.length === 0 && (
@@ -3097,7 +3051,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.15)" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.08)" : "none",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3108,29 +3062,29 @@ function DashboardPage() {
                     </div>
                     <div style={{ textAlign: "right", display: "flex", gap: 12, alignItems: "center" }}>
                       <div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#F1F5F9" }}>{c.count}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{c.count}</span>
                         <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 4 }}>sk.</span>
                       </div>
-                      <div style={{ borderLeft: "1px solid rgba(148,163,184,0.15)", paddingLeft: 12 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>{c.uniqueUsers}</span>
+                      <div style={{ borderLeft: "1px solid rgba(148,163,184,0.08)", paddingLeft: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#38BDF8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{c.uniqueUsers}</span>
                         <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 4 }}>unik.</span>
                       </div>
                     </div>
                   </div>
                 ))}
                 {topCountries.length > 5 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
                     <span style={{ fontSize: 10, color: "#64748B" }}>{Math.min(countriesPage * 5, topCountries.length)}/{topCountries.length}</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
                         disabled={countriesPage <= 1}
                         onClick={() => setCountriesPage(p => p - 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: countriesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage <= 1 ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: countriesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage <= 1 ? "default" : "pointer" }}
                       >← Poprz.</button>
                       <button
                         disabled={countriesPage * 5 >= topCountries.length}
                         onClick={() => setCountriesPage(p => p + 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: countriesPage * 5 >= topCountries.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage * 5 >= topCountries.length ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: countriesPage * 5 >= topCountries.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: countriesPage * 5 >= topCountries.length ? "default" : "pointer" }}
                       >Nast. →</button>
                     </div>
                   </div>
@@ -3139,7 +3093,7 @@ function DashboardPage() {
 
               {/* Cities */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#F1F5F9" }}>
+                <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 14, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Miasta
                 </h3>
                 {topCities.length === 0 && (
@@ -3153,7 +3107,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.15)" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.08)" : "none",
                     }}
                   >
                     <div>
@@ -3164,29 +3118,29 @@ function DashboardPage() {
                     </div>
                     <div style={{ textAlign: "right", display: "flex", gap: 12, alignItems: "center" }}>
                       <div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#F1F5F9" }}>{c.count}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{c.count}</span>
                         <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 4 }}>sk.</span>
                       </div>
-                      <div style={{ borderLeft: "1px solid rgba(148,163,184,0.15)", paddingLeft: 12 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>{c.uniqueUsers}</span>
+                      <div style={{ borderLeft: "1px solid rgba(148,163,184,0.08)", paddingLeft: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#38BDF8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{c.uniqueUsers}</span>
                         <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 4 }}>unik.</span>
                       </div>
                     </div>
                   </div>
                 ))}
                 {topCities.length > 5 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
                     <span style={{ fontSize: 10, color: "#64748B" }}>{Math.min(citiesPage * 5, topCities.length)}/{topCities.length}</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
                         disabled={citiesPage <= 1}
                         onClick={() => setCitiesPage(p => p - 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: citiesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage <= 1 ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: citiesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage <= 1 ? "default" : "pointer" }}
                       >← Poprz.</button>
                       <button
                         disabled={citiesPage * 5 >= topCities.length}
                         onClick={() => setCitiesPage(p => p + 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: citiesPage * 5 >= topCities.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage * 5 >= topCities.length ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: citiesPage * 5 >= topCities.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: citiesPage * 5 >= topCities.length ? "default" : "pointer" }}
                       >Nast. →</button>
                     </div>
                   </div>
@@ -3216,15 +3170,15 @@ function DashboardPage() {
                     marginBottom: 20,
                   }}
                 >
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9" }}>
+                  <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
                     Trend tygodniowy
                   </h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <button
                       onClick={() => handleWeekChange(-1)}
                       style={{
-                        background: "#243052",
-                        border: "1px solid rgba(148,163,184,0.15)",
+                        background: "transparent",
+                        border: "1px solid rgba(148,163,184,0.08)",
                         color: "#94A3B8",
                         borderRadius: 6,
                         width: 32,
@@ -3250,8 +3204,8 @@ function DashboardPage() {
                       onClick={() => handleWeekChange(1)}
                       disabled={weekOffset >= 0}
                       style={{
-                        background: "#243052",
-                        border: "1px solid rgba(148,163,184,0.15)",
+                        background: "transparent",
+                        border: "1px solid rgba(148,163,184,0.08)",
                         color: weekOffset >= 0 ? "#3d4250" : "#a0a0c0",
                         borderRadius: 6,
                         width: 32,
@@ -3351,7 +3305,7 @@ function DashboardPage() {
 
               {/* Languages */}
               <div className="card">
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#F1F5F9" }}>
+                <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 14, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Jezyki przegladarek
                 </h3>
                 {topLanguages.length === 0 && (
@@ -3365,7 +3319,7 @@ function DashboardPage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 0",
-                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.15)" : "none",
+                      borderBottom: i < arr.length - 1 ? "1px solid rgba(148,163,184,0.08)" : "none",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3374,11 +3328,11 @@ function DashboardPage() {
                           display: "inline-block",
                           padding: "2px 8px",
                           borderRadius: 4,
-                          background: "#243052",
+                          background: "transparent",
                           fontSize: 12,
                           fontWeight: 600,
                           color: "#7dd3fc",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-mono)",
                         }}
                       >
                         {l.lang}
@@ -3388,28 +3342,28 @@ function DashboardPage() {
                       <div className="progress-bar" style={{ width: 80 }}>
                         <div className="progress-fill" style={{ width: `${l.percent}%` }} />
                       </div>
-                      <span style={{ fontSize: 13, color: "#94A3B8", minWidth: 50, textAlign: "right" }}>
+                      <span style={{ fontSize: 12, color: "#94A3B8", minWidth: 50, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                         {l.count}
                       </span>
-                      <span style={{ fontSize: 12, color: "#10b981", minWidth: 40, textAlign: "right" }}>
+                      <span style={{ fontSize: 11, color: "#38BDF8", minWidth: 40, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                         {l.uniqueUsers} un.
                       </span>
                     </div>
                   </div>
                 ))}
                 {topLanguages.length > 5 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
                     <span style={{ fontSize: 10, color: "#64748B" }}>{Math.min(languagesPage * 5, topLanguages.length)}/{topLanguages.length}</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
                         disabled={languagesPage <= 1}
                         onClick={() => setLanguagesPage(p => p - 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: languagesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage <= 1 ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: languagesPage <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage <= 1 ? "default" : "pointer" }}
                       >← Poprz.</button>
                       <button
                         disabled={languagesPage * 5 >= topLanguages.length}
                         onClick={() => setLanguagesPage(p => p + 1)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: languagesPage * 5 >= topLanguages.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage * 5 >= topLanguages.length ? "default" : "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: languagesPage * 5 >= topLanguages.length ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: languagesPage * 5 >= topLanguages.length ? "default" : "pointer" }}
                       >Nast. →</button>
                     </div>
                   </div>
@@ -3426,7 +3380,7 @@ function DashboardPage() {
                 {/* Header with peak insight + mode toggle */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
                   <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: "#F1F5F9" }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       Rozklad godzinowy
                     </h3>
                     {/* Peak insight */}
@@ -3447,12 +3401,12 @@ function DashboardPage() {
                   {/* Toggles */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
                     {/* Data mode toggle */}
-                    <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.15)" }}>
+                    <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
                       <button
                         onClick={() => setHourlyDataMode("both")}
                         style={{
                           padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                          background: hourlyDataMode === "both" ? "rgba(0,200,160,0.15)" : "transparent",
+                          background: hourlyDataMode === "both" ? "rgba(56,189,248,0.12)" : "transparent",
                           color: hourlyDataMode === "both" ? "#7dd3fc" : "#64748B",
                         }}
                       >
@@ -3462,7 +3416,7 @@ function DashboardPage() {
                         onClick={() => setHourlyDataMode("all")}
                         style={{
                           padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                          background: hourlyDataMode === "all" ? "rgba(0,200,160,0.15)" : "transparent",
+                          background: hourlyDataMode === "all" ? "rgba(56,189,248,0.12)" : "transparent",
                           color: hourlyDataMode === "all" ? "#7dd3fc" : "#64748B",
                         }}
                       >
@@ -3480,12 +3434,12 @@ function DashboardPage() {
                       </button>
                     </div>
                     {/* View mode toggle */}
-                    <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.15)" }}>
+                    <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
                       <button
                         onClick={() => setHourlyMode("bars")}
                         style={{
                           padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                          background: hourlyMode === "bars" ? "rgba(0,200,160,0.15)" : "transparent",
+                          background: hourlyMode === "bars" ? "rgba(56,189,248,0.12)" : "transparent",
                           color: hourlyMode === "bars" ? "#7dd3fc" : "#64748B",
                         }}
                       >
@@ -3495,7 +3449,7 @@ function DashboardPage() {
                         onClick={() => setHourlyMode("heatmap")}
                         style={{
                           padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
-                          background: hourlyMode === "heatmap" ? "rgba(0,200,160,0.15)" : "transparent",
+                          background: hourlyMode === "heatmap" ? "rgba(56,189,248,0.12)" : "transparent",
                           color: hourlyMode === "heatmap" ? "#7dd3fc" : "#64748B",
                         }}
                       >
@@ -3650,7 +3604,7 @@ function DashboardPage() {
 
             {stats.nfcChips && stats.nfcChips.length > 0 && (
               <section className="card" style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", marginBottom: 16 }}>
+                <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 16 }}>
                   Fizyczne breloczki NFC
                 </h3>
                 <p style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
@@ -3659,7 +3613,7 @@ function DashboardPage() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(148,163,184,0.15)" }}>
+                      <tr style={{ borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
                         <th style={{ textAlign: "left", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>#</th>
                         <th style={{ textAlign: "left", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>NFC Chip ID</th>
                         <th style={{ textAlign: "right", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>Skany</th>
@@ -3677,7 +3631,7 @@ function DashboardPage() {
                             <td style={{ padding: "8px 12px" }}>
                               <button
                                 onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
-                                style={{ background: "none", border: "none", fontFamily: "monospace", color: "#7dd3fc", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
+                                style={{ background: "none", border: "none", fontFamily: "var(--font-mono)", color: "#7dd3fc", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
                                 title="Kliknij zeby zobaczyc skany tego chipa"
                               >
                                 {chip.nfcId}
@@ -3686,7 +3640,7 @@ function DashboardPage() {
                             <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#F1F5F9" }}>{chip.count}</td>
                             <td style={{ padding: "8px 12px", textAlign: "right" }}>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                                <div style={{ width: 50, height: 4, background: "#243052", borderRadius: 2, overflow: "hidden" }}>
+                                <div style={{ width: 50, height: 4, background: "transparent", borderRadius: 2, overflow: "hidden" }}>
                                   <div style={{ width: `${pct}%`, height: "100%", background: "#8b5cf6", borderRadius: 2 }} />
                                 </div>
                                 <span style={{ color: "#94A3B8", minWidth: 30 }}>{pct}%</span>
@@ -3695,7 +3649,7 @@ function DashboardPage() {
                             <td style={{ padding: "8px 12px" }}>
                               <button
                                 onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
-                                style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.15)", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
+                                style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
                               >
                                 Pokaz skany
                               </button>
@@ -3716,7 +3670,7 @@ function DashboardPage() {
               <section className="card" style={{ marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                   <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9", marginBottom: 2 }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 2 }}>
                       <span style={{ marginRight: 8 }}>📱</span>Skanowania QR
                     </h3>
                     <p style={{ fontSize: 12, color: "#64748B" }}>
@@ -3736,7 +3690,7 @@ function DashboardPage() {
                         title={t.tagId}
                       >{t.tagName}</button>
                       <span style={{ fontSize: 11, color: "#F1F5F9", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{t.count}</span>
-                      <div style={{ width: 60, height: 4, background: "#243052", borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
+                      <div style={{ width: 60, height: 4, background: "transparent", borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
                         <div style={{ width: `${t.percent}%`, height: "100%", background: "#10b981", borderRadius: 2 }} />
                       </div>
                       <span style={{ fontSize: 10, color: "#64748B", minWidth: 28 }}>{t.percent}%</span>
@@ -3753,7 +3707,7 @@ function DashboardPage() {
             <section ref={scanTableRef} className="card" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9" }}>
+                  <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
                     Lista skanow
                   </h3>
                   <button
@@ -3771,7 +3725,7 @@ function DashboardPage() {
                   {scanSourceFilter !== "all" && (
                     <span style={{
                       padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6,
-                      background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.15)" : "rgba(0,200,160,0.15)",
+                      background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.15)" : "rgba(56,189,248,0.12)",
                       color: scanSourceFilter === "qr" ? "#10b981" : "#7dd3fc",
                       border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(0,200,160,0.3)"}`,
                     }}>
@@ -3853,10 +3807,10 @@ function DashboardPage() {
                                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
                                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                               >
-                                <td style={{ padding: "6px 8px", color: "#64748B", fontWeight: 600, fontFamily: "monospace" }}>
+                                <td style={{ padding: "6px 8px", color: "#64748B", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
                                   {scan.seq}
                                 </td>
-                                <td style={{ padding: "6px 8px", color: "#F1F5F9", fontFamily: "monospace", fontSize: 10 }}>
+                                <td style={{ padding: "6px 8px", color: "#F1F5F9", fontFamily: "var(--font-mono)", fontSize: 10 }}>
                                   {new Date(scan.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                                 </td>
                                 <td style={{ padding: "6px 8px" }}>
@@ -3879,7 +3833,7 @@ function DashboardPage() {
                                       <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,200,160,0.25)", letterSpacing: 0.5 }}>NFC</span>
                                       <button
                                         onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
-                                        style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "monospace", padding: 0, textDecoration: "underline" }}
+                                        style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "var(--font-mono)", padding: 0, textDecoration: "underline" }}
                                       >{scan.nfcId}</button>
                                     </div>
                                   ) : (
@@ -3929,7 +3883,7 @@ function DashboardPage() {
                                         borderRadius: 4,
                                         padding: "2px 7px",
                                         fontSize: 10,
-                                        fontFamily: "monospace",
+                                        fontFamily: "var(--font-mono)",
                                         fontWeight: 700,
                                         cursor: "pointer",
                                         letterSpacing: 0.5,
@@ -3952,7 +3906,7 @@ function DashboardPage() {
                       </div>
 
                       {/* Pagination */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
                         <span style={{ fontSize: 11, color: "#64748B" }}>
                           {scanData.total} skanów • strona {scanData.page}/{scanData.totalPages}
                         </span>
@@ -3960,14 +3914,14 @@ function DashboardPage() {
                           <button
                             disabled={scanData.page <= 1}
                             onClick={() => { const p = scanData.page - 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
-                            style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: scanData.page <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
+                            style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
                           >
                             ← Poprz.
                           </button>
                           <button
                             disabled={scanData.page >= scanData.totalPages}
                             onClick={() => { const p = scanData.page + 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
-                            style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: scanData.page >= scanData.totalPages ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
+                            style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page >= scanData.totalPages ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
                           >
                             Nast. →
                           </button>
@@ -3985,7 +3939,7 @@ function DashboardPage() {
             <section className="card" style={{ marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showGuestsTable ? 16 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9" }}>Top Gości</h3>
+                  <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Top Gości</h3>
                   {guestsTotal > 0 && (
                     <span style={{ fontSize: 11, color: "#64748B" }}>{guestsTotal} unikalnych</span>
                   )}
@@ -4049,7 +4003,7 @@ function DashboardPage() {
                               onMouseEnter={e => (e.currentTarget.style.background = "#151D35")}
                               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                             >
-                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "monospace", fontWeight: 600 }}>{g.rank}</td>
+                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{g.rank}</td>
                               <td style={{ padding: "6px 8px" }}>
                                 <button
                                   onClick={async () => {
@@ -4066,7 +4020,7 @@ function DashboardPage() {
                                   style={{
                                     background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
                                     color: "#818cf8", borderRadius: 4, padding: "2px 7px",
-                                    fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+                                    fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700,
                                     cursor: "pointer", letterSpacing: 0.5, transition: "background 0.15s",
                                   }}
                                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(99,102,241,0.25)")}
@@ -4096,7 +4050,7 @@ function DashboardPage() {
                                 </span>
                               </td>
                               <td style={{ padding: "6px 8px", color: "#94A3B8" }}>{g.city || "—"}</td>
-                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "monospace", fontSize: 10 }}>
+                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "var(--font-mono)", fontSize: 10 }}>
                                 {new Date(g.lastSeen).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
                               </td>
                             </tr>
@@ -4121,7 +4075,7 @@ function DashboardPage() {
                   </h2>
                   <span
                     style={{
-                      background: "#243052",
+                      background: "transparent",
                       color: "#94A3B8",
                       fontSize: 12,
                       fontWeight: 600,
@@ -4135,7 +4089,7 @@ function DashboardPage() {
                 {/* View mode toggle + Global reset stats */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   {/* Cards / Table toggle */}
-                  <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.15)" }}>
+                  <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
                     {(["cards", "table"] as const).map((mode) => (
                       <button
                         key={mode}
@@ -4188,7 +4142,7 @@ function DashboardPage() {
                       </button>
                       <button
                         onClick={() => setResetAllConfirm(false)}
-                        style={{ background: "#243052", border: "1px solid rgba(148,163,184,0.15)", color: "#94A3B8", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer" }}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 6, padding: "6px 14px", fontSize: 12, cursor: "pointer" }}
                       >
                         Anuluj
                       </button>
@@ -4196,7 +4150,7 @@ function DashboardPage() {
                   ) : (
                     <button
                       onClick={() => setResetAllConfirm(true)}
-                      style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.15)", color: "#94A3B8", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
+                      style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "border-color 0.2s, color 0.2s" }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#f87171"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)"; e.currentTarget.style.color = "#a0a0c0"; }}
                     >
@@ -4307,7 +4261,7 @@ function DashboardPage() {
                         >
                           {/* Left: name + badges */}
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: "#F1F5F9" }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
                               {tag.name}
                             </span>
                             <span
@@ -4429,8 +4383,8 @@ function DashboardPage() {
                               onClick={e => { e.stopPropagation(); handleCopyLink(tag.id); }}
                               title="Kopiuj link publiczny"
                               style={{
-                                background: "#243052",
-                                border: "1px solid rgba(148,163,184,0.15)",
+                                background: "transparent",
+                                border: "1px solid rgba(148,163,184,0.08)",
                                 color: copiedCardId === tag.id ? "#22c55e" : "#94A3B8",
                                 borderRadius: 6,
                                 width: 28,
@@ -4456,8 +4410,8 @@ function DashboardPage() {
                               onClick={e => { e.stopPropagation(); router.push(`/dashboard/tags/${tag.id}/edit`); }}
                               title={isAdmin ? "Edytuj akcje" : "Podglad"}
                               style={{
-                                background: "#243052",
-                                border: "1px solid rgba(148,163,184,0.15)",
+                                background: "transparent",
+                                border: "1px solid rgba(148,163,184,0.08)",
                                 color: "#94A3B8",
                                 borderRadius: 6,
                                 width: 28,
@@ -4485,8 +4439,8 @@ function DashboardPage() {
                                 onClick={(e) => openCardMenu(tag.id, e)}
                                 title="Więcej opcji"
                                 style={{
-                                  background: "#243052",
-                                  border: "1px solid rgba(148,163,184,0.15)",
+                                  background: "transparent",
+                                  border: "1px solid rgba(148,163,184,0.08)",
                                   color: "#94A3B8",
                                   borderRadius: 6,
                                   width: 32,
@@ -4637,7 +4591,7 @@ function DashboardPage() {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12, color: "#94A3B8", alignItems: "center" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <span style={{ color: "#64748B" }}>ID:</span>{" "}
-                            <span style={{ fontFamily: "monospace", color: "#7dd3fc" }}>{tag.id}</span>
+                            <span style={{ fontFamily: "var(--font-mono)", color: "#7dd3fc" }}>{tag.id}</span>
                           </span>
                           <span>
                             <span style={{ color: "#64748B" }}>Skany:</span>{" "}
@@ -4657,7 +4611,7 @@ function DashboardPage() {
                               onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,200,160,0.18)"; e.currentTarget.style.borderColor = "rgba(0,200,160,0.45)"; }}
                               onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,200,160,0.1)"; e.currentTarget.style.borderColor = "rgba(0,200,160,0.25)"; }}
                             >
-                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#7dd3fc" }}>/s/{tag.id}</span>
+                              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#7dd3fc" }}>/s/{tag.id}</span>
                               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
                               </svg>
@@ -4728,7 +4682,7 @@ function DashboardPage() {
                                 padding: 12,
                                 background: "#14171e",
                                 borderRadius: 8,
-                                border: "1px solid rgba(148,163,184,0.15)",
+                                border: "1px solid rgba(148,163,184,0.08)",
                               }}>
                                 {linkClickStats[tag.id].links.length === 0 ? (
                                   <p style={{ fontSize: 12, color: "#64748B" }}>Brak klikniec</p>
@@ -4748,7 +4702,7 @@ function DashboardPage() {
                                           </span>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                          <div style={{ width: 60, height: 4, background: "#243052", borderRadius: 2, overflow: "hidden" }}>
+                                          <div style={{ width: 60, height: 4, background: "transparent", borderRadius: 2, overflow: "hidden" }}>
                                             <div style={{ width: `${lc.percent}%`, height: "100%", background: "#38BDF8", borderRadius: 2 }} />
                                           </div>
                                           <span style={{ fontSize: 12, fontWeight: 700, color: "#F1F5F9", minWidth: 24, textAlign: "right" }}>{lc.clicks}</span>
@@ -4811,7 +4765,7 @@ function DashboardPage() {
                                 padding: 12,
                                 background: "#14171e",
                                 borderRadius: 8,
-                                border: "1px solid rgba(148,163,184,0.15)",
+                                border: "1px solid rgba(148,163,184,0.08)",
                               }}>
                                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -5000,7 +4954,7 @@ function DashboardPage() {
             left: "50%",
             transform: "translate(-50%,-50%)",
             background: "#14171e",
-            border: "1px solid rgba(148,163,184,0.15)",
+            border: "1px solid rgba(148,163,184,0.08)",
             borderRadius: 8,
             padding: "28px 32px",
             zIndex: 1101,
@@ -5034,7 +4988,7 @@ function DashboardPage() {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.15)", background: "#243052", color: "#94A3B8", fontSize: 13, cursor: "pointer" }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.08)", background: "transparent", color: "#94A3B8", fontSize: 13, cursor: "pointer" }}
               >
                 Anuluj
               </button>
@@ -5088,7 +5042,7 @@ function DashboardPage() {
             onClick={e => e.stopPropagation()}
             style={{
               background: "#14171e",
-              border: "1px solid rgba(148,163,184,0.15)",
+              border: "1px solid rgba(148,163,184,0.08)",
               borderRadius: 8,
               width: "min(760px, 95vw)",
               maxHeight: "80vh",
@@ -5098,7 +5052,7 @@ function DashboardPage() {
             }}
           >
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(148,163,184,0.15)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{
                   background: "rgba(99,102,241,0.15)",
@@ -5107,7 +5061,7 @@ function DashboardPage() {
                   borderRadius: 6,
                   padding: "3px 10px",
                   fontSize: 13,
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono)",
                   fontWeight: 700,
                   letterSpacing: 0.5,
                 }}>
@@ -5149,8 +5103,8 @@ function DashboardPage() {
                         onMouseEnter={e => (e.currentTarget.style.background = "#151D35")}
                         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                       >
-                        <td style={{ padding: "5px 8px", color: "#64748B", fontFamily: "monospace" }}>{idx + 1}</td>
-                        <td style={{ padding: "5px 8px", color: "#F1F5F9", fontFamily: "monospace", fontSize: 10, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "5px 8px", color: "#64748B", fontFamily: "var(--font-mono)" }}>{idx + 1}</td>
+                        <td style={{ padding: "5px 8px", color: "#F1F5F9", fontFamily: "var(--font-mono)", fontSize: 10, whiteSpace: "nowrap" }}>
                           {new Date(s.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                         </td>
                         <td style={{ padding: "5px 8px" }}>

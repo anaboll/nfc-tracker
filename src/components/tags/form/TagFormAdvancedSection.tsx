@@ -208,7 +208,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#1C2541",
     color: "#7dd3fc",
     fontSize: 12,
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
     outline: "none",
     boxSizing: "border-box" as const,
   },

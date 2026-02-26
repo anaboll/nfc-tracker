@@ -185,7 +185,7 @@ export function ActionEditor({
             readOnly
             className="input-field"
             value={`${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`}
-            style={{ fontSize: 12, padding: "6px 10px", color: "#2ee8c0", fontFamily: "monospace", cursor: "text", userSelect: "all", flex: 1 }}
+            style={{ fontSize: 12, padding: "6px 10px", color: "#2ee8c0", fontFamily: "var(--font-mono)", cursor: "text", userSelect: "all", flex: 1 }}
             onFocus={e => e.target.select()}
           />
           <button
@@ -481,7 +481,7 @@ export function ActionEditor({
                 readOnly
                 className="input-field"
                 value={editTokenUrl}
-                style={{ fontSize: 11, padding: "6px 10px", color: "#2ee8c0", fontFamily: "monospace", cursor: "text", userSelect: "all" }}
+                style={{ fontSize: 11, padding: "6px 10px", color: "#2ee8c0", fontFamily: "var(--font-mono)", cursor: "text", userSelect: "all" }}
                 onFocus={e => e.target.select()}
               />
               <div style={{ display: "flex", gap: 6 }}>

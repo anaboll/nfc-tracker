@@ -221,7 +221,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #1C2541",
     color: "#7dd3fc",
     fontSize: 14,
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
     opacity: 0.8,
   },
   hint: {

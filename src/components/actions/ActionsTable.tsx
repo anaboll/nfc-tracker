@@ -335,10 +335,10 @@ export function ActionsTable({
         </colgroup>
         {/* ---- HEAD ---- */}
         <thead>
-          <tr style={{ borderBottom: "1px solid #1C2541" }}>
+          <tr style={{ borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
             {/* Checkbox header */}
             {!readOnly && <th
-              style={{ padding: "8px 8px 8px 16px" }}
+              style={{ padding: "6px 8px 6px 16px" }}
               onClick={(e) => e.stopPropagation()}
             >
               <input
@@ -353,12 +353,12 @@ export function ActionsTable({
               <th
                 key={h}
                 style={{
-                  padding: "8px 12px",
+                  padding: "6px 12px",
                   textAlign: "left",
-                  fontSize: 11,
-                  fontWeight: 600,
+                  fontSize: 10,
+                  fontWeight: 500,
                   color: "#64748B",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -383,17 +383,17 @@ export function ActionsTable({
                 key={tag.id}
                 onClick={() => !readOnly && onStartEdit(tag)}
                 style={{
-                  borderBottom: isLast ? "none" : "1px solid #243052",
+                  borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.04)",
                   cursor: readOnly ? "default" : "pointer",
                   transition: "background 0.12s",
                   background: isSelected ? "rgba(59,130,246,0.06)" : "transparent",
                 }}
-                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#1C2541"; }}
+                onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isSelected ? "rgba(59,130,246,0.06)" : "transparent"; }}
               >
                 {/* Checkbox */}
                 {!readOnly && <td
-                  style={{ padding: "10px 8px 10px 16px" }}
+                  style={{ padding: "8px 8px 8px 16px" }}
                   onClick={(e) => { e.stopPropagation(); toggleOne(tag.id); }}
                 >
                   <input
@@ -405,7 +405,7 @@ export function ActionsTable({
                 </td>}
 
                 {/* Nazwa */}
-                <td style={{ padding: "10px 12px", fontWeight: 600, overflow: "hidden" }}>
+                <td style={{ padding: "8px 12px", fontWeight: 600, overflow: "hidden" }}>
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={tag.name}>
                     {tag.name}
                   </div>
@@ -417,7 +417,7 @@ export function ActionsTable({
                 </td>
 
                 {/* Typ */}
-                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
                   <span
                     style={{
                       fontSize: 11,
@@ -433,7 +433,7 @@ export function ActionsTable({
                 </td>
 
                 {/* Status */}
-                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
                   <span
                     style={{
                       fontSize: 11,
@@ -449,12 +449,12 @@ export function ActionsTable({
                 </td>
 
                 {/* Skany */}
-                <td style={{ padding: "10px 12px", fontWeight: 700, color: "#7dd3fc", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)", fontWeight: 600, color: "#F1F5F9", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                   {tag._count.scans}
                 </td>
 
                 {/* Linki */}
-                <td style={{ padding: "10px 12px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+                <td style={{ padding: "8px 12px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => copyLink(tag.id)}
                     title={`/s/${tag.id}`}
@@ -476,7 +476,7 @@ export function ActionsTable({
                   >
                     <span
                       style={{
-                        fontFamily: "monospace",
+                        fontFamily: "var(--font-mono)",
                         fontSize: 11,
                         color: copiedId === tag.id ? "#22c55e" : "#7dd3fc",
                         overflow: "hidden",
@@ -518,7 +518,7 @@ export function ActionsTable({
 
                 {/* Akcje */}
                 {!readOnly && <td
-                  style={{ padding: "10px 12px", whiteSpace: "nowrap" }}
+                  style={{ padding: "8px 12px", whiteSpace: "nowrap" }}
                   onClick={(e) => e.stopPropagation()} /* prevent row-click when clicking controls */
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

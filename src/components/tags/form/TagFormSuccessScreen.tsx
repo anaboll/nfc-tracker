@@ -149,7 +149,7 @@ const styles: Record<string, React.CSSProperties> = {
   urlCode: {
     fontSize: 13,
     color: "#7dd3fc",
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
   },
   qrSection: {
     marginBottom: 28,
