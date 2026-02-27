@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { Language } from "@/types/dashboard";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface LanguagesCardProps {
   topLanguages: Language[];
@@ -16,7 +17,7 @@ export default function LanguagesCard({ topLanguages }: LanguagesCardProps) {
         Jezyki przegladarek
       </h3>
       {topLanguages.length === 0 && (
-        <p style={{ color: "#64748B", fontSize: 14 }}>Brak danych</p>
+        <EmptyState icon="language" message="Brak danych o językach" hint="Języki przeglądarek pojawią się po skanach" />
       )}
       {topLanguages.slice((languagesPage - 1) * 5, languagesPage * 5).map((l, i, arr) => (
         <div

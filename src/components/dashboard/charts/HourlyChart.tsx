@@ -29,7 +29,7 @@ export default function HourlyChart({
   if (hourly.length === 0 || !hourly.some(h => h.count > 0)) return null;
 
   return (
-    <section className="card" style={{ marginBottom: 24 }}>
+    <section className="card">
       {/* Header with peak insight + mode toggle */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>
@@ -56,9 +56,9 @@ export default function HourlyChart({
           {/* Data mode toggle */}
           <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
             <button
+              className="hourly-toggle-btn"
               onClick={() => setHourlyDataMode("both")}
               style={{
-                padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
                 background: hourlyDataMode === "both" ? "rgba(56,189,248,0.12)" : "transparent",
                 color: hourlyDataMode === "both" ? "#7dd3fc" : "#64748B",
               }}
@@ -66,9 +66,9 @@ export default function HourlyChart({
               Razem
             </button>
             <button
+              className="hourly-toggle-btn"
               onClick={() => setHourlyDataMode("all")}
               style={{
-                padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
                 background: hourlyDataMode === "all" ? "rgba(56,189,248,0.12)" : "transparent",
                 color: hourlyDataMode === "all" ? "#7dd3fc" : "#64748B",
               }}
@@ -76,9 +76,9 @@ export default function HourlyChart({
               Wszystkie
             </button>
             <button
+              className="hourly-toggle-btn"
               onClick={() => setHourlyDataMode("unique")}
               style={{
-                padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
                 background: hourlyDataMode === "unique" ? "rgba(16,185,129,0.15)" : "transparent",
                 color: hourlyDataMode === "unique" ? "#10b981" : "#64748B",
               }}
@@ -89,9 +89,9 @@ export default function HourlyChart({
           {/* View mode toggle */}
           <div style={{ display: "flex", background: "#1C2541", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.08)" }}>
             <button
+              className="hourly-toggle-btn"
               onClick={() => setHourlyMode("bars")}
               style={{
-                padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
                 background: hourlyMode === "bars" ? "rgba(56,189,248,0.12)" : "transparent",
                 color: hourlyMode === "bars" ? "#7dd3fc" : "#64748B",
               }}
@@ -99,9 +99,9 @@ export default function HourlyChart({
               Histogram
             </button>
             <button
+              className="hourly-toggle-btn"
               onClick={() => setHourlyMode("heatmap")}
               style={{
-                padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.2s",
                 background: hourlyMode === "heatmap" ? "rgba(56,189,248,0.12)" : "transparent",
                 color: hourlyMode === "heatmap" ? "#7dd3fc" : "#64748B",
               }}
@@ -146,17 +146,17 @@ export default function HourlyChart({
                   <span style={{ fontSize: 8, fontWeight: 600, color: "#10b981" }}>{h.uniqueUsers}</span>
                 )}
                 <div style={{ position: "relative", width: "100%", height: Math.max(showAll ? barH : uBarH, isActive ? 4 : 2) }}>
-                  {/* Total bar */}
+                  {/* Total bar (blue) */}
                   {showAll && (
                     <div style={{
                       position: "absolute", bottom: 0, left: "10%", right: "10%",
                       height: Math.max(barH, h.count > 0 ? 4 : 2),
                       borderRadius: "3px 3px 0 0",
-                      background: h.count > 0 ? "rgba(0,200,160,0.6)" : "#1C2541",
+                      background: h.count > 0 ? "rgba(56,189,248,0.5)" : "#1C2541",
                       transition: "height 0.3s ease",
                     }} />
                   )}
-                  {/* Unique overlay */}
+                  {/* Unique overlay (green) */}
                   {showUnique && h.uniqueUsers > 0 && (
                     <div style={{
                       position: "absolute", bottom: 0,
@@ -164,7 +164,7 @@ export default function HourlyChart({
                       right: showAll ? "25%" : "10%",
                       height: Math.max(uBarH, 3),
                       borderRadius: "2px 2px 0 0",
-                      background: "rgba(16,185,129,0.7)",
+                      background: "rgba(16,185,129,0.8)",
                       transition: "height 0.3s ease",
                     }} />
                   )}
@@ -200,12 +200,12 @@ export default function HourlyChart({
                   const val = isUnique ? (heatmapUniqueData[dayIdx]?.[h] || 0) : (heatmapData[dayIdx]?.[h] || 0);
                   const maxVal = isUnique ? heatmapUniqueMax : heatmapMax;
                   const intensity = maxVal > 0 ? val / maxVal : 0;
-                  // Color interpolation: 0 = dark, unique = green, all/both = orange
+                  // Color interpolation: 0 = dark, unique = green, all/both = blue
                   const bg = val === 0
                     ? "#151D35"
                     : isUnique
                       ? `rgba(16, 185, 129, ${0.15 + intensity * 0.85})`
-                      : `rgba(46, 232, 192, ${0.15 + intensity * 0.85})`;
+                      : `rgba(56, 189, 248, ${0.15 + intensity * 0.85})`;
                   return (
                     <div
                       key={`cell-${dayIdx}-${h}`}
@@ -236,7 +236,7 @@ export default function HourlyChart({
             <span style={{ fontSize: 9, color: "#64748B" }}>Mniej</span>
             <div style={{ display: "flex", gap: 2 }}>
               {[0, 0.25, 0.5, 0.75, 1].map((f, i) => (
-                <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: f === 0 ? "#151D35" : hourlyDataMode === "unique" ? `rgba(16, 185, 129, ${0.15 + f * 0.85})` : `rgba(46, 232, 192, ${0.15 + f * 0.85})` }} />
+                <div key={i} style={{ width: 16, height: 10, borderRadius: 2, background: f === 0 ? "#151D35" : hourlyDataMode === "unique" ? `rgba(16, 185, 129, ${0.15 + f * 0.85})` : `rgba(56, 189, 248, ${0.15 + f * 0.85})` }} />
               ))}
             </div>
             <span style={{ fontSize: 9, color: "#64748B" }}>Wiecej</span>

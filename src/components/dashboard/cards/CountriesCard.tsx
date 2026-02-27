@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { Country } from "@/types/dashboard";
 import { getCountryFlag } from "@/lib/utils";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface CountriesCardProps {
   topCountries: Country[];
@@ -17,7 +18,7 @@ export default function CountriesCard({ topCountries }: CountriesCardProps) {
         Kraje
       </h3>
       {topCountries.length === 0 && (
-        <p style={{ color: "#64748B", fontSize: 14 }}>Brak danych</p>
+        <EmptyState icon="globe" message="Brak danych o krajach" hint="Skany pojawią się gdy użytkownicy zaczną skanować" />
       )}
       {topCountries.slice((countriesPage - 1) * 5, countriesPage * 5).map((c, i, arr) => (
         <div

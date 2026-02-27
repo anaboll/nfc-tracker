@@ -26,7 +26,10 @@ const ALL_VIEWER_SECTIONS = [
   { key: "hourly", label: "Wykres godzinowy" },
   { key: "weekly", label: "Wykres tygodniowy" },
   { key: "geo", label: "Top kraje" },
+  { key: "cities", label: "Top miasta" },
+  { key: "languages", label: "Jezyki" },
   { key: "devices", label: "Urzadzenia" },
+  { key: "nfcChips", label: "NFC chipy" },
 ] as const;
 
 const DEFAULT_SECTIONS = ALL_VIEWER_SECTIONS.map((s) => s.key);

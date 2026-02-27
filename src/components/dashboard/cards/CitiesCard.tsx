@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { City } from "@/types/dashboard";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface CitiesCardProps {
   topCities: City[];
@@ -16,7 +17,7 @@ export default function CitiesCard({ topCities }: CitiesCardProps) {
         Miasta
       </h3>
       {topCities.length === 0 && (
-        <p style={{ color: "#64748B", fontSize: 14 }}>Brak danych</p>
+        <EmptyState icon="city" message="Brak danych o miastach" hint="Lokalizacje pojawią się po pierwszych skanach" />
       )}
       {topCities.slice((citiesPage - 1) * 5, citiesPage * 5).map((c, i, arr) => (
         <div

@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { TopTag } from "@/types/dashboard";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface Props {
   topTags: TopTag[];
@@ -14,7 +15,7 @@ export default function TopTagsCard({ topTags }: Props) {
         Najczesciej skanowane
       </h3>
       {topTags.length === 0 && (
-        <p style={{ color: "#64748B", fontSize: 13 }}>Brak danych</p>
+        <EmptyState icon="tag" message="Brak danych o tagach" hint="Statystyki tagów pojawią się po skanach" />
       )}
       {topTags.map((t, i) => (
         <div

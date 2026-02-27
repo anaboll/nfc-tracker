@@ -1389,7 +1389,7 @@ select {
 /* Main */
 .viewer-main {
   flex: 1;
-  max-width: 900px;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   padding: 24px;
@@ -1601,10 +1601,10 @@ select {
   cursor: default;
 }
 
-/* VCard cards grid */
+/* VCard cards grid — max 2 columns */
 .viewer-vcards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 .viewer-vcard-card {
@@ -1770,6 +1770,17 @@ select {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+/* Analytics grid — single 2-col grid, last odd item spans full */
+.viewer-analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.viewer-analytics-grid > *:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 .viewer-section--chart {
   margin-bottom: 0 !important;
@@ -1961,6 +1972,60 @@ select {
   text-align: right;
 }
 
+/* Date range picker */
+.viewer-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.viewer-date-picker-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--txt-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.viewer-date-picker-group {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.viewer-date-picker-btn {
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--txt-muted);
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.viewer-date-picker-btn:hover {
+  color: var(--txt-sec);
+  background: rgba(255,255,255,0.03);
+}
+.viewer-date-picker-btn--active {
+  background: var(--accent-muted);
+  color: var(--accent-light);
+}
+
+/* Hourly chart toggle buttons (CSS class for mobile sizing) */
+.hourly-toggle-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
 /* Footer */
 .viewer-footer {
   text-align: center;
@@ -1990,6 +2055,9 @@ select {
   .viewer-charts-grid {
     grid-template-columns: 1fr;
   }
+  .viewer-analytics-grid {
+    grid-template-columns: 1fr;
+  }
   .viewer-vcard-btn {
     min-height: 44px;
     display: flex;
@@ -1998,6 +2066,19 @@ select {
   }
   .viewer-hourly-label {
     font-size: 8px;
+  }
+  .viewer-date-picker {
+    flex-wrap: wrap;
+  }
+  .viewer-date-picker-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+  .hourly-toggle-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 44px;
   }
 }
 
@@ -2021,5 +2102,8 @@ select {
   }
   .viewer-country-stat-value {
     font-size: 12px;
+  }
+  .viewer-kpi-value {
+    font-size: 24px;
   }
 }

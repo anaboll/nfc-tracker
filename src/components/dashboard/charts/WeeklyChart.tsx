@@ -6,8 +6,8 @@ import type { WeeklyTrend } from "@/types/dashboard";
 interface Props {
   weekly: WeeklyTrend | null | undefined;
   maxWeeklyCount: number;
-  weekOffset: number;
-  onWeekChange: (direction: number) => void;
+  weekOffset?: number;
+  onWeekChange?: (direction: number) => void;
   formatWeekRange: (start: string, end: string) => string;
 }
 
@@ -26,56 +26,60 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
           Trend tygodniowy
         </h3>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => onWeekChange(-1)}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(148,163,184,0.08)",
-              color: "#94A3B8",
-              borderRadius: 6,
-              width: 32,
-              height: 32,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#38BDF8")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
-          >
-            &#8249;
-          </button>
+          {onWeekChange && (
+            <button
+              onClick={() => onWeekChange(-1)}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(148,163,184,0.08)",
+                color: "#94A3B8",
+                borderRadius: 6,
+                width: 32,
+                height: 32,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                transition: "border-color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#38BDF8")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
+            >
+              &#8249;
+            </button>
+          )}
           <span style={{ fontSize: 12, color: "#94A3B8", minWidth: 100, textAlign: "center" }}>
             {weekly
               ? formatWeekRange(weekly.weekStart, weekly.weekEnd)
               : "---"}
           </span>
-          <button
-            onClick={() => onWeekChange(1)}
-            disabled={weekOffset >= 0}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(148,163,184,0.08)",
-              color: weekOffset >= 0 ? "#3d4250" : "#a0a0c0",
-              borderRadius: 6,
-              width: 32,
-              height: 32,
-              cursor: weekOffset >= 0 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              if (weekOffset < 0) e.currentTarget.style.borderColor = "#38BDF8";
-            }}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
-          >
-            &#8250;
-          </button>
+          {onWeekChange && (
+            <button
+              onClick={() => onWeekChange(1)}
+              disabled={(weekOffset ?? 0) >= 0}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(148,163,184,0.08)",
+                color: (weekOffset ?? 0) >= 0 ? "#3d4250" : "#a0a0c0",
+                borderRadius: 6,
+                width: 32,
+                height: 32,
+                cursor: (weekOffset ?? 0) >= 0 ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                transition: "border-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                if ((weekOffset ?? 0) < 0) e.currentTarget.style.borderColor = "#38BDF8";
+              }}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
+            >
+              &#8250;
+            </button>
+          )}
         </div>
       </div>
 

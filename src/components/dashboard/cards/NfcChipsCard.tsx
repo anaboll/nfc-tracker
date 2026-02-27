@@ -5,7 +5,7 @@ import type { NfcChip } from "@/types/dashboard";
 
 interface Props {
   nfcChips: NfcChip[];
-  onChipClick: (nfcId: string) => void;
+  onChipClick?: (nfcId: string) => void;
 }
 
 export default function NfcChipsCard({ nfcChips, onChipClick }: Props) {
@@ -14,7 +14,7 @@ export default function NfcChipsCard({ nfcChips, onChipClick }: Props) {
   const totalNfc = nfcChips.reduce((s, c) => s + c.count, 0);
 
   return (
-    <section className="card" style={{ marginBottom: 24 }}>
+    <section className="card">
       <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 16 }}>
         Fizyczne breloczki NFC
       </h3>
@@ -29,7 +29,7 @@ export default function NfcChipsCard({ nfcChips, onChipClick }: Props) {
               <th style={{ textAlign: "left", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>NFC Chip ID</th>
               <th style={{ textAlign: "right", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>Skany</th>
               <th style={{ textAlign: "right", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>Udział</th>
-              <th style={{ padding: "8px 12px" }}></th>
+              {onChipClick && <th style={{ padding: "8px 12px" }}></th>}
             </tr>
           </thead>
           <tbody>
@@ -39,13 +39,19 @@ export default function NfcChipsCard({ nfcChips, onChipClick }: Props) {
                 <tr key={chip.nfcId} style={{ borderBottom: "1px solid #1C2541" }}>
                   <td style={{ padding: "8px 12px", color: "#64748B" }}>{idx + 1}</td>
                   <td style={{ padding: "8px 12px" }}>
-                    <button
-                      onClick={() => onChipClick(chip.nfcId)}
-                      style={{ background: "none", border: "none", fontFamily: "var(--font-mono)", color: "#7dd3fc", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
-                      title="Kliknij zeby zobaczyc skany tego chipa"
-                    >
-                      {chip.nfcId}
-                    </button>
+                    {onChipClick ? (
+                      <button
+                        onClick={() => onChipClick(chip.nfcId)}
+                        style={{ background: "none", border: "none", fontFamily: "var(--font-mono)", color: "#7dd3fc", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
+                        title="Kliknij zeby zobaczyc skany tego chipa"
+                      >
+                        {chip.nfcId}
+                      </button>
+                    ) : (
+                      <span style={{ fontFamily: "var(--font-mono)", color: "#7dd3fc", fontWeight: 600, fontSize: 12 }}>
+                        {chip.nfcId}
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#F1F5F9" }}>{chip.count}</td>
                   <td style={{ padding: "8px 12px", textAlign: "right" }}>
@@ -56,14 +62,16 @@ export default function NfcChipsCard({ nfcChips, onChipClick }: Props) {
                       <span style={{ color: "#94A3B8", minWidth: 30 }}>{pct}%</span>
                     </div>
                   </td>
-                  <td style={{ padding: "8px 12px" }}>
-                    <button
-                      onClick={() => onChipClick(chip.nfcId)}
-                      style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
-                    >
-                      Pokaz skany
-                    </button>
-                  </td>
+                  {onChipClick && (
+                    <td style={{ padding: "8px 12px" }}>
+                      <button
+                        onClick={() => onChipClick(chip.nfcId)}
+                        style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
+                      >
+                        Pokaz skany
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
