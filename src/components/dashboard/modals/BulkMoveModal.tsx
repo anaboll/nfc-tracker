@@ -38,9 +38,9 @@ export default function BulkMoveModal({
         background: "#14171e",
         border: "1px solid rgba(148,163,184,0.08)",
         borderRadius: 8,
-        padding: "28px 32px",
+        padding: "24px clamp(16px, 4vw, 32px)",
         zIndex: 1101,
-        minWidth: 360,
+        minWidth: "min(360px, 90vw)",
         maxWidth: "90vw",
         boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
       }}>

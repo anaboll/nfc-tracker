@@ -54,11 +54,12 @@ export default function DashboardFilterBar({
     <>
       {/* ---- Filter Bar — time range + source pills ---- */}
       <section
+        className="dash-filter-bar"
         style={{ marginBottom: 16, padding: "10px 0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid rgba(148,163,184,0.06)" }}
       >
         {/* Time range preset pills */}
-        <div style={{ position: "relative" }}>
-          <div style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
+        <div style={{ position: "relative", minWidth: 0 }}>
+          <div className="dash-time-pills" style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
             {(["today", "week", "24h", "7d", "30d", "month", "custom"] as const).map((p) => {
               const labels: Record<string, string> = { "today": "Dziś", "week": "Ten tydz.", "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
               const active = rangePreset === p;
@@ -92,11 +93,11 @@ export default function DashboardFilterBar({
 
           {/* Custom range popover */}
           {showCustomPopover && (
-            <div ref={customPopoverRef} style={{
+            <div ref={customPopoverRef} className="dash-custom-popover" style={{
               position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
               background: "#161a22", border: "1px solid #363b48", borderRadius: 8,
               padding: "16px 18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-              display: "flex", flexDirection: "column", gap: 12, minWidth: 320,
+              display: "flex", flexDirection: "column", gap: 12, minWidth: 280,
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

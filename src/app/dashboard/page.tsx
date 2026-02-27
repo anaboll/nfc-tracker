@@ -1228,7 +1228,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
   /* ================================================================ */
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0B0F1A" }}>
+    <div style={{ minHeight: "100vh", background: "#0B0F1A", overflowX: "hidden" }}>
       {/* ---- Spinner keyframes ---- */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -1251,7 +1251,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       {/*  MAIN CONTENT                                                */}
       {/* ============================================================ */}
 
-      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 24px 64px" }}>
+      <main className="dash-main" style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 24px 64px", overflowX: "hidden" }}>
         {/* ================================================================ */}
         {/*  TWO-COLUMN LAYOUT: sidebar (260px) + scrollable content        */}
         {/* ================================================================ */}
@@ -1322,7 +1322,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
         {loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* KPI skeleton */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 12 }}>
               {[1,2,3,4].map(i => (
                 <div key={i} className="skeleton" style={{ height: 100, borderRadius: 8 }} />
               ))}
@@ -1356,7 +1356,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
                 gap: 16,
                 marginBottom: 24,
               }}
@@ -1372,7 +1372,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
                 gap: 16,
                 marginBottom: 24,
               }}
@@ -1385,7 +1385,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
                 gap: 16,
                 marginBottom: 24,
               }}

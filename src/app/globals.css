@@ -47,6 +47,7 @@ body {
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 ::-webkit-scrollbar { width: 5px; }
@@ -60,6 +61,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.25rem;
+  min-width: 0;
+  overflow: hidden;
 }
 .card-hover {
   transition: border-color 0.15s ease;
@@ -620,12 +623,48 @@ select {
   .dash-header-actions button span.btn-label { display: none; }
   .dash-header-actions { gap: 6px !important; }
   .dash-header-actions button { padding: 8px 10px !important; min-height: 44px; }
-  .dash-main { padding: 16px 12px 48px !important; }
+  .dash-main { padding: 16px 12px 48px !important; overflow-x: hidden !important; }
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .dash-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .dash-table-wrap table { min-width: 600px; }
   .toast-container { left: 1rem; right: 1rem; }
   .toast { max-width: 100%; }
+
+  /* Dashboard filter bar — scrollable on mobile */
+  .dash-filter-bar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* hide scrollbar Firefox */
+    padding-bottom: 4px !important;
+  }
+  .dash-filter-bar::-webkit-scrollbar { display: none; }
+  .dash-time-pills {
+    flex-shrink: 0;
+  }
+  .dash-time-pills button {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    min-height: 36px;
+  }
+  .dash-custom-popover {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: 16px !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    border-radius: 12px !important;
+  }
+
+  /* Main layout — prevent overflow */
+  .nfc-layout {
+    min-width: 0 !important;
+    overflow: hidden;
+  }
 
   /* Dashboard sidebar → drawer */
   .sidebar-hamburger { display: flex; }
@@ -664,6 +703,12 @@ select {
     min-width: 0 !important;
     width: 100% !important;
   }
+
+  /* Cards — prevent overflow */
+  .card, [class*="Card"] {
+    min-width: 0 !important;
+    overflow: hidden;
+  }
 }
 
 @media (max-width: 480px) {
@@ -678,6 +723,7 @@ select {
 
   /* Dashboard KPI → 1 column */
   .kpi-grid { grid-template-columns: 1fr !important; }
+  .dash-main { padding: 12px 8px 48px !important; }
 }
 
 /* ================================================================== */
@@ -1338,6 +1384,7 @@ select {
   font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .viewer-loading {

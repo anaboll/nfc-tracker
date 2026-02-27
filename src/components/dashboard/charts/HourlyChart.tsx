@@ -42,7 +42,7 @@ export default function HourlyChart({
             const totalH = hourly.reduce((s, h) => s + h.count, 0);
             const peakPct = totalH > 0 ? Math.round((peak.count / totalH) * 100) : 0;
             return peak.count > 0 ? (
-              <p style={{ fontSize: 12, color: "#94A3B8", display: "flex", alignItems: "center", gap: 6 }}>
+              <p style={{ fontSize: 12, color: "#94A3B8", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 <span style={{ color: "#10b981", fontWeight: 700 }}>Szczyt:</span>
                 {peak.hour}:00–{peak.hour + 1}:00
                 <span style={{ color: "#7dd3fc", fontWeight: 600 }}>({peak.count} skanow, {peak.uniqueUsers} unik.)</span>
