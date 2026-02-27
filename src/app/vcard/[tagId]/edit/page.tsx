@@ -6,6 +6,7 @@ import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import VCardLivePreview from "@/components/vcard/VCardLivePreview";
 import ThemeEditor from "@/components/vcard/ThemeEditor";
+import ImageCropper from "@/components/ui/ImageCropper";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -84,6 +85,7 @@ export default function VCardEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [socialExpanded, setSocialExpanded] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   /* -- Load vCard data -- */
   useEffect(() => {
@@ -152,21 +154,31 @@ export default function VCardEditPage() {
     setVcard({ ...vcard, [key]: value });
   };
 
-  /* -- Photo upload -- */
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* -- Photo: open cropper when file selected -- */
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !vcard) return;
+    // Reset input so re-selecting same file triggers onChange
+    e.target.value = "";
     if (!file.type.startsWith("image/")) {
       setError("Dozwolone tylko pliki graficzne");
       setTimeout(() => setError(null), 3000);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Maksymalny rozmiar zdjecia to 5MB");
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Maksymalny rozmiar zdjecia to 10MB");
       setTimeout(() => setError(null), 3000);
       return;
     }
+    setCropFile(file);
+  };
 
+  /* -- Photo: upload after crop -- */
+  const handleCroppedUpload = async (blob: Blob) => {
+    setCropFile(null);
+    if (!vcard) return;
+
+    const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("file", file);
     formData.append("tagId", tagId);
@@ -240,7 +252,7 @@ export default function VCardEditPage() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={handlePhotoUpload}
+                onChange={handlePhotoSelect}
                 style={{ display: "none" }}
               />
               {vcard.photo ? (
@@ -264,6 +276,15 @@ export default function VCardEditPage() {
                 </div>
               )}
             </label>
+            {vcard.photo && (
+              <button
+                type="button"
+                className="vcard-edit-photo-remove"
+                onClick={() => setVcard({ ...vcard, photo: "" })}
+              >
+                Usun zdjecie
+              </button>
+            )}
           </div>
 
           {/* Data Sections */}
@@ -375,6 +396,15 @@ export default function VCardEditPage() {
         {/* RIGHT: Live Preview */}
         <VCardLivePreview vcard={previewVcard} theme={theme} />
       </div>
+
+      {/* Image Cropper Modal */}
+      {cropFile && (
+        <ImageCropper
+          file={cropFile}
+          onCrop={handleCroppedUpload}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
     </div>
   );
 }
