@@ -245,6 +245,7 @@ function DashboardPage() {
 
   // users panel
   const [usersPanelOpen, setUsersPanelOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // create tag
   const [newTagId, setNewTagId] = useState("");
@@ -666,8 +667,14 @@ function DashboardPage() {
             if (f.timeFrom) setTimeFrom(f.timeFrom);
             if (f.timeTo) setTimeTo(f.timeTo);
           }
+        } else {
+          // No saved filters — default to "7d" so user sees recent data
+          setTimeout(() => applyPreset("7d"), 0);
         }
-      } catch { /* ignore */ }
+      } catch {
+        // On parse error, fall back to "7d"
+        setTimeout(() => applyPreset("7d"), 0);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1703,11 +1710,23 @@ function DashboardPage() {
             justifyContent: "space-between",
           }}
         >
-          {/* logo */}
-          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            <span style={{ color: "#38BDF8" }}>Twoje</span>
-            <span style={{ color: "#F1F5F9" }}>NFC</span>
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Mobile hamburger */}
+            <button
+              className="sidebar-hamburger"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Otworz filtry"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <path d="M3 12h18M3 6h18M3 18h18" />
+              </svg>
+            </button>
+            {/* logo */}
+            <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>
+              <span style={{ color: "#38BDF8" }}>Twoje</span>
+              <span style={{ color: "#F1F5F9" }}>NFC</span>
+            </span>
+          </div>
 
           {/* actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1821,11 +1840,6 @@ function DashboardPage() {
         {/*  TWO-COLUMN LAYOUT: sidebar (260px) + scrollable content        */}
         {/* ================================================================ */}
         <style>{`
-          @media (max-width: 700px) {
-            .nfc-layout { flex-direction: column !important; }
-            .nfc-sidebar { width: 100% !important; position: static !important; max-height: none !important; overflow: visible !important; flex-direction: row !important; flex-wrap: wrap !important; }
-            .nfc-sidebar > div { flex: 1 1 calc(50% - 6px); min-width: 140px; }
-          }
           /* Sidebar scrollbar — only appears when content overflows; thin and unobtrusive */
           .nfc-sidebar { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.15) transparent; }
           .nfc-sidebar::-webkit-scrollbar { width: 4px; }
@@ -1833,13 +1847,22 @@ function DashboardPage() {
           .nfc-sidebar::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.15); border-radius: 4px; }
           .nfc-sidebar::-webkit-scrollbar-thumb:hover { background: #363b48; }
         `}</style>
+
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <div className="nfc-layout" style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
           {/* ============================================================ */}
           {/*  LEFT SIDEBAR — Filtry: Klienci, Kampanie, Akcje             */}
           {/* ============================================================ */}
           <aside
-            className="nfc-sidebar"
+            className={`nfc-sidebar ${sidebarOpen ? "sidebar-open" : ""}`}
             onScroll={() => {
             }}
             style={{
@@ -1854,6 +1877,10 @@ function DashboardPage() {
               gap: 4,
             }}
           >
+            {/* Mobile close button */}
+            <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>
+              &times;
+            </button>
             {/* -- Klienci block -- */}
             <div style={{ padding: "0 0 12px", borderBottom: "1px solid rgba(148,163,184,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>

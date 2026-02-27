@@ -111,7 +111,14 @@ function isLightBg(t: ResolvedTheme): boolean {
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
-export default async function VCardPage({ params }: { params: { tagId: string } }) {
+export default async function VCardPage({
+  params,
+  searchParams,
+}: {
+  params: { tagId: string };
+  searchParams: { from?: string };
+}) {
+  const fromDashboard = searchParams.from === "dashboard";
   const tag = await prisma.tag.findUnique({
     where: { id: params.tagId, isActive: true },
   });
@@ -226,6 +233,13 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
     >
       {/* Pattern overlay */}
       {patternStyle && <div style={patternStyle} />}
+
+      {/* Back to dashboard button */}
+      {fromDashboard && (
+        <a href="/dashboard" className="vcard-edit-back-btn" style={{ position: "relative", zIndex: 2 }}>
+          ← Wroc do panelu
+        </a>
+      )}
 
       <div className="w-full" style={{ maxWidth: 440, position: "relative", zIndex: 1 }}>
 
