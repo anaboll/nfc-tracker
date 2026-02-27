@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { VCardTheme, BgMode, BgPattern, ButtonStyle, ButtonVariant, FontFamily, LayoutVariant, AvatarShape, SocialIconStyle } from "@/types/vcard";
+import type { VCardTheme, BgMode, BgPattern, ButtonStyle, ButtonVariant, FontFamily, LayoutVariant, SocialIconStyle } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import { THEME_PRESETS } from "@/lib/vcard-theme-presets";
 
@@ -90,7 +90,6 @@ const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { rounded: "Zaokraglone
 const BUTTON_VARIANT_LABELS: Record<ButtonVariant, string> = { filled: "Wypelnione", outline: "Obrys", ghost: "Przezroczyste" };
 const FONT_LABELS: Record<FontFamily, string> = { geist: "Geist Sans", inter: "Inter", serif: "Serif" };
 const LAYOUT_LABELS: Record<LayoutVariant, string> = { classic: "Klasyczny", modern: "Nowoczesny", minimal: "Minimalny" };
-const AVATAR_LABELS: Record<AvatarShape, string> = { circle: "Kolo", "rounded-square": "Zaokraglony kw.", square: "Kwadrat" };
 const SOCIAL_ICON_LABELS: Record<SocialIconStyle, string> = { rounded: "Zaokraglone", circle: "Kolo", square: "Kwadrat", pill: "Pigulka" };
 
 /* ------------------------------------------------------------------ */
@@ -233,28 +232,21 @@ export default function ThemeEditor({ theme, onChange }: Props) {
             renderLabel={(v) => LAYOUT_LABELS[v]}
           />
 
-          {/* Avatar */}
+          {/* Avatar border */}
           <SectionTitle>Avatar</SectionTitle>
-          <OptionGrid
-            value={t.avatarShape}
-            options={["circle", "rounded-square", "square"] as AvatarShape[]}
-            onChange={(v) => update({ avatarShape: v })}
-            renderLabel={(v) => AVATAR_LABELS[v]}
-          />
-          <div style={{ marginTop: 12 }}>
-            <label className="theme-color-field">
-              <span className="theme-color-label">Grubosc ramki ({t.avatarBorderWidth}px)</span>
-              <input
-                type="range"
-                min={0}
-                max={6}
-                step={1}
-                value={t.avatarBorderWidth}
-                onChange={(e) => update({ avatarBorderWidth: Number(e.target.value) })}
-                className="theme-range-input"
-              />
-            </label>
-          </div>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Grubosc ramki ({t.avatarBorderWidth}px)</span>
+            <input
+              type="range"
+              min={0}
+              max={6}
+              step={1}
+              value={t.avatarBorderWidth}
+              onChange={(e) => update({ avatarBorderWidth: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <ColorInput label="Kolor ramki" value={t.avatarBorderColor} onChange={(v) => update({ avatarBorderColor: v })} />
 
           {/* Social icons */}
           <SectionTitle>Styl ikon social</SectionTitle>

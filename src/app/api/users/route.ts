@@ -23,6 +23,7 @@ export async function GET() {
       name: true,
       role: true,
       mustChangePass: true,
+      viewerSections: true,
       createdAt: true,
       clients: {
         select: {
@@ -50,12 +51,13 @@ export async function POST(request: NextRequest) {
   if (!isAdmin(session)) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
-  const { email, password, name, role, clientIds } = body as {
+  const { email, password, name, role, clientIds, viewerSections } = body as {
     email?: string;
     password?: string;
     name?: string;
     role?: string;
     clientIds?: string[];
+    viewerSections?: string[];
   };
 
   if (!email || !password) {
@@ -83,6 +85,7 @@ export async function POST(request: NextRequest) {
       name: name || null,
       role: userRole,
       mustChangePass: true,
+      viewerSections: viewerSections ? JSON.stringify(viewerSections) : null,
       ...(clientIds && clientIds.length > 0
         ? {
             clients: {
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
           }
         : {}),
     },
-    select: { id: true, email: true, name: true, role: true },
+    select: { id: true, email: true, name: true, role: true, viewerSections: true },
   });
 
   return NextResponse.json(user, { status: 201 });
@@ -104,13 +107,14 @@ export async function PUT(request: NextRequest) {
   if (!isAdmin(session)) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
-  const { id, email, password, name, role, clientIds } = body as {
+  const { id, email, password, name, role, clientIds, viewerSections } = body as {
     id?: string;
     email?: string;
     password?: string;
     name?: string;
     role?: string;
     clientIds?: string[];
+    viewerSections?: string[] | null;
   };
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
@@ -142,11 +146,14 @@ export async function PUT(request: NextRequest) {
     data.password = await bcrypt.hash(password, 12);
     data.mustChangePass = true;
   }
+  if (viewerSections !== undefined) {
+    data.viewerSections = viewerSections ? JSON.stringify(viewerSections) : null;
+  }
 
   const user = await prisma.user.update({
     where: { id },
     data,
-    select: { id: true, email: true, name: true, role: true },
+    select: { id: true, email: true, name: true, role: true, viewerSections: true },
   });
 
   // Update client assignments if provided

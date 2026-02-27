@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import type { VCardData, VCardTheme } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME } from "@/types/vcard";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import VCardLivePreview from "@/components/vcard/VCardLivePreview";
 import ThemeEditor from "@/components/vcard/ThemeEditor";
 
@@ -59,8 +59,10 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
 export default function VCardEditPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tagId = params.tagId as string;
   const token = searchParams.get("token") || "";
+  const fromDashboard = searchParams.get("from") === "dashboard";
 
   const [vcard, setVcard] = useState<VCardData | null>(null);
   const [theme, setTheme] = useState<VCardTheme>({ ...DEFAULT_VCARD_THEME });
@@ -118,7 +120,12 @@ export default function VCardEditPage() {
         throw new Error(data.error || `Blad ${res.status}`);
       }
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      // If came from dashboard, redirect back after 1.5s
+      if (fromDashboard) {
+        setTimeout(() => router.push("/dashboard"), 1500);
+      } else {
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Blad zapisu";
       setError(msg);
@@ -195,6 +202,17 @@ export default function VCardEditPage() {
       <div className="vcard-edit-layout">
         {/* LEFT: Edit Form */}
         <div className="vcard-edit-form-col">
+          {/* Back to dashboard button */}
+          {fromDashboard && (
+            <button
+              type="button"
+              className="vcard-edit-back-btn"
+              onClick={() => router.push("/dashboard")}
+            >
+              &larr; Wroc do panelu
+            </button>
+          )}
+
           {/* Header */}
           <div className="vcard-edit-header">
             <span className="vcard-edit-header-sub">Edycja wizytowki</span>

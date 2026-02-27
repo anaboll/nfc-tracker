@@ -13,9 +13,23 @@ interface UserRow {
   name: string | null;
   role: string;
   mustChangePass: boolean;
+  viewerSections: string | null;
   createdAt: string;
   clients: UserClient[];
 }
+
+/* All possible viewer dashboard sections */
+const ALL_VIEWER_SECTIONS = [
+  { key: "kpi", label: "Metryki (KPI)" },
+  { key: "vcards", label: "Wizytowki" },
+  { key: "tags", label: "Inne tagi" },
+  { key: "hourly", label: "Wykres godzinowy" },
+  { key: "weekly", label: "Wykres tygodniowy" },
+  { key: "geo", label: "Top kraje" },
+  { key: "devices", label: "Urzadzenia" },
+] as const;
+
+const DEFAULT_SECTIONS = ALL_VIEWER_SECTIONS.map((s) => s.key);
 
 interface ClientOption {
   id: string;
@@ -42,6 +56,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<"admin" | "viewer">("viewer");
   const [formClientIds, setFormClientIds] = useState<string[]>([]);
+  const [formViewerSections, setFormViewerSections] = useState<string[]>([...DEFAULT_SECTIONS]);
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -79,6 +94,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
     setFormPassword("");
     setFormRole("viewer");
     setFormClientIds([]);
+    setFormViewerSections([...DEFAULT_SECTIONS]);
     setEditUser(null);
   };
 
@@ -94,6 +110,13 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
     setFormPassword("");
     setFormRole(u.role as "admin" | "viewer");
     setFormClientIds(u.clients.map((c) => c.id));
+    // Parse viewerSections from JSON string or use defaults
+    try {
+      const parsed = u.viewerSections ? JSON.parse(u.viewerSections) : null;
+      setFormViewerSections(Array.isArray(parsed) ? parsed : [...DEFAULT_SECTIONS]);
+    } catch {
+      setFormViewerSections([...DEFAULT_SECTIONS]);
+    }
     setMode("edit");
   };
 
@@ -111,6 +134,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
             name: formName || undefined,
             role: formRole,
             clientIds: formRole === "viewer" ? formClientIds : [],
+            viewerSections: formRole === "viewer" ? formViewerSections : null,
           }),
         });
         if (!res.ok) {
@@ -126,6 +150,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
           name: formName,
           role: formRole,
           clientIds: formRole === "viewer" ? formClientIds : [],
+          viewerSections: formRole === "viewer" ? formViewerSections : null,
         };
         if (formPassword) body.password = formPassword;
         const res = await fetch("/api/users", {
@@ -169,6 +194,12 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
   const toggleClient = (cid: string) => {
     setFormClientIds((prev) =>
       prev.includes(cid) ? prev.filter((x) => x !== cid) : [...prev, cid]
+    );
+  };
+
+  const toggleSection = (key: string) => {
+    setFormViewerSections((prev) =>
+      prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
     );
   };
 
@@ -477,7 +508,7 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                 <div>
                   <label style={labelStyle}>Przypisani klienci</label>
                   {clients.length === 0 ? (
-                    <p style={{ fontSize: 11, color: "#64748B" }}>Brak klientów do przypisania</p>
+                    <p style={{ fontSize: 11, color: "#64748B" }}>Brak klientow do przypisania</p>
                   ) : (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
                       {clients.map((c) => {
@@ -499,13 +530,64 @@ export function UsersPanel({ open, onClose, clients }: UsersPanelProps) {
                               transition: "all 0.15s",
                             }}
                           >
-                            {selected ? "✓ " : ""}
+                            {selected ? "\u2713 " : ""}
                             {c.name}
                           </button>
                         );
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {formRole === "viewer" && (
+                <div>
+                  <label style={labelStyle}>Widoczne sekcje dashboardu</label>
+                  <p style={{ fontSize: 10, color: "#64748B", marginBottom: 6 }}>
+                    Wybierz, ktore sekcje ten uzytkownik zobaczy na swoim panelu
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {ALL_VIEWER_SECTIONS.map((s) => {
+                      const selected = formViewerSections.includes(s.key);
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => toggleSection(s.key)}
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            border: selected ? "1px solid #38BDF8" : "1px solid #1C2541",
+                            background: selected ? "rgba(56,189,248,0.12)" : "#243052",
+                            color: selected ? "#38BDF8" : "#94A3B8",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {selected ? "\u2713 " : ""}
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      type="button"
+                      style={{ ...btnSecondary, padding: "4px 10px", fontSize: 10 }}
+                      onClick={() => setFormViewerSections([...DEFAULT_SECTIONS])}
+                    >
+                      Zaznacz wszystkie
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...btnSecondary, padding: "4px 10px", fontSize: 10 }}
+                      onClick={() => setFormViewerSections([])}
+                    >
+                      Odznacz wszystkie
+                    </button>
+                  </div>
                 </div>
               )}
 
