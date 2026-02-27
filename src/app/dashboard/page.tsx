@@ -11,232 +11,21 @@ import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
 import { UsersPanel } from "@/components/users/UsersPanel";
 import { useToast } from "@/components/ui/Toast";
 import ViewerDashboard from "@/components/dashboard/ViewerDashboard";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
-interface KPI {
-  totalScans: number;
-  uniqueUsers: number;
-  lastScan: string | null;
-  avgScansPerUser: number;
-}
-
-interface Devices {
-  iOS: number;
-  Android: number;
-  Desktop: number;
-  total: number;
-}
-
-interface TopTag {
-  tagId: string;
-  tagName: string;
-  count: number;
-  uniqueUsers: number;
-  percent: number;
-}
-
-interface Country {
-  country: string;
-  count: number;
-  uniqueUsers: number;
-  percent: number;
-}
-
-interface City {
-  city: string;
-  country: string;
-  count: number;
-  uniqueUsers: number;
-}
-
-interface Language {
-  lang: string;
-  count: number;
-  uniqueUsers: number;
-  percent: number;
-}
-
-interface WeekDay {
-  day: string;
-  date: string;
-  count: number;
-  uniqueUsers: number;
-}
-
-interface WeeklyTrend {
-  data: WeekDay[];
-  weekStart: string;
-  weekEnd: string;
-}
-
-interface NfcChip {
-  nfcId: string;
-  count: number;
-}
-
-interface HourlyData {
-  hour: number;
-  count: number;
-  uniqueUsers: number;
-}
-
-interface HourlyRawEntry {
-  t: string;
-  ip: string;
-}
-
-interface StatsData {
-  kpi: KPI;
-  devices: Devices;
-  topTags: TopTag[];
-  topCountries: Country[];
-  topCities: City[];
-  topLanguages: Language[];
-  nfcChips: NfcChip[];
-  weeklyTrend: WeeklyTrend;
-  hourlyRaw: HourlyRawEntry[];
-  allTags: { id: string; name: string }[];
-}
-
-interface CampaignInfo {
-  id: string;
-  name: string;
-}
-
-interface CampaignFull extends CampaignInfo {
-  description: string | null;
-  clientId: string;
-  client: ClientInfo;
-  isActive: boolean;
-  tagCount: number;
-  scanCount: number;
-}
-
-interface ScanRow {
-  seq: number;
-  id: string;
-  tagId: string;
-  tagName: string;
-  tagType: string;
-  timestamp: string;
-  nfcId: string | null;
-  deviceType: string;
-  country: string | null;
-  city: string | null;
-  region: string | null;
-  browserLang: string | null;
-  isReturning: boolean;
-  eventSource: string | null;
-  guestKey: string | null;
-  ipHash: string | null;
-}
-
-interface ScansResponse {
-  rows: ScanRow[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-interface TagLink {
-  label: string;
-  url: string;
-  icon: string;
-}
-
-interface VCardData {
-  firstName: string;
-  lastName: string;
-  company?: string;
-  jobTitle?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  address?: string;
-  instagram?: string;
-  facebook?: string;
-  linkedin?: string;
-  tiktok?: string;
-  youtube?: string;
-  whatsapp?: string;
-  telegram?: string;
-  note?: string;
-}
-
-interface LinkClickStat {
-  linkUrl: string;
-  linkLabel: string | null;
-  linkIcon: string | null;
-  clicks: number;
-  percent: number;
-}
-
-interface LinkClickData {
-  tagId: string;
-  total: number;
-  links: LinkClickStat[];
-}
-
-interface VideoStats {
-  tagId: string;
-  plays: number;
-  pauses: number;
-  completions: number;
-  progress25: number;
-  progress50: number;
-  progress75: number;
-  progress100: number;
-  avgWatchTime: number | null;
-  maxWatchTime: number | null;
-}
-
-interface ClientInfo {
-  id: string;
-  name: string;
-  slug: string;
-  color: string | null;
-}
-
-interface ClientFull extends ClientInfo {
-  description: string | null;
-  isActive: boolean;
-  tagCount: number;
-  scanCount: number;
-}
-
-interface TagFull {
-  id: string;
-  name: string;
-  targetUrl: string;
-  description: string | null;
-  videoFile: string | null;
-  isActive: boolean;
-  tagType: string;
-  links: TagLink[] | null;
-  clientId: string | null;
-  client: ClientInfo | null;
-  campaignId: string | null;
-  campaign: CampaignInfo | null;
-  _count: { scans: number };
-}
+import PasswordModal from "@/components/dashboard/modals/PasswordModal";
+import BulkMoveModal from "@/components/dashboard/modals/BulkMoveModal";
+import GuestModal from "@/components/dashboard/modals/GuestModal";
+import type {
+  KPI, Devices, TopTag, Country, City, Language, WeekDay,
+  WeeklyTrend, NfcChip, HourlyData, HourlyRawEntry, StatsData,
+  CampaignInfo, CampaignFull, ScanRow, ScansResponse,
+  TagLink, LinkClickStat, LinkClickData, VideoStats,
+  ClientInfo, ClientFull, TagFull, ChipItem, FilterChipsBarProps,
+} from "@/types/dashboard";
+import type { VCardData } from "@/types/vcard";
 
 /* ------------------------------------------------------------------ */
 /*  FilterChipsBar — measures real overflow, shows +N only when needed */
 /* ------------------------------------------------------------------ */
-
-interface ChipItem { key: string; node: React.ReactNode; }
-
-interface FilterChipsBarProps {
-  chips: ChipItem[];
-  onReset: () => void;
-  showOverflow: boolean;
-  setShowOverflow: (v: boolean | ((prev: boolean) => boolean)) => void;
-  overflowRef: React.RefObject<HTMLDivElement>;
-}
 
 function FilterChipsBar({ chips, onReset, showOverflow, setShowOverflow, overflowRef }: FilterChipsBarProps) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -4850,164 +4639,31 @@ function DashboardPage() {
       {/* ============================================================ */}
 
       {showPasswordModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              width: "100%",
-              maxWidth: 420,
-              margin: "0 16px",
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 3,
-                borderRadius: "12px 12px 0 0",
-                background: "#38BDF8",
-              }}
-            />
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "#F1F5F9" }}>
-              Zmiana hasla
-            </h2>
-            <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>
-              Ze wzgledow bezpieczenstwa musisz ustawic nowe haslo przy pierwszym logowaniu.
-            </p>
-
-            <form onSubmit={handlePasswordChange}>
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#94A3B8", marginBottom: 4, fontWeight: 500 }}>
-                  Nowe haslo
-                </label>
-                <input
-                  type="password"
-                  className="input-field"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min. 8 znakow"
-                  autoFocus
-                />
-              </div>
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#94A3B8", marginBottom: 4, fontWeight: 500 }}>
-                  Powtorz haslo
-                </label>
-                <input
-                  type="password"
-                  className="input-field"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Powtorz nowe haslo"
-                />
-              </div>
-
-              {passwordError && (
-                <div
-                  style={{
-                    marginBottom: 14,
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    background: "rgba(239,68,68,0.1)",
-                    color: "#f87171",
-                    border: "1px solid rgba(239,68,68,0.2)",
-                  }}
-                >
-                  {passwordError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={passwordSaving}
-                style={{ width: "100%", padding: "12px 0", fontSize: 14 }}
-              >
-                {passwordSaving ? "Zapisywanie..." : "Ustaw nowe haslo"}
-              </button>
-            </form>
-          </div>
-        </div>
+        <PasswordModal
+          newPassword={newPassword}
+          setNewPassword={setNewPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
+          passwordError={passwordError}
+          passwordSaving={passwordSaving}
+          handlePasswordChange={handlePasswordChange}
+        />
       )}
 
       {/* ============================================================ */}
       {/*  BULK MOVE MODAL                                            */}
       {/* ============================================================ */}
       {showBulkMoveModal && (
-        <>
-          <div
-            onClick={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1100 }}
-          />
-          <div style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
-            background: "#14171e",
-            border: "1px solid rgba(148,163,184,0.08)",
-            borderRadius: 8,
-            padding: "28px 32px",
-            zIndex: 1101,
-            minWidth: 360,
-            maxWidth: "90vw",
-            boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-          }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#F1F5F9", marginBottom: 6 }}>
-              Przenieś {selectedIds.length} akcji
-            </h3>
-            <p style={{ fontSize: 12, color: "#64748B", marginBottom: 20 }}>
-              Wybierz kampanię docelową. Akcje zostaną przeniesione bez zmiany klienta.
-            </p>
-            <label style={{ display: "block", fontSize: 11, color: "#94A3B8", marginBottom: 6 }}>
-              Kampania docelowa
-            </label>
-            <select
-              value={bulkMoveCampaignId}
-              onChange={(e) => setBulkMoveCampaignId(e.target.value)}
-              className="input-field"
-              style={{ width: "100%", marginBottom: 20, padding: "8px 12px" }}
-            >
-              <option value="">(bez kampanii)</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            {bulkMsg && (
-              <p style={{ fontSize: 12, color: "#f87171", marginBottom: 12 }}>{bulkMsg}</p>
-            )}
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                onClick={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.08)", background: "transparent", color: "#94A3B8", fontSize: 13, cursor: "pointer" }}
-              >
-                Anuluj
-              </button>
-              <button
-                onClick={handleBulkMove}
-                disabled={bulkLoading}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#38BDF8", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: bulkLoading ? 0.7 : 1 }}
-              >
-                {bulkLoading ? "Przenoszenie..." : "Przenieś"}
-              </button>
-            </div>
-          </div>
-        </>
+        <BulkMoveModal
+          selectedCount={selectedIds.length}
+          campaigns={campaigns}
+          bulkMoveCampaignId={bulkMoveCampaignId}
+          setBulkMoveCampaignId={setBulkMoveCampaignId}
+          bulkMsg={bulkMsg}
+          bulkLoading={bulkLoading}
+          handleBulkMove={handleBulkMove}
+          onClose={() => { setShowBulkMoveModal(false); setBulkMsg(""); }}
+        />
       )}
 
       {/* Edit Action Drawer — REPLACED with full-page editor at /dashboard/tags/[id]/edit */}
@@ -5035,121 +4691,13 @@ function DashboardPage() {
 
       {/* ── GUEST MODAL ─────────────────────────────────────────── */}
       {guestModal && (
-        <div
-          onClick={() => setGuestModal(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 100000,
-            background: "rgba(0,0,0,0.7)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            backdropFilter: "blur(3px)",
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#14171e",
-              border: "1px solid rgba(148,163,184,0.08)",
-              borderRadius: 8,
-              width: "min(760px, 95vw)",
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
-            }}
-          >
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{
-                  background: "rgba(99,102,241,0.15)",
-                  border: "1px solid rgba(99,102,241,0.35)",
-                  color: "#818cf8",
-                  borderRadius: 6,
-                  padding: "3px 10px",
-                  fontSize: 13,
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 700,
-                  letterSpacing: 0.5,
-                }}>
-                  #{guestModal.guestKey}
-                </span>
-                <span style={{ color: "#94A3B8", fontSize: 12 }}>
-                  {guestLoading ? "Ładowanie..." : `${guestScans.length} skan${guestScans.length === 1 ? "" : guestScans.length < 5 ? "y" : "ów"}`}
-                </span>
-              </div>
-              <button
-                onClick={() => setGuestModal(null)}
-                style={{ background: "none", border: "none", color: "#64748B", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "0 4px" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#F1F5F9")}
-                onMouseLeave={e => (e.currentTarget.style.color = "#64748B")}
-              >×</button>
-            </div>
-
-            {/* Body */}
-            <div style={{ overflowY: "auto", padding: "12px 20px 20px" }}>
-              {guestLoading && (
-                <p style={{ color: "#64748B", fontSize: 12, textAlign: "center", padding: "32px 0" }}>Ładowanie skanów...</p>
-              )}
-              {!guestLoading && guestScans.length === 0 && (
-                <p style={{ color: "#64748B", fontSize: 12, textAlign: "center", padding: "32px 0" }}>Brak skanów</p>
-              )}
-              {!guestLoading && guestScans.length > 0 && (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid rgba(148,163,184,0.15)" }}>
-                      {["#", "Data/Czas", "Akcja", "Źródło", "Urządzenie", "Miasto", "Ponowny"].map(h => (
-                        <th key={h} style={{ textAlign: "left", padding: "6px 8px", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {guestScans.map((s, idx) => (
-                      <tr key={s.id}
-                        style={{ borderBottom: "1px solid #1C2541", transition: "background 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "#151D35")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                      >
-                        <td style={{ padding: "5px 8px", color: "#64748B", fontFamily: "var(--font-mono)" }}>{idx + 1}</td>
-                        <td style={{ padding: "5px 8px", color: "#F1F5F9", fontFamily: "var(--font-mono)", fontSize: 10, whiteSpace: "nowrap" }}>
-                          {new Date(s.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                        </td>
-                        <td style={{ padding: "5px 8px" }}>
-                          <span style={{ color: "#7dd3fc", fontWeight: 600 }}>{s.tagName}</span>
-                        </td>
-                        <td style={{ padding: "5px 8px" }}>
-                          {s.eventSource === "qr" ? (
-                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>QR</span>
-                          ) : s.nfcId ? (
-                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,200,160,0.25)" }}>NFC</span>
-                          ) : (
-                            <span style={{ color: "#3d4250" }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "5px 8px" }}>
-                          <span style={{
-                            padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
-                            background: s.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : s.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
-                            color: s.deviceType === "iOS" ? "#60a5fa" : s.deviceType === "Android" ? "#10b981" : "#94A3B8",
-                          }}>
-                            {s.deviceType}
-                          </span>
-                        </td>
-                        <td style={{ padding: "5px 8px", color: "#94A3B8" }}>{s.city || "—"}</td>
-                        <td style={{ padding: "5px 8px" }}>
-                          {s.isReturning
-                            ? <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
-                            : <span style={{ color: "#3d4250", fontSize: 10 }}>Nie</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
+        <GuestModal
+          guestModal={guestModal}
+          onClose={() => setGuestModal(null)}
+          guestScans={guestScans}
+          guestLoading={guestLoading}
+        />
       )}
-      {/* ── END GUEST MODAL ─────────────────────────────────────── */}
 
       {/* ── USERS PANEL ────────────────────────────────────────── */}
       <UsersPanel
