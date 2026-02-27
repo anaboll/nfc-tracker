@@ -58,10 +58,10 @@ export default function DashboardFilterBar({
         style={{ marginBottom: 16, padding: "10px 0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid rgba(148,163,184,0.06)" }}
       >
         {/* Time range preset pills */}
-        <div style={{ position: "relative", minWidth: 0 }}>
+        <div className="dash-time-pills-wrap" style={{ position: "relative", minWidth: 0 }}>
           <div className="dash-time-pills" style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
             {(["today", "week", "24h", "7d", "30d", "month", "custom"] as const).map((p) => {
-              const labels: Record<string, string> = { "today": "Dziś", "week": "Ten tydz.", "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Ten miesiąc", "custom": "Niestandardowy" };
+              const labels: Record<string, string> = { "today": "Dziś", "week": "Tydzień", "24h": "24h", "7d": "7 dni", "30d": "30 dni", "month": "Miesiąc", "custom": "Zakres ▾" };
               const active = rangePreset === p;
               return (
                 <button key={p}
@@ -139,10 +139,10 @@ export default function DashboardFilterBar({
         </div>
 
         {/* Divider */}
-        <div style={{ width: 1, height: 20, background: "rgba(148,163,184,0.15)", flexShrink: 0 }} />
+        <div className="dash-filter-divider" style={{ width: 1, height: 20, background: "rgba(148,163,184,0.15)", flexShrink: 0 }} />
 
         {/* Source filter — Wszystkie / NFC / QR */}
-        <div style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)" }}>
+        <div className="dash-source-pills" style={{ display: "flex", gap: 0, background: "#0B0F1A", borderRadius: 8, padding: 2, border: "1px solid rgba(148,163,184,0.08)", flexShrink: 0 }}>
           {(["all", "nfc", "qr"] as const).map(src => (
             <button key={src} type="button"
               onClick={() => { setScanSourceFilter(src); fetchScans({ source: src, page: 1 }); fetchStats({ source: src }); }}
