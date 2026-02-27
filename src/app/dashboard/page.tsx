@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import ReactDOM from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { DashboardFilterProvider, useDashboardFilters } from "@/contexts/DashboardFilterContext";
-import { getCountryFlag } from "@/lib/utils";
 import { UsersPanel } from "@/components/users/UsersPanel";
 import { useToast } from "@/components/ui/Toast";
 import ViewerDashboard from "@/components/dashboard/ViewerDashboard";
@@ -29,11 +27,11 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardFilterBar from "@/components/dashboard/DashboardFilterBar";
 import TagManagement from "@/components/dashboard/TagManagement";
 import type {
-  KPI, Devices, TopTag, Country, City, Language, WeekDay,
-  WeeklyTrend, NfcChip, HourlyData, HourlyRawEntry, StatsData,
-  CampaignInfo, CampaignFull, ScanRow, ScansResponse,
-  TagLink, LinkClickStat, LinkClickData, VideoStats,
-  ClientInfo, ClientFull, TagFull,
+  Devices, TopTag, Language,
+  NfcChip, HourlyData, StatsData,
+  CampaignFull, ScanRow, ScansResponse,
+  TagLink, LinkClickData, VideoStats,
+  ClientFull, TagFull,
 } from "@/types/dashboard";
 import type { VCardData } from "@/types/vcard";
 import {
