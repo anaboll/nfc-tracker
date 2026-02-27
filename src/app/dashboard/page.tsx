@@ -26,7 +26,9 @@ import GuestsTable from "@/components/dashboard/GuestsTable";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardFilterBar from "@/components/dashboard/DashboardFilterBar";
+import ComparisonToggle from "@/components/dashboard/ComparisonToggle";
 import TagManagement from "@/components/dashboard/TagManagement";
+import { getPreviousPeriod } from "@/lib/periodComparison";
 import type {
   Devices, TopTag, Language,
   NfcChip, HourlyData, StatsData,
@@ -192,6 +194,10 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
   // users panel
   const [usersPanelOpen, setUsersPanelOpen] = useState(false);
 
+  // period comparison
+  const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [previousStats, setPreviousStats] = useState<StatsData | null>(null);
+
   // create tag
   const [newTagId, setNewTagId] = useState("");
   const [newTagName, setNewTagName] = useState("");
@@ -338,7 +344,21 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       // Use opts.source if provided (avoids stale closure after setScanSourceFilter)
       const effectiveSource = opts?.source !== undefined ? opts.source : scanSourceFilter;
       if (effectiveSource !== "all") params.set("source", effectiveSource);
-      const res = await fetch(`/api/stats?${params.toString()}`);
+      // Comparison: build previous period fetch in parallel
+      const fetchPromises: Promise<Response>[] = [fetch(`/api/stats?${params.toString()}`)];
+
+      if (comparisonEnabled && effectiveFrom) {
+        const periods = getPreviousPeriod(effectiveFrom, effectiveTo || null);
+        if (periods) {
+          const prevParams = new URLSearchParams(params);
+          prevParams.set("from", periods.previous.from);
+          prevParams.set("to", periods.previous.to);
+          // Remove weekOffset for comparison — we want the same scope
+          fetchPromises.push(fetch(`/api/stats?${prevParams.toString()}`));
+        }
+      }
+
+      const [res, prevRes] = await Promise.all(fetchPromises);
       if (res.ok) {
         const data: StatsData = await res.json();
         setStats(data);
@@ -347,11 +367,16 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
         setFetchError(`Stats API error ${res.status}: ${errText.substring(0, 200)}`);
         console.error("Stats API error:", res.status, errText);
       }
+      if (prevRes?.ok) {
+        setPreviousStats(await prevRes.json());
+      } else {
+        setPreviousStats(null);
+      }
     } catch (e) {
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter, selectedTagIds]);
+  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter, selectedTagIds, comparisonEnabled]);
 
   const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null; source?: "all" | "nfc" | "qr" }) => {
     setScanLoading(true);
@@ -1301,15 +1326,24 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        <DashboardFilterBar
-          clients={clients}
-          campaigns={campaigns}
-          tags={tags}
-          fetchStats={fetchStats}
-          fetchScans={fetchScans}
-          setLoading={setLoading}
-          onResetFilters={handleResetFilters}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <DashboardFilterBar
+              clients={clients}
+              campaigns={campaigns}
+              tags={tags}
+              fetchStats={fetchStats}
+              fetchScans={fetchScans}
+              setLoading={setLoading}
+              onResetFilters={handleResetFilters}
+            />
+          </div>
+          <ComparisonToggle
+            enabled={comparisonEnabled}
+            onChange={setComparisonEnabled}
+            disabled={!dateFrom && !dateTo}
+          />
+        </div>
 
         {/* ---- Error display ---- */}
         {fetchError && (
@@ -1344,7 +1378,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
             {/*  1. KPI CARDS                                              */}
             {/* ========================================================== */}
 
-            <KpiStrip kpi={kpi} formatDate={formatDate} />
+            <KpiStrip kpi={kpi} formatDate={formatDate} previousKpi={previousStats?.kpi} showComparison={comparisonEnabled} />
 
             {/* 1b. VIDEO RETENTION CHART */}
             <VideoRetentionChart videoStats={selectedVideoRetention} formatWatchTime={formatWatchTime} />

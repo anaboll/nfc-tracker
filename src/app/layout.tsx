@@ -9,9 +9,15 @@ export const metadata: Metadata = {
   description: "Track and analyze your NFC tag interactions",
 };
 
+/** Inline script that runs before React hydration to prevent theme flash */
+const themeScript = `(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})()`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pl" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="pl" className={`${GeistSans.variable} ${GeistMono.variable}`} data-theme="dark">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body><Providers>{children}</Providers></body>
     </html>
   );

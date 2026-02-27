@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function LoginPage() {
   return (
@@ -61,8 +62,11 @@ function LoginForm() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "linear-gradient(135deg, #0B0F1A, #151D35, #0f172a)" }}
+      style={{ background: "linear-gradient(135deg, var(--bg), var(--surface), var(--bg))", position: "relative" }}
     >
+      <div style={{ position: "absolute", top: 16, right: 16 }}>
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">

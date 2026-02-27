@@ -8,7 +8,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { signOut } from "next-auth/react";
 import type { Session } from "next-auth";
-import type { StatsData, ClientInfo, HourlyData } from "@/types/dashboard";
+import type { StatsData, ClientInfo, HourlyData, KPI } from "@/types/dashboard";
+import { computeDelta } from "@/lib/periodComparison";
 import { formatDate, formatWeekRange, timeAgo, buildHourlyData, buildHeatmapData, buildHeatmapUniqueData } from "@/lib/dashboardHelpers";
 import { ViewerDashboardSkeleton } from "@/components/ui/Skeleton";
 
@@ -22,6 +23,9 @@ import NfcChipsCard from "@/components/dashboard/cards/NfcChipsCard";
 import HourlyChart from "@/components/dashboard/charts/HourlyChart";
 import WeeklyChart from "@/components/dashboard/charts/WeeklyChart";
 import ViewerDateRangePicker from "@/components/dashboard/ViewerDateRangePicker";
+import ComparisonToggle from "@/components/dashboard/ComparisonToggle";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { getPreviousPeriod } from "@/lib/periodComparison";
 
 /* ------------------------------------------------------------------ */
 /*  Tag type used by viewer (subset — API returns more than TagFull)    */
@@ -76,6 +80,10 @@ export default function ViewerDashboard({ session }: Props) {
   const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
   const [hourlyDataMode, setHourlyDataMode] = useState<"both" | "all" | "unique">("both");
 
+  /* -- Period comparison state -- */
+  const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [previousStats, setPreviousStats] = useState<StatsData | null>(null);
+
   /* -- Date change handler -- */
   const handleDateChange = useCallback((from: string | null, to: string | null) => {
     setDateFrom(from);
@@ -90,12 +98,30 @@ export default function ViewerDashboard({ session }: Props) {
       if (dateFrom) params.set("from", dateFrom);
       if (dateTo) params.set("to", dateTo);
 
-      const [statsRes, tagsRes, clientsRes, meRes] = await Promise.all([
+      const fetches: Promise<Response>[] = [
         fetch(`/api/stats?${params.toString()}`),
         fetch("/api/tags"),
         fetch("/api/clients"),
         fetch("/api/users/me"),
-      ]);
+      ];
+
+      // Comparison: fetch previous period stats in parallel
+      let prevFetchIdx = -1;
+      if (comparisonEnabled && dateFrom) {
+        const periods = getPreviousPeriod(dateFrom, dateTo);
+        if (periods) {
+          const prevParams = new URLSearchParams();
+          prevParams.set("from", periods.previous.from);
+          prevParams.set("to", periods.previous.to);
+          if (selectedClientId) prevParams.set("clientId", selectedClientId);
+          prevFetchIdx = fetches.length;
+          fetches.push(fetch(`/api/stats?${prevParams.toString()}`));
+        }
+      }
+
+      const results = await Promise.all(fetches);
+
+      const [statsRes, tagsRes, clientsRes, meRes] = results;
 
       if (statsRes.ok) setStats(await statsRes.json());
       if (tagsRes.ok) {
@@ -112,12 +138,19 @@ export default function ViewerDashboard({ session }: Props) {
           setVisibleSections(meData.viewerSections);
         }
       }
+
+      // Previous period stats
+      if (prevFetchIdx >= 0 && results[prevFetchIdx]?.ok) {
+        setPreviousStats(await results[prevFetchIdx].json());
+      } else {
+        setPreviousStats(null);
+      }
     } catch (e) {
       console.error("Viewer dashboard fetch error:", e);
     } finally {
       setLoading(false);
     }
-  }, [selectedClientId, dateFrom, dateTo]);
+  }, [selectedClientId, dateFrom, dateTo, comparisonEnabled]);
 
   useEffect(() => {
     fetchAll();
@@ -218,6 +251,13 @@ export default function ViewerDashboard({ session }: Props) {
         </div>
         <div className="viewer-header-right">
           <span className="viewer-user-email">{session.user?.email}</span>
+          <ThemeToggle />
+          <a href="/dashboard/settings" className="viewer-settings-btn" title="Ustawienia">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+          </a>
           <button className="viewer-logout-btn" onClick={() => signOut({ callbackUrl: "/login" })}>
             Wyloguj
           </button>
@@ -250,27 +290,23 @@ export default function ViewerDashboard({ session }: Props) {
           </div>
         )}
 
-        {/* Date range picker */}
-        <ViewerDateRangePicker onChange={handleDateChange} />
+        {/* Date range picker + comparison toggle */}
+        <div className="viewer-filter-row">
+          <ViewerDateRangePicker onChange={handleDateChange} />
+          <ComparisonToggle
+            enabled={comparisonEnabled}
+            onChange={setComparisonEnabled}
+            disabled={!dateFrom}
+          />
+        </div>
 
         {/* KPI Strip */}
         {show("kpi") && stats?.kpi && (
-          <div className="viewer-kpi-strip">
-            {[
-              { value: stats.kpi.totalScans.toLocaleString("pl-PL"), label: "Wszystkie skany", accent: true },
-              { value: stats.kpi.uniqueUsers.toLocaleString("pl-PL"), label: "Unikalni uzytkownicy" },
-              { value: stats.kpi.avgScansPerUser.toFixed(1), label: "Skany / uzytkownik" },
-              { value: timeAgo(stats.kpi.lastScan), label: "Ostatni skan", small: true },
-            ].map((kpi, i) => (
-              <div key={i} className="viewer-kpi-card">
-                <div className={`viewer-kpi-accent ${kpi.accent ? "viewer-kpi-accent--primary" : ""}`} />
-                <div className={`viewer-kpi-value ${kpi.small ? "viewer-kpi-value--small" : ""}`}>
-                  {kpi.value}
-                </div>
-                <div className="viewer-kpi-label">{kpi.label}</div>
-              </div>
-            ))}
-          </div>
+          <ViewerKpiStrip
+            kpi={stats.kpi}
+            previousKpi={previousStats?.kpi ?? null}
+            showComparison={comparisonEnabled}
+          />
         )}
 
         {/* Analytics cards — single 2-column grid, items auto-flow into pairs */}
@@ -385,6 +421,51 @@ export default function ViewerDashboard({ session }: Props) {
       <footer className="viewer-footer">
         TwojeNFC &middot; Panel klienta
       </footer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ViewerKpiStrip — with optional comparison deltas                    */
+/* ------------------------------------------------------------------ */
+
+function ViewerKpiStrip({ kpi, previousKpi, showComparison }: {
+  kpi: KPI;
+  previousKpi: KPI | null;
+  showComparison: boolean;
+}) {
+  const showDelta = showComparison && previousKpi;
+
+  const items = [
+    { value: kpi.totalScans.toLocaleString("pl-PL"), label: "Wszystkie skany", accent: true, deltaKey: "totalScans" as const },
+    { value: kpi.uniqueUsers.toLocaleString("pl-PL"), label: "Unikalni uzytkownicy", accent: false, deltaKey: "uniqueUsers" as const },
+    { value: kpi.avgScansPerUser.toFixed(1), label: "Skany / uzytkownik", accent: false, deltaKey: "avgScansPerUser" as const },
+    { value: timeAgo(kpi.lastScan), label: "Ostatni skan", small: true, deltaKey: null },
+  ];
+
+  return (
+    <div className="viewer-kpi-strip">
+      {items.map((item, i) => {
+        const delta = showDelta && item.deltaKey
+          ? computeDelta(kpi[item.deltaKey], previousKpi[item.deltaKey])
+          : null;
+        return (
+          <div key={i} className="viewer-kpi-card">
+            <div className={`viewer-kpi-accent ${item.accent ? "viewer-kpi-accent--primary" : ""}`} />
+            <div className={`viewer-kpi-value ${"small" in item && item.small ? "viewer-kpi-value--small" : ""}`}>
+              {item.value}
+            </div>
+            <div className="viewer-kpi-label">{item.label}</div>
+            {delta && (
+              <span className={`kpi-delta kpi-delta--${delta.direction}`}>
+                {delta.direction === "up" ? "\u2191" : delta.direction === "down" ? "\u2193" : "\u2192"}
+                {" "}{Math.abs(delta.changePercent)}%
+                <span className="kpi-delta-prev">vs {delta.prevValue.toLocaleString("pl-PL")}</span>
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
