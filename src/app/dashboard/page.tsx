@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import ReactDOM from "react-dom";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
+import { DashboardFilterProvider, useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { getCountryFlag } from "@/lib/utils";
 import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
@@ -97,12 +98,73 @@ export default function DashboardWrapper() {
 
 function DashboardPage() {
   const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0B0F1A" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(148,163,184,0.15)", borderTopColor: "#38BDF8", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#94A3B8" }}>Ladowanie...</p>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    if (typeof window !== "undefined") window.location.href = "/login";
+    return null;
+  }
+
+  const isAdmin = session?.user?.role === "admin";
+
+  /* Viewer (non-admin) gets simplified dashboard */
+  if (session && !isAdmin) {
+    return <ViewerDashboard session={session} />;
+  }
+
+  /* Admin — wrap in FilterProvider so children can use useDashboardFilters() */
+  return (
+    <DashboardFilterProvider>
+      <DashboardAdmin session={session!} />
+    </DashboardFilterProvider>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Admin Dashboard                                                    */
+/* ------------------------------------------------------------------ */
+
+function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof useSession>["data"]> }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const toast = useToast();
   const isAdmin = session?.user?.role === "admin";
 
-  /* ---- state ---- */
+  /* ---- filter state (from context) ---- */
+  const {
+    dateFrom, setDateFrom, dateTo, setDateTo, timeFrom, setTimeFrom, timeTo, setTimeTo,
+    rangePreset, setRangePreset, weekOffset, setWeekOffset,
+    showCustomPopover, setShowCustomPopover,
+    draftFrom, setDraftFrom, draftTimeFrom, setDraftTimeFrom, draftTo, setDraftTo, draftTimeTo, setDraftTimeTo,
+    customPopoverRef,
+    selectedClientId, setSelectedClientId, selectedCampaignId, setSelectedCampaignId,
+    tagFilter, setTagFilter, selectedTagIds, setSelectedTagIds, actionsMode, setActionsMode,
+    scanSourceFilter, setScanSourceFilter, scanNfcFilter, setScanNfcFilter,
+    scanPage, setScanPage, scanSortBy, setScanSortBy, scanSortDir, setScanSortDir,
+    tagSearch, setTagSearch, clientSearch, setClientSearch, campaignSearch, setCampaignSearch,
+    showCampaignDropdown, setShowCampaignDropdown,
+    campaignDropdownRef, campaignDropdownPortalRef, campaignDropdownPos, setCampaignDropdownPos,
+    showChipsOverflow, setShowChipsOverflow, chipsOverflowRef,
+    countriesPage, setCountriesPage, citiesPage, setCitiesPage, languagesPage, setLanguagesPage,
+    viewMode, setViewMode,
+    sidebarOpen, setSidebarOpen,
+    hourlyMode, setHourlyMode, hourlyDataMode, setHourlyDataMode,
+    showScanTable, setShowScanTable, showGuestsTable, setShowGuestsTable,
+    applyPreset, resetFilterState,
+    filtersRestoredRef, scanTableRef,
+  } = useDashboardFilters();
+
+  /* ---- data state (NOT in filter context) ---- */
   const [stats, setStats] = useState<StatsData | null>(null);
   const [tags, setTags] = useState<TagFull[]>([]);
   const [clients, setClients] = useState<ClientFull[]>([]);
@@ -111,7 +173,6 @@ function DashboardPage() {
   const [fetchError, setFetchError] = useState("");
 
   // client management
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null); // null = all clients
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientDesc, setNewClientDesc] = useState("");
@@ -120,35 +181,16 @@ function DashboardPage() {
 
   // campaigns
   const [campaigns, setCampaigns] = useState<CampaignFull[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [showAddCampaign, setShowAddCampaign] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
   const [newCampaignDesc, setNewCampaignDesc] = useState("");
   const [campaignCreating, setCampaignCreating] = useState(false);
 
-  // filters
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [timeFrom, setTimeFrom] = useState("");
-  const [timeTo, setTimeTo] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [rangePreset, setRangePreset] = useState<"today" | "week" | "24h" | "7d" | "30d" | "month" | "custom">("custom");
-  const [weekOffset, setWeekOffset] = useState(0);
-  // custom range popover
-  const [showCustomPopover, setShowCustomPopover] = useState(false);
-  const [draftFrom, setDraftFrom] = useState("");
-  const [draftTimeFrom, setDraftTimeFrom] = useState("");
-  const [draftTo, setDraftTo] = useState("");
-  const [draftTimeTo, setDraftTimeTo] = useState("");
-  const customPopoverRef = useRef<HTMLDivElement>(null);
-  const filtersRestoredRef = useRef(false);
-  const scanTableRef = useRef<HTMLElement>(null);
-
   // new-tag drawer
   const [showNewTagDrawer, setShowNewTagDrawer] = useState(false);
   const [drawerIsClosing, setDrawerIsClosing] = useState(false);
 
-  // change‑password modal
+  // change-password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -157,7 +199,6 @@ function DashboardPage() {
 
   // users panel
   const [usersPanelOpen, setUsersPanelOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // create tag
   const [newTagId, setNewTagId] = useState("");
@@ -182,50 +223,17 @@ function DashboardPage() {
   const [copiedCardId, setCopiedCardId] = useState<string | null>(null);
   const copiedCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // hourly chart mode
-  const [hourlyMode, setHourlyMode] = useState<"bars" | "heatmap">("bars");
-  const [hourlyDataMode, setHourlyDataMode] = useState<"both" | "all" | "unique">("both");
-
-  // geo pagination
-  const [countriesPage, setCountriesPage] = useState(1);
-  const [citiesPage, setCitiesPage] = useState(1);
-  const [languagesPage, setLanguagesPage] = useState(1);
-
   // raw scan table
   const [scanData, setScanData] = useState<ScansResponse | null>(null);
-  const [scanPage, setScanPage] = useState(1);
-  const [scanSortBy, setScanSortBy] = useState("timestamp");
-  const [scanSortDir, setScanSortDir] = useState<"asc" | "desc">("desc");
-  const [scanNfcFilter, setScanNfcFilter] = useState<string | null>(null);
-  const [scanSourceFilter, setScanSourceFilter] = useState<"all" | "nfc" | "qr">("all");
-  // Multi-select tag filter (empty = all tags in current campaign/client scope)
-  // actionsMode: "NA" = campaign not selected (filter locked); "ALL" = campaign selected, all its actions; "SELECTED" = specific actions chosen
-  const [actionsMode, setActionsMode] = useState<"NA" | "ALL" | "SELECTED">("NA");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [scanLoading, setScanLoading] = useState(false);
-  const [showScanTable, setShowScanTable] = useState(false);
   // Guest modal state
   const [guestModal, setGuestModal] = useState<{ ipHash: string; guestKey: string } | null>(null);
   const [guestScans, setGuestScans] = useState<ScanRow[]>([]);
   const [guestLoading, setGuestLoading] = useState(false);
-  // Top Goście section
-  const [showGuestsTable, setShowGuestsTable] = useState(false);
+  // Top Goście data
   const [guestsData, setGuestsData] = useState<{ rank: number; ipHash: string; guestKey: string; scanCount: number; uniqueActions: number; lastSeen: string; deviceType: string; city: string | null; country: string | null; source: string }[]>([]);
   const [guestsTotal, setGuestsTotal] = useState(0);
   const [guestsLoading, setGuestsLoading] = useState(false);
-  // actions search (inline list, no dropdown)
-  const [tagSearch, setTagSearch] = useState("");
-  // client inline list search
-  const [clientSearch, setClientSearch] = useState("");
-  // campaign combobox
-  const [campaignSearch, setCampaignSearch] = useState("");
-  const [showCampaignDropdown, setShowCampaignDropdown] = useState(false);
-  const campaignDropdownRef = useRef<HTMLDivElement>(null);
-  const campaignDropdownPortalRef = useRef<HTMLDivElement>(null);
-  const [campaignDropdownPos, setCampaignDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
-  // chips overflow popover
-  const [showChipsOverflow, setShowChipsOverflow] = useState(false);
-  const chipsOverflowRef = useRef<HTMLDivElement>(null);
 
   // editing
   const [editingAction, setEditingAction] = useState<TagFull | null>(null);
@@ -271,15 +279,6 @@ function DashboardPage() {
     setOpenMenuId(null);
     setMenuRect(null);
   };
-
-  // view mode: cards | table
-  const [viewMode, setViewMode] = useState<"cards" | "table">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("actionsViewMode");
-      if (saved === "cards" || saved === "table") return saved;
-    }
-    return "cards";
-  });
 
   // link click stats
   const [linkClickStats, setLinkClickStats] = useState<Record<string, LinkClickData>>({});
@@ -502,148 +501,29 @@ function DashboardPage() {
     }
   }, [tagFilter, selectedTagIds, tags]);
 
-  /* ---- restore filters from URL params (priority) or localStorage on mount ---- */
-  useEffect(() => {
-    if (filtersRestoredRef.current) return;
-    filtersRestoredRef.current = true;
-    const urlClient = searchParams.get("client");
-    const urlCampaign = searchParams.get("campaign");
-    const urlFrom = searchParams.get("from");
-    const urlTo = searchParams.get("to");
-    const urlTag = searchParams.get("tag");
-    const urlTags = searchParams.get("tags");
-    const urlRange = searchParams.get("range") as "today" | "week" | "24h" | "7d" | "30d" | "month" | "custom" | null;
-    const hasUrlParams = urlClient || urlCampaign || urlFrom || urlTo || urlTag || urlTags || urlRange;
-    if (hasUrlParams) {
-      if (urlClient) setSelectedClientId(urlClient);
-      if (urlCampaign) {
-        setSelectedCampaignId(urlCampaign);
-        // Restore action tags only when a campaign is present
-        if (urlTags) {
-          const ids = urlTags.split(",").filter(Boolean);
-          setSelectedTagIds(ids);
-          setActionsMode(ids.length > 0 ? "SELECTED" : "ALL");
-        } else {
-          setActionsMode("ALL");
-        }
-      }
-      // urlTags without urlCampaign is intentionally ignored (actionsMode stays "NA")
-      if (urlTag) setTagFilter(urlTag);
-      if (urlRange && urlRange !== "custom") {
-        // Re-apply preset on load (recomputes from/to to "now minus X")
-        // We call applyPreset after mount via a tiny timeout so state is ready
-        setTimeout(() => applyPreset(urlRange), 0);
-      } else {
-        if (urlRange === "custom" || !urlRange) setRangePreset("custom");
-        if (urlFrom) {
-          const [d, t] = urlFrom.split("T");
-          setDateFrom(d || "");
-          if (t) setTimeFrom(t);
-        }
-        if (urlTo) {
-          const [d, t] = urlTo.split("T");
-          setDateTo(d || "");
-          if (t) setTimeTo(t);
-        }
-      }
-    } else {
-      try {
-        const saved = localStorage.getItem("nfc_filters");
-        if (saved) {
-          const f = JSON.parse(saved);
-          if (f.clientId) setSelectedClientId(f.clientId);
-          if (f.campaignId) {
-            setSelectedCampaignId(f.campaignId);
-            // Restore action tags only when a campaign is present
-            if (Array.isArray(f.selectedTagIds) && f.selectedTagIds.length > 0) {
-              setSelectedTagIds(f.selectedTagIds);
-              setActionsMode("SELECTED");
-            } else {
-              setActionsMode("ALL");
-            }
-          }
-          // f.selectedTagIds without f.campaignId is intentionally ignored
-          if (f.tagFilter) setTagFilter(f.tagFilter);
-          if (f.rangePreset && f.rangePreset !== "custom") {
-            setTimeout(() => applyPreset(f.rangePreset), 0);
-          } else {
-            if (f.dateFrom) setDateFrom(f.dateFrom);
-            if (f.dateTo) setDateTo(f.dateTo);
-            if (f.timeFrom) setTimeFrom(f.timeFrom);
-            if (f.timeTo) setTimeTo(f.timeTo);
-          }
-        } else {
-          // No saved filters — default to "7d" so user sees recent data
-          setTimeout(() => applyPreset("7d"), 0);
-        }
-      } catch {
-        // On parse error, fall back to "7d"
-        setTimeout(() => applyPreset("7d"), 0);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* Filter restore + URL/localStorage sync are handled by DashboardFilterContext */
 
-  /* ---- sync filters to URL params and localStorage when they change ---- */
-  useEffect(() => {
-    if (!filtersRestoredRef.current) return;
-    // Build new URL query string
-    const params = new URLSearchParams();
-    if (selectedClientId) params.set("client", selectedClientId);
-    if (selectedCampaignId) params.set("campaign", selectedCampaignId);
-    if (tagFilter) params.set("tag", tagFilter);
-    if (selectedTagIds.length > 0) params.set("tags", selectedTagIds.join(","));
-    if (rangePreset !== "custom") {
-      params.set("range", rangePreset);
-      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
-    } else {
-      if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-      if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
-    }
-    const qs = params.toString();
-    router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
-    // Also keep localStorage in sync
-    try {
-      localStorage.setItem("nfc_filters", JSON.stringify({
-        clientId: selectedClientId,
-        campaignId: selectedCampaignId,
-        tagFilter,
-        selectedTagIds,
-        rangePreset,
-        dateFrom,
-        dateTo,
-        timeFrom,
-        timeTo,
-      }));
-    } catch { /* ignore */ }
-  }, [selectedClientId, selectedCampaignId, tagFilter, selectedTagIds, rangePreset, dateFrom, dateTo, timeFrom, timeTo, router]);
-
-  /* ---- initial load ---- */
+  /* ---- initial load (DashboardAdmin only renders when authenticated) ---- */
 
   useEffect(() => {
-    if (status === "authenticated") {
-      loadAll();
-      if (session?.user?.mustChangePass) {
-        setShowPasswordModal(true);
-      }
+    loadAll();
+    if (session?.user?.mustChangePass) {
+      setShowPasswordModal(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, []);
 
   /* ---- refresh campaigns when client changes ---- */
   const clientInitRef = useRef(false);
   useEffect(() => {
     if (!clientInitRef.current) { clientInitRef.current = true; return; }
-    if (status === "authenticated") {
-      setSelectedCampaignId(null); // reset campaign when client changes
-      setTagFilter("");            // reset tag filter when client changes
-      setSelectedTagIds([]);       // reset multi-tag filter
-      setActionsMode("NA");        // actions locked until campaign is chosen
-      setTagSearch("");
-      fetchCampaigns();
-      fetchStats();
-    }
+    setSelectedCampaignId(null);
+    setTagFilter("");
+    setSelectedTagIds([]);
+    setActionsMode("NA");
+    setTagSearch("");
+    fetchCampaigns();
+    fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClientId]);
 
@@ -651,21 +531,15 @@ function DashboardPage() {
   const campaignInitRef = useRef(false);
   useEffect(() => {
     if (!campaignInitRef.current) { campaignInitRef.current = true; return; }
-    if (status === "authenticated") {
-      setTagFilter("");      // reset tag filter when campaign changes
-      setSelectedTagIds([]); // reset multi-tag filter
-      setTagSearch("");
-      // Cascade actionsMode: NA when campaign cleared, ALL when campaign chosen
-      setActionsMode(selectedCampaignId ? "ALL" : "NA");
-      fetchStats();
-    }
+    setTagFilter("");
+    setSelectedTagIds([]);
+    setTagSearch("");
+    setActionsMode(selectedCampaignId ? "ALL" : "NA");
+    fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCampaignId]);
 
-  /* ---- persist view mode ---- */
-  useEffect(() => {
-    localStorage.setItem("actionsViewMode", viewMode);
-  }, [viewMode]);
+  /* viewMode persistence + popover/chips outside-click are in FilterContext */
 
   /* ---- close context menu on outside click ---- */
   useEffect(() => {
@@ -679,31 +553,7 @@ function DashboardPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [openMenuId]);
 
-  /* ---- close custom range popover on outside click ---- */
-  useEffect(() => {
-    if (!showCustomPopover) return;
-    const handler = (e: MouseEvent) => {
-      if (customPopoverRef.current && !customPopoverRef.current.contains(e.target as Node)) {
-        setShowCustomPopover(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showCustomPopover]);
-
-
-
-  /* ---- chips overflow outside-click ---- */
-  useEffect(() => {
-    if (!showChipsOverflow) return;
-    const handler = (e: MouseEvent) => {
-      if (chipsOverflowRef.current && !chipsOverflowRef.current.contains(e.target as Node)) {
-        setShowChipsOverflow(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showChipsOverflow]);
+  /* custom range popover + chips overflow outside-click are in FilterContext */
 
   /* ---- handlers ---- */
 
@@ -811,65 +661,12 @@ function DashboardPage() {
     });
   };
 
-  /* ---- range preset helper ---- */
-  const applyPreset = useCallback((preset: "today" | "week" | "24h" | "7d" | "30d" | "month" | "custom") => {
-    setRangePreset(preset);
-    if (preset === "custom") return; // keep existing Od/Do inputs as-is
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const toTimeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    let from: Date;
-    if (preset === "today") {
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    } else if (preset === "week") {
-      // ISO week: Monday 00:01 → now
-      const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-      const diff = day === 0 ? 6 : day - 1; // days since last Monday
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff, 0, 1, 0);
-    } else if (preset === "24h") {
-      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    } else if (preset === "7d") {
-      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    } else if (preset === "30d") {
-      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    } else { // month
-      from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    }
-    setDateFrom(toDateStr(from));
-    setTimeFrom(preset === "month" ? "00:00" : preset === "today" ? "00:00" : preset === "week" ? "00:01" : toTimeStr(from));
-    setDateTo(toDateStr(now));
-    setTimeTo(toTimeStr(now));
-  }, []);
+  /* applyPreset is from FilterContext */
 
   const handleResetFilters = async () => {
-    // Reset all filter state first, then let fetchStats read the cleared values.
-    // Previously this called /api/stats directly and bypassed fetchStats(), causing
-    // stale clientId/campaignId params to leak into the reset request.
-    setDateFrom("");
-    setDateTo("");
-    setTimeFrom("");
-    setTimeTo("");
-    setTagFilter("");
-    setSelectedClientId(null);
-    setSelectedCampaignId(null);
-    setWeekOffset(0);
-    setScanSourceFilter("all");
-    setScanNfcFilter(null);
-    setSelectedTagIds([]);
-    setTagSearch("");
-    setClientSearch("");
-    setCampaignSearch("");
-    setShowCampaignDropdown(false);
-    setShowChipsOverflow(false);
-    setRangePreset("custom");
-    // Clear URL params
-    router.replace("/dashboard", { scroll: false });
+    resetFilterState();
     setLoading(true);
     try {
-      // Call the API directly with a clean slate (all filters cleared above).
-      // We cannot call fetchStats() here because React state updates are async
-      // and fetchStats reads from state — use a direct fetch with no params instead.
       const res = await fetch("/api/stats?weekOffset=0");
       if (res.ok) setStats(await res.json());
     } catch { /* ignore */ }
@@ -1393,47 +1190,7 @@ function DashboardPage() {
   };
 
 
-  /* ---- loading / auth guard ---- */
-
-  if (status === "loading") {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#0B0F1A",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              border: "3px solid rgba(148,163,184,0.15)",
-              borderTopColor: "#38BDF8",
-              animation: "spin 0.8s linear infinite",
-              margin: "0 auto 16px",
-            }}
-          />
-          <p style={{ color: "#94A3B8" }}>Ladowanie...</p>
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated") {
-    if (typeof window !== "undefined") window.location.href = "/login";
-    return null;
-  }
-
-  /* ---- Viewer (non-admin) gets simplified dashboard ---- */
-  if (session && !isAdmin) {
-    return <ViewerDashboard session={session} />;
-  }
+  /* Auth guard + viewer check are in DashboardPage above */
 
   /* ---- computed data ---- */
 
