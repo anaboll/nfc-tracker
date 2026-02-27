@@ -23,6 +23,9 @@ import LanguagesCard from "@/components/dashboard/cards/LanguagesCard";
 import VideoRetentionChart from "@/components/dashboard/charts/VideoRetentionChart";
 import WeeklyChart from "@/components/dashboard/charts/WeeklyChart";
 import HourlyChart from "@/components/dashboard/charts/HourlyChart";
+import NfcChipsCard from "@/components/dashboard/cards/NfcChipsCard";
+import ScanTable from "@/components/dashboard/ScanTable";
+import GuestsTable from "@/components/dashboard/GuestsTable";
 import type {
   KPI, Devices, TopTag, Country, City, Language, WeekDay,
   WeeklyTrend, NfcChip, HourlyData, HourlyRawEntry, StatsData,
@@ -2620,70 +2623,16 @@ function DashboardPage() {
               heatmapUniqueMax={heatmapUniqueMax}
             />
 
-            {/* ========================================================== */}
-            {/*  4b. NFC CHIPS (physical keychains)                        */}
-            {/* ========================================================== */}
-
-            {stats.nfcChips && stats.nfcChips.length > 0 && (
-              <section className="card" style={{ marginBottom: 24 }}>
-                <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 16 }}>
-                  Fizyczne breloczki NFC
-                </h3>
-                <p style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
-                  Unikalne chipy NFC ({stats.nfcChips.length} {stats.nfcChips.length === 1 ? "breloczek" : "breloczków"}, {stats.nfcChips.reduce((s, c) => s + c.count, 0)} skanów łącznie)
-                </p>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(148,163,184,0.08)" }}>
-                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>#</th>
-                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>NFC Chip ID</th>
-                        <th style={{ textAlign: "right", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>Skany</th>
-                        <th style={{ textAlign: "right", padding: "8px 12px", color: "#94A3B8", fontWeight: 600 }}>Udział</th>
-                        <th style={{ padding: "8px 12px" }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.nfcChips.map((chip, idx) => {
-                        const totalNfc = stats.nfcChips.reduce((s, c) => s + c.count, 0);
-                        const pct = totalNfc > 0 ? Math.round((chip.count / totalNfc) * 100) : 0;
-                        return (
-                          <tr key={chip.nfcId} style={{ borderBottom: "1px solid #1C2541" }}>
-                            <td style={{ padding: "8px 12px", color: "#64748B" }}>{idx + 1}</td>
-                            <td style={{ padding: "8px 12px" }}>
-                              <button
-                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
-                                style={{ background: "none", border: "none", fontFamily: "var(--font-mono)", color: "#7dd3fc", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}
-                                title="Kliknij zeby zobaczyc skany tego chipa"
-                              >
-                                {chip.nfcId}
-                              </button>
-                            </td>
-                            <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#F1F5F9" }}>{chip.count}</td>
-                            <td style={{ padding: "8px 12px", textAlign: "right" }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                                <div style={{ width: 50, height: 4, background: "transparent", borderRadius: 2, overflow: "hidden" }}>
-                                  <div style={{ width: `${pct}%`, height: "100%", background: "#8b5cf6", borderRadius: 2 }} />
-                                </div>
-                                <span style={{ color: "#94A3B8", minWidth: 30 }}>{pct}%</span>
-                              </div>
-                            </td>
-                            <td style={{ padding: "8px 12px" }}>
-                              <button
-                                onClick={() => { setScanNfcFilter(chip.nfcId); setShowScanTable(true); fetchScans({ nfcId: chip.nfcId, page: 1 }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200); }}
-                                style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#60a5fa", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
-                              >
-                                Pokaz skany
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
+            {/* 4b. NFC CHIPS */}
+            <NfcChipsCard
+              nfcChips={stats.nfcChips ?? []}
+              onChipClick={(nfcId) => {
+                setScanNfcFilter(nfcId);
+                setShowScanTable(true);
+                fetchScans({ nfcId, page: 1 });
+                setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+              }}
+            />
 
             {/* ========================================================== */}
             {/*  4b2. QR SCANS SUMMARY (visible when source=qr or all)    */}
@@ -2722,368 +2671,83 @@ function DashboardPage() {
               </section>
             )}
 
-            {/* ========================================================== */}
-            {/*  4c. RAW SCAN TABLE                                        */}
-            {/* ========================================================== */}
+            {/* 4c. RAW SCAN TABLE */}
+            <ScanTable
+              scanTableRef={scanTableRef}
+              showScanTable={showScanTable}
+              setShowScanTable={setShowScanTable}
+              scanData={scanData}
+              scanLoading={scanLoading}
+              scanSortBy={scanSortBy}
+              scanSortDir={scanSortDir}
+              scanNfcFilter={scanNfcFilter}
+              scanSourceFilter={scanSourceFilter}
+              onToggle={() => { setShowScanTable(!showScanTable); if (!showScanTable && !scanData) fetchScans({ page: 1 }); }}
+              onSort={(key) => {
+                const newDir = scanSortBy === key && scanSortDir === "desc" ? "asc" : "desc";
+                setScanSortBy(key);
+                setScanSortDir(newDir);
+                fetchScans({ sortBy: key, sortDir: newDir, page: 1 });
+              }}
+              onPageChange={(p) => {
+                setScanPage(p);
+                fetchScans({ page: p });
+                setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+              }}
+              onNfcFilter={(nfcId) => { setScanNfcFilter(nfcId); fetchScans({ nfcId, page: 1 }); }}
+              onTagFilter={(tagId) => setTagFilter(tagId)}
+              onGuestClick={async (ipHash, guestKey) => {
+                setGuestModal({ ipHash, guestKey });
+                setGuestScans([]);
+                setGuestLoading(true);
+                try {
+                  const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(ipHash)}`);
+                  const data = await res.json();
+                  setGuestScans(data.rows ?? []);
+                } catch { /* ignore */ }
+                finally { setGuestLoading(false); }
+              }}
+            />
 
-            <section ref={scanTableRef} className="card" style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                    Lista skanow
-                  </h3>
-                  <button
-                    onClick={() => { setShowScanTable(!showScanTable); if (!showScanTable && !scanData) fetchScans({ page: 1 }); }}
-                    style={{
-                      background: showScanTable ? "rgba(0,200,160,0.12)" : "#243052",
-                      border: `1px solid ${showScanTable ? "rgba(0,200,160,0.3)" : "rgba(148,163,184,0.15)"}`,
-                      color: showScanTable ? "#7dd3fc" : "#94A3B8",
-                      borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
-                    }}
-                  >
-                    {showScanTable ? "Ukryj" : "Pokaz"} {scanData ? `(${scanData.total})` : ""}
-                  </button>
-                  {/* Source badge — read-only, control is in FilterBar above */}
-                  {scanSourceFilter !== "all" && (
-                    <span style={{
-                      padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 6,
-                      background: scanSourceFilter === "qr" ? "rgba(16,185,129,0.15)" : "rgba(56,189,248,0.12)",
-                      color: scanSourceFilter === "qr" ? "#10b981" : "#7dd3fc",
-                      border: `1px solid ${scanSourceFilter === "qr" ? "rgba(16,185,129,0.3)" : "rgba(0,200,160,0.3)"}`,
-                    }}>
-                      {scanSourceFilter.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                {showScanTable && scanNfcFilter && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
-                    <span style={{ fontSize: 11, color: "#a78bfa" }}>NFC: {scanNfcFilter}</span>
-                    <button onClick={() => { setScanNfcFilter(null); fetchScans({ nfcId: null, page: 1 }); }} style={{ background: "none", border: "none", color: "#64748B", cursor: "pointer", fontSize: 14 }}>×</button>
-                  </div>
-                )}
-              </div>
-
-              {showScanTable && (
-                <>
-                  {scanLoading && <p style={{ fontSize: 12, color: "#64748B", padding: "20px 0", textAlign: "center" }}>Ladowanie...</p>}
-                  {scanData && !scanLoading && (
-                    <>
-                      <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                          <thead>
-                            <tr style={{ borderBottom: "2px solid rgba(148,163,184,0.15)" }}>
-                              {[
-                                { key: "seq", label: "#", w: 40 },
-                                { key: "timestamp", label: "Data/Czas", w: 140 },
-                                { key: "tagId", label: "Akcja", w: 140 },
-                                { key: "nfcId", label: "Źródło / ID", w: 130 },
-                                { key: "deviceType", label: "Urzadzenie", w: 80 },
-                                { key: "country", label: "Kraj", w: 60 },
-                                { key: "city", label: "Miasto", w: 100 },
-                              ].map(col => (
-                                <th
-                                  key={col.key}
-                                  onClick={() => {
-                                    if (col.key === "seq") return;
-                                    const newDir = scanSortBy === col.key && scanSortDir === "desc" ? "asc" : "desc";
-                                    setScanSortBy(col.key);
-                                    setScanSortDir(newDir);
-                                    fetchScans({ sortBy: col.key, sortDir: newDir, page: 1 });
-                                  }}
-                                  style={{
-                                    textAlign: "left",
-                                    padding: "8px 8px",
-                                    color: scanSortBy === col.key ? "#7dd3fc" : "#94A3B8",
-                                    fontWeight: 600,
-                                    cursor: col.key === "seq" ? "default" : "pointer",
-                                    minWidth: col.w,
-                                    whiteSpace: "nowrap",
-                                    userSelect: "none",
-                                  }}
-                                >
-                                  {col.label}
-                                  {scanSortBy === col.key && (
-                                    <span style={{ marginLeft: 4 }}>{scanSortDir === "desc" ? "↓" : "↑"}</span>
-                                  )}
-                                </th>
-                              ))}
-                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#94A3B8", fontWeight: 600 }}>Jezyk</th>
-                              <th style={{ textAlign: "left", padding: "8px 8px", color: "#94A3B8", fontWeight: 600 }} title="Czy ta osoba skanowala te sama akcje wczesniej">Ponowny</th>
-                              <th
-                                onClick={() => {
-                                  const newDir = scanSortBy === "ipHash" && scanSortDir === "desc" ? "asc" : "desc";
-                                  setScanSortBy("ipHash");
-                                  setScanSortDir(newDir);
-                                  fetchScans({ sortBy: "ipHash", sortDir: newDir, page: 1 });
-                                }}
-                                style={{ textAlign: "left", padding: "8px 8px", color: scanSortBy === "ipHash" ? "#7dd3fc" : "#94A3B8", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}
-                                title="Sortuj po gosciu — grupuje skany tej samej osoby razem"
-                              >
-                                Gość {scanSortBy === "ipHash" && <span style={{ marginLeft: 4 }}>{scanSortDir === "desc" ? "↓" : "↑"}</span>}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {scanData.rows.map((scan, idx) => (
-                              <tr key={scan.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "background 0.15s" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                              >
-                                <td style={{ padding: "6px 8px", color: "#64748B", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
-                                  {scan.seq}
-                                </td>
-                                <td style={{ padding: "6px 8px", color: "#F1F5F9", fontFamily: "var(--font-mono)", fontSize: 10 }}>
-                                  {new Date(scan.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                                </td>
-                                <td style={{ padding: "6px 8px" }}>
-                                  <button
-                                    onClick={() => { setTagFilter(scan.tagId); }}
-                                    style={{ background: "none", border: "none", color: "#7dd3fc", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textDecoration: "underline" }}
-                                    title={`Filtruj po: ${scan.tagName}`}
-                                  >
-                                    {scan.tagName}
-                                  </button>
-                                  <span style={{ fontSize: 9, color: "#64748B", marginLeft: 4 }}>{scan.tagId}</span>
-                                </td>
-                                <td style={{ padding: "6px 8px" }}>
-                                  {scan.eventSource === "qr" ? (
-                                    // QR scan — confirmed source
-                                    <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
-                                  ) : scan.nfcId ? (
-                                    // NFC scan with known chip ID
-                                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                      <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,200,160,0.25)", letterSpacing: 0.5 }}>NFC</span>
-                                      <button
-                                        onClick={() => { setScanNfcFilter(scan.nfcId); fetchScans({ nfcId: scan.nfcId, page: 1 }); }}
-                                        style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "var(--font-mono)", padding: 0, textDecoration: "underline" }}
-                                      >{scan.nfcId}</button>
-                                    </div>
-                                  ) : (
-                                    // Unknown source — just dash
-                                    <span style={{ color: "#3d4250" }}>—</span>
-                                  )}
-                                </td>
-                                <td style={{ padding: "6px 8px", color: "#94A3B8" }}>
-                                  <span style={{
-                                    padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
-                                    background: scan.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : scan.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
-                                    color: scan.deviceType === "iOS" ? "#60a5fa" : scan.deviceType === "Android" ? "#10b981" : "#94A3B8",
-                                  }}>
-                                    {scan.deviceType}
-                                  </span>
-                                </td>
-                                <td style={{ padding: "6px 8px", color: "#94A3B8" }}>
-                                  {scan.country ? `${getCountryFlag(scan.country)} ${scan.country}` : "—"}
-                                </td>
-                                <td style={{ padding: "6px 8px", color: "#94A3B8" }}>{scan.city || "—"}</td>
-                                <td style={{ padding: "6px 8px", color: "#64748B", fontSize: 10 }}>{scan.browserLang || "—"}</td>
-                                <td style={{ padding: "6px 8px" }}>
-                                  {scan.isReturning ? (
-                                    <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
-                                  ) : (
-                                    <span style={{ color: "#3d4250", fontSize: 10 }}>Nie</span>
-                                  )}
-                                </td>
-                                <td style={{ padding: "6px 8px" }}>
-                                  {scan.ipHash ? (
-                                    <button
-                                      onClick={async () => {
-                                        setGuestModal({ ipHash: scan.ipHash!, guestKey: scan.guestKey ?? scan.ipHash!.slice(0, 7) });
-                                        setGuestScans([]);
-                                        setGuestLoading(true);
-                                        try {
-                                          const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(scan.ipHash!)}`);
-                                          const data = await res.json();
-                                          setGuestScans(data.rows ?? []);
-                                        } catch { /* ignore */ }
-                                        finally { setGuestLoading(false); }
-                                      }}
-                                      style={{
-                                        background: "rgba(99,102,241,0.12)",
-                                        border: "1px solid rgba(99,102,241,0.3)",
-                                        color: "#818cf8",
-                                        borderRadius: 4,
-                                        padding: "2px 7px",
-                                        fontSize: 10,
-                                        fontFamily: "var(--font-mono)",
-                                        fontWeight: 700,
-                                        cursor: "pointer",
-                                        letterSpacing: 0.5,
-                                        transition: "background 0.15s",
-                                      }}
-                                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(99,102,241,0.25)")}
-                                      onMouseLeave={e => (e.currentTarget.style.background = "rgba(99,102,241,0.12)")}
-                                      title="Kliknij aby zobaczyc wszystkie skany tej osoby"
-                                    >
-                                      #{scan.guestKey ?? scan.ipHash!.slice(0, 7)}
-                                    </button>
-                                  ) : (
-                                    <span style={{ color: "#3d4250" }}>—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Pagination */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
-                        <span style={{ fontSize: 11, color: "#64748B" }}>
-                          {scanData.total} skanów • strona {scanData.page}/{scanData.totalPages}
-                        </span>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button
-                            disabled={scanData.page <= 1}
-                            onClick={() => { const p = scanData.page - 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
-                            style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
-                          >
-                            ← Poprz.
-                          </button>
-                          <button
-                            disabled={scanData.page >= scanData.totalPages}
-                            onClick={() => { const p = scanData.page + 1; setScanPage(p); fetchScans({ page: p }); setTimeout(() => scanTableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100); }}
-                            style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page >= scanData.totalPages ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
-                          >
-                            Nast. →
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </section>
-
-            {/* ========================================================== */}
-            {/*  4c. TOP GOŚCIE                                            */}
-            {/* ========================================================== */}
-            <section className="card" style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showGuestsTable ? 16 : 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Top Gości</h3>
-                  {guestsTotal > 0 && (
-                    <span style={{ fontSize: 11, color: "#64748B" }}>{guestsTotal} unikalnych</span>
-                  )}
-                </div>
-                <button
-                  onClick={async () => {
-                    const next = !showGuestsTable;
-                    setShowGuestsTable(next);
-                    if (next) {
-                      setGuestsLoading(true);
-                      try {
-                        const params = new URLSearchParams();
-                        if (selectedTagIds.length > 0) {
-                          params.set("tags", selectedTagIds.join(","));
-                        } else if (tagFilter) {
-                          params.set("tagId", tagFilter);
-                        }
-                        if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
-                        if (selectedClientId) params.set("clientId", selectedClientId);
-                        if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
-                        if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
-                        const res = await fetch(`/api/scans/guests?${params.toString()}`);
-                        const data = await res.json();
-                        setGuestsData(data.guests ?? []);
-                        setGuestsTotal(data.total ?? 0);
-                      } catch { /* ignore */ }
-                      finally { setGuestsLoading(false); }
-                    }
-                  }}
-                  style={{
-                    background: showGuestsTable ? "rgba(0,200,160,0.12)" : "#243052",
-                    border: `1px solid ${showGuestsTable ? "rgba(0,200,160,0.3)" : "rgba(148,163,184,0.15)"}`,
-                    color: showGuestsTable ? "#7dd3fc" : "#94A3B8",
-                    borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
-                  }}
-                >
-                  {showGuestsTable ? "Ukryj" : "Pokaż"}
-                </button>
-              </div>
-
-              {showGuestsTable && (
-                <>
-                  {guestsLoading && <p style={{ fontSize: 12, color: "#64748B", padding: "20px 0", textAlign: "center" }}>Ładowanie...</p>}
-                  {!guestsLoading && guestsData.length === 0 && (
-                    <p style={{ fontSize: 12, color: "#64748B", padding: "20px 0", textAlign: "center" }}>Brak danych</p>
-                  )}
-                  {!guestsLoading && guestsData.length > 0 && (
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                        <thead>
-                          <tr style={{ borderBottom: "2px solid rgba(148,163,184,0.15)" }}>
-                            {["#", "Gość", "Skanów", "Akcji", "Źródło", "Urządzenie", "Miasto", "Ostatni skan"].map(h => (
-                              <th key={h} style={{ textAlign: "left", padding: "8px 8px", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {guestsData.map((g) => (
-                            <tr key={g.ipHash}
-                              style={{ borderBottom: "1px solid #1C2541", transition: "background 0.15s" }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "#151D35")}
-                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                            >
-                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{g.rank}</td>
-                              <td style={{ padding: "6px 8px" }}>
-                                <button
-                                  onClick={async () => {
-                                    setGuestModal({ ipHash: g.ipHash, guestKey: g.guestKey });
-                                    setGuestScans([]);
-                                    setGuestLoading(true);
-                                    try {
-                                      const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(g.ipHash)}`);
-                                      const data = await res.json();
-                                      setGuestScans(data.rows ?? []);
-                                    } catch { /* ignore */ }
-                                    finally { setGuestLoading(false); }
-                                  }}
-                                  style={{
-                                    background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
-                                    color: "#818cf8", borderRadius: 4, padding: "2px 7px",
-                                    fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 700,
-                                    cursor: "pointer", letterSpacing: 0.5, transition: "background 0.15s",
-                                  }}
-                                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(99,102,241,0.25)")}
-                                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(99,102,241,0.12)")}
-                                >
-                                  #{g.guestKey}
-                                </button>
-                              </td>
-                              <td style={{ padding: "6px 8px", color: "#F1F5F9", fontWeight: 600 }}>{g.scanCount}</td>
-                              <td style={{ padding: "6px 8px", color: "#10b981", fontWeight: 600 }}>{g.uniqueActions}</td>
-                              <td style={{ padding: "6px 8px" }}>
-                                {g.source === "qr" ? (
-                                  <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>QR</span>
-                                ) : g.source === "nfc" ? (
-                                  <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,200,160,0.25)" }}>NFC</span>
-                                ) : g.source === "mixed" ? (
-                                  <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }}>QR+NFC</span>
-                                ) : <span style={{ color: "#3d4250" }}>—</span>}
-                              </td>
-                              <td style={{ padding: "6px 8px" }}>
-                                <span style={{
-                                  padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
-                                  background: g.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : g.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
-                                  color: g.deviceType === "iOS" ? "#60a5fa" : g.deviceType === "Android" ? "#10b981" : "#94A3B8",
-                                }}>
-                                  {g.deviceType}
-                                </span>
-                              </td>
-                              <td style={{ padding: "6px 8px", color: "#94A3B8" }}>{g.city || "—"}</td>
-                              <td style={{ padding: "6px 8px", color: "#64748B", fontFamily: "var(--font-mono)", fontSize: 10 }}>
-                                {new Date(g.lastSeen).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
-              )}
-            </section>
+            {/* 4c. TOP GOŚCIE */}
+            <GuestsTable
+              showGuestsTable={showGuestsTable}
+              guestsData={guestsData}
+              guestsTotal={guestsTotal}
+              guestsLoading={guestsLoading}
+              onToggle={async () => {
+                const next = !showGuestsTable;
+                setShowGuestsTable(next);
+                if (next) {
+                  setGuestsLoading(true);
+                  try {
+                    const params = new URLSearchParams();
+                    if (selectedTagIds.length > 0) params.set("tags", selectedTagIds.join(","));
+                    else if (tagFilter) params.set("tagId", tagFilter);
+                    if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
+                    if (selectedClientId) params.set("clientId", selectedClientId);
+                    if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+                    if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+                    const res = await fetch(`/api/scans/guests?${params.toString()}`);
+                    const data = await res.json();
+                    setGuestsData(data.guests ?? []);
+                    setGuestsTotal(data.total ?? 0);
+                  } catch { /* ignore */ }
+                  finally { setGuestsLoading(false); }
+                }
+              }}
+              onGuestClick={async (ipHash, guestKey) => {
+                setGuestModal({ ipHash, guestKey });
+                setGuestScans([]);
+                setGuestLoading(true);
+                try {
+                  const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(ipHash)}`);
+                  const data = await res.json();
+                  setGuestScans(data.rows ?? []);
+                } catch { /* ignore */ }
+                finally { setGuestLoading(false); }
+              }}
+            />
 
             {/* ========================================================== */}
             {/*  5. TAG MANAGEMENT                                         */}
