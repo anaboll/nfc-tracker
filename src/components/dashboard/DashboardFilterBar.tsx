@@ -90,52 +90,6 @@ export default function DashboardFilterBar({
               );
             })}
           </div>
-
-          {/* Custom range popover */}
-          {showCustomPopover && (
-            <>
-            {/* Mobile backdrop */}
-            <div className="dash-custom-backdrop" onClick={() => setShowCustomPopover(false)} />
-            <div ref={customPopoverRef} className="dash-custom-popover">
-
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>Od</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
-                  <input type="time" value={draftTimeFrom} onChange={(e) => setDraftTimeFrom(e.target.value)} placeholder="00:00"
-                    style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>Do</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
-                  <input type="time" value={draftTimeTo} onChange={(e) => setDraftTimeTo(e.target.value)} placeholder="23:59"
-                    style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
-                </div>
-              </div>
-              <div className="dash-custom-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button onClick={() => setShowCustomPopover(false)}
-                  className="dash-custom-cancel"
-                >Anuluj</button>
-                <button
-                  onClick={async () => {
-                    setDateFrom(draftFrom); setTimeFrom(draftTimeFrom);
-                    setDateTo(draftTo); setTimeTo(draftTimeTo);
-                    setShowCustomPopover(false);
-                    const fromStr = draftTimeFrom ? `${draftFrom}T${draftTimeFrom}` : draftFrom;
-                    const toStr = draftTimeTo ? `${draftTo}T${draftTimeTo}` : draftTo;
-                    setLoading(true);
-                    await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
-                    setLoading(false);
-                  }}
-                  className="btn-primary dash-custom-apply"
-                >Zastosuj</button>
-              </div>
-            </div>
-            </>
-          )}
         </div>
 
         {/* Divider */}
@@ -168,6 +122,48 @@ export default function DashboardFilterBar({
         fetchScans={fetchScans}
         onReset={onResetFilters}
       />
+
+      {/* Custom range popover — rendered at top level to escape overflow containers */}
+      {showCustomPopover && (
+        <>
+          <div className="dash-custom-backdrop" onClick={() => setShowCustomPopover(false)} />
+          <div ref={customPopoverRef} className="dash-custom-popover">
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>Od</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+                <input type="time" value={draftTimeFrom} onChange={(e) => setDraftTimeFrom(e.target.value)} placeholder="00:00"
+                  style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>Do</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+                <input type="time" value={draftTimeTo} onChange={(e) => setDraftTimeTo(e.target.value)} placeholder="23:59"
+                  style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
+              </div>
+            </div>
+            <div className="dash-custom-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowCustomPopover(false)} className="dash-custom-cancel">Anuluj</button>
+              <button
+                onClick={async () => {
+                  setDateFrom(draftFrom); setTimeFrom(draftTimeFrom);
+                  setDateTo(draftTo); setTimeTo(draftTimeTo);
+                  setShowCustomPopover(false);
+                  const fromStr = draftTimeFrom ? `${draftFrom}T${draftTimeFrom}` : draftFrom;
+                  const toStr = draftTimeTo ? `${draftTo}T${draftTimeTo}` : draftTo;
+                  setLoading(true);
+                  await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
+                  setLoading(false);
+                }}
+                className="btn-primary dash-custom-apply"
+              >Zastosuj</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
