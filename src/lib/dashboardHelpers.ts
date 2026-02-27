@@ -35,6 +35,31 @@ export const formatWatchTime = (seconds: number | null): string => {
   return `${min}m ${sec}s`;
 };
 
+/** Relative time: "3 min temu", "wczoraj", "2 godz. temu" */
+export const timeAgo = (iso: string | null): string => {
+  if (!iso) return "---";
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diff = now - then;
+  if (diff < 0) return "teraz";
+
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "przed chwilą";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min temu`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} godz. temu`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "wczoraj";
+  if (days < 7) return `${days} dni temu`;
+  if (days < 30) return `${Math.floor(days / 7)} tyg. temu`;
+
+  return formatDate(iso);
+};
+
 /* ---- Tag type helpers ---- */
 
 export const getTagTypeLabel = (type: string): string => {

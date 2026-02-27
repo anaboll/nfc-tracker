@@ -8,6 +8,18 @@ import VCardLivePreview from "@/components/vcard/VCardLivePreview";
 import ThemeEditor from "@/components/vcard/ThemeEditor";
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Normalize photo path: old "/uploads/x" → "/api/uploads/x" */
+function photoSrc(photo: string | undefined | null): string {
+  if (!photo) return "";
+  if (photo.startsWith("/api/uploads/")) return photo;
+  if (photo.startsWith("/uploads/")) return `/api${photo}`;
+  return photo;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Field config                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -234,7 +246,11 @@ export default function VCardEditPage() {
               {vcard.photo ? (
                 <div className="vcard-edit-photo-preview">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={vcard.photo} alt="Avatar" />
+                  <img
+                    src={photoSrc(vcard.photo)}
+                    alt=""
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
                   <div className="vcard-edit-photo-overlay">Zmien</div>
                 </div>
               ) : (

@@ -15,9 +15,9 @@ interface Props {
   filteredCampaigns: CampaignFull[];
   filteredTags: TagFull[];
   onCreateClient: () => Promise<void>;
-  onDeleteClient: (id: string) => Promise<void>;
+  onDeleteClient: (id: string) => void;
   onCreateCampaign: () => Promise<void>;
-  onDeleteCampaign: (id: string) => Promise<void>;
+  onDeleteCampaign: (id: string) => void;
   fetchStats: (opts?: { tagIds?: string[] }) => void;
   fetchScans: () => void;
   /* client form state lifted from parent — for create-client handler to work */

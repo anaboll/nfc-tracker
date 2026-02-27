@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     await writeFile(filepath, Buffer.from(bytes));
 
-    const photoPath = `/uploads/${filename}`;
+    const photoPath = `/api/uploads/${filename}`;
 
     /* Update tag links with new photo path */
     const currentLinks = (tag.links as Record<string, unknown>) || {};

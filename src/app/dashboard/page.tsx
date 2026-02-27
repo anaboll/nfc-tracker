@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { DashboardFilterProvider, useDashboardFilters } from "@/contexts/DashboardFilterContext";
 import { UsersPanel } from "@/components/users/UsersPanel";
 import { useToast } from "@/components/ui/Toast";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ViewerDashboard from "@/components/dashboard/ViewerDashboard";
 import PasswordModal from "@/components/dashboard/modals/PasswordModal";
 import BulkMoveModal from "@/components/dashboard/modals/BulkMoveModal";
@@ -288,6 +289,32 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
 
+  // confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("");
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [confirmLabel, setConfirmLabel] = useState("Potwierdź");
+  const confirmAction = useRef<(() => void) | null>(null);
+
+  const showConfirm = useCallback((title: string, message: string, action: () => void, label = "Usuń") => {
+    setConfirmTitle(title);
+    setConfirmMessage(message);
+    setConfirmLabel(label);
+    confirmAction.current = action;
+    setConfirmOpen(true);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    setConfirmOpen(false);
+    confirmAction.current?.();
+    confirmAction.current = null;
+  }, []);
+
+  const handleCancelConfirm = useCallback(() => {
+    setConfirmOpen(false);
+    confirmAction.current = null;
+  }, []);
+
   /* ---- fetch helpers ---- */
 
   const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[]; from?: string; to?: string }) => {
@@ -543,15 +570,17 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
     finally { setClientCreating(false); }
   };
 
-  const handleDeleteClient = async (id: string) => {
-    if (!confirm("Usunac klienta? Tagi zostana odpiete (nie usuniete).")) return;
-    try {
-      await fetch(`/api/clients?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (selectedClientId === id) setSelectedClientId(null);
-      await fetchClients();
-      await fetchTags();
-      await fetchCampaigns();
-    } catch { /* ignore */ }
+  const handleDeleteClient = (id: string) => {
+    showConfirm("Usunąć klienta?", "Tagi zostaną odpięte (nie usunięte).", async () => {
+      try {
+        await fetch(`/api/clients?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (selectedClientId === id) setSelectedClientId(null);
+        await fetchClients();
+        await fetchTags();
+        await fetchCampaigns();
+        toast.success("Klient usunięty");
+      } catch { toast.error("Błąd usuwania klienta"); }
+    });
   };
 
   /* campaign CRUD */
@@ -578,14 +607,16 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
     finally { setCampaignCreating(false); }
   };
 
-  const handleDeleteCampaign = async (id: string) => {
-    if (!confirm("Usunac kampanie? Akcje zostana odpiete (nie usuniete).")) return;
-    try {
-      await fetch(`/api/campaigns?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (selectedCampaignId === id) setSelectedCampaignId(null);
-      await fetchCampaigns();
-      await fetchTags();
-    } catch { /* ignore */ }
+  const handleDeleteCampaign = (id: string) => {
+    showConfirm("Usunąć kampanię?", "Akcje zostaną odpięte (nie usunięte).", async () => {
+      try {
+        await fetch(`/api/campaigns?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (selectedCampaignId === id) setSelectedCampaignId(null);
+        await fetchCampaigns();
+        await fetchTags();
+        toast.success("Kampania usunięta");
+      } catch { toast.error("Błąd usuwania kampanii"); }
+    });
   };
 
   /* ---- copy-link helper ---- */
@@ -768,17 +799,21 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
         body: JSON.stringify({ id: tag.id, isActive: !tag.isActive }),
       });
       await fetchTags();
-    } catch { /* ignore */ }
+      toast.info(tag.isActive ? "Akcja dezaktywowana" : "Akcja aktywowana");
+    } catch { toast.error("Błąd zmiany statusu"); }
   };
 
-  const handleDeleteTag = async (id: string) => {
-    if (!confirm(`Czy na pewno chcesz usunac akcje "${id}" i wszystkie jej skany?`)) return;
-    try {
-      await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      setEditingAction(null);
-      await fetchTags();
-      await fetchStats();
-    } catch { /* ignore */ }
+  const handleDeleteTag = (id: string) => {
+    const tag = tags.find(t => t.id === id);
+    showConfirm("Usunąć akcję?", `Akcja "${tag?.name || id}" i wszystkie jej skany zostaną trwale usunięte.`, async () => {
+      try {
+        await fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        setEditingAction(null);
+        await fetchTags();
+        await fetchStats();
+        toast.success("Akcja usunięta");
+      } catch { toast.error("Błąd usuwania akcji"); }
+    });
   };
 
   const handleSaveEdit = async (id: string) => {
@@ -807,7 +842,8 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       });
       setEditingAction(null);
       await fetchTags();
-    } catch { /* ignore */ }
+      toast.success("Zapisano zmiany");
+    } catch { toast.error("Błąd zapisywania"); }
   };
 
   const startEdit = (tag: TagFull) => {
@@ -827,16 +863,18 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
   };
 
   /* remove video from tag */
-  const handleRemoveVideo = async (tagId: string) => {
-    if (!confirm("Czy na pewno chcesz usunac video z tej akcji?")) return;
-    try {
-      await fetch("/api/tags", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: tagId, videoFile: null }),
-      });
-      await fetchTags();
-    } catch { /* ignore */ }
+  const handleRemoveVideo = (tagId: string) => {
+    showConfirm("Usunąć video?", "Video zostanie trwale usunięte z tej akcji.", async () => {
+      try {
+        await fetch("/api/tags", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: tagId, videoFile: null }),
+        });
+        await fetchTags();
+        toast.success("Video usunięte");
+      } catch { toast.error("Błąd usuwania video"); }
+    });
   };
 
   /* video upload */
@@ -1077,21 +1115,23 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
 
   /* ---- bulk handlers ---- */
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (!selectedIds.length) return;
-    if (!confirm(`Czy na pewno chcesz usunąć ${selectedIds.length} akcji i wszystkie ich dane?`)) return;
-    setBulkLoading(true);
-    setBulkMsg("");
-    try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" })
-        )
-      );
-      setSelectedIds([]);
-      await Promise.all([fetchTags(), fetchStats()]);
-    } catch { setBulkMsg("Błąd usuwania"); }
-    finally { setBulkLoading(false); }
+    showConfirm("Usunąć zaznaczone akcje?", `${selectedIds.length} akcji i wszystkie ich dane zostaną trwale usunięte.`, async () => {
+      setBulkLoading(true);
+      setBulkMsg("");
+      try {
+        await Promise.all(
+          selectedIds.map((id) =>
+            fetch(`/api/tags?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+          )
+        );
+        setSelectedIds([]);
+        await Promise.all([fetchTags(), fetchStats()]);
+        toast.success(`Usunięto ${selectedIds.length} akcji`);
+      } catch { toast.error("Błąd usuwania"); }
+      finally { setBulkLoading(false); }
+    });
   };
 
   const handleBulkMove = async () => {
@@ -1610,6 +1650,16 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
         open={usersPanelOpen}
         onClose={() => setUsersPanelOpen(false)}
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+      />
+
+      {/* ── CONFIRM DIALOG ──────────────────────────────────────── */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmLabel={confirmLabel}
+        onConfirm={handleConfirm}
+        onCancel={handleCancelConfirm}
       />
 
     </div>

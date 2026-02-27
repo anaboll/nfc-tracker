@@ -9,7 +9,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { signOut } from "next-auth/react";
 import type { Session } from "next-auth";
 import type { StatsData, ClientInfo, HourlyData } from "@/types/dashboard";
-import { formatDate, formatWeekRange, buildHourlyData, buildHeatmapData, buildHeatmapUniqueData } from "@/lib/dashboardHelpers";
+import { formatDate, formatWeekRange, timeAgo, buildHourlyData, buildHeatmapData, buildHeatmapUniqueData } from "@/lib/dashboardHelpers";
+import { ViewerDashboardSkeleton } from "@/components/ui/Skeleton";
 
 /* ---- Extracted card / chart components ---- */
 import DevicesCard from "@/components/dashboard/cards/DevicesCard";
@@ -192,10 +193,16 @@ export default function ViewerDashboard({ session }: Props) {
   if (loading) {
     return (
       <div className="viewer-dashboard">
-        <div className="viewer-loading">
-          <div className="viewer-loading-spinner" />
-          Ladowanie danych...
-        </div>
+        <header className="viewer-header">
+          <div className="viewer-header-left">
+            <h1 className="viewer-logo">
+              <span style={{ color: "var(--accent)" }}>Twoje</span>NFC
+            </h1>
+          </div>
+        </header>
+        <main className="viewer-main">
+          <ViewerDashboardSkeleton />
+        </main>
       </div>
     );
   }
@@ -253,7 +260,7 @@ export default function ViewerDashboard({ session }: Props) {
               { value: stats.kpi.totalScans.toLocaleString("pl-PL"), label: "Wszystkie skany", accent: true },
               { value: stats.kpi.uniqueUsers.toLocaleString("pl-PL"), label: "Unikalni uzytkownicy" },
               { value: stats.kpi.avgScansPerUser.toFixed(1), label: "Skany / uzytkownik" },
-              { value: formatDate(stats.kpi.lastScan), label: "Ostatni skan", small: true },
+              { value: timeAgo(stats.kpi.lastScan), label: "Ostatni skan", small: true },
             ].map((kpi, i) => (
               <div key={i} className="viewer-kpi-card">
                 <div className={`viewer-kpi-accent ${kpi.accent ? "viewer-kpi-accent--primary" : ""}`} />

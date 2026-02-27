@@ -14,6 +14,14 @@ import {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+/** Normalize photo path: old "/uploads/x" → "/api/uploads/x" */
+function photoSrc(photo: string | undefined | null): string {
+  if (!photo) return "";
+  if (photo.startsWith("/api/uploads/")) return photo;
+  if (photo.startsWith("/uploads/")) return `/api${photo}`;
+  return photo;
+}
+
 type ResolvedTheme = Required<VCardTheme>;
 
 function resolveTheme(raw?: VCardTheme): ResolvedTheme {
@@ -276,7 +284,12 @@ export default function VCardRenderer({
               boxShadow: `0 0 30px ${theme.primaryColor}20`,
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={vcard.photo} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img
+                src={photoSrc(vcard.photo)}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
             </div>
           ) : (
             <div style={{

@@ -34,24 +34,21 @@ export default function GuestsTable({
 }: Props) {
   return (
     <section className="card" style={{ marginBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showGuestsTable ? 16 : 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: showGuestsTable ? 16 : 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Top Gości</h3>
-          {guestsTotal > 0 && (
-            <span style={{ fontSize: 11, color: "#64748B" }}>{guestsTotal} unikalnych</span>
-          )}
+          <button
+            onClick={onToggle}
+            style={{
+              background: showGuestsTable ? "rgba(0,200,160,0.12)" : "#243052",
+              border: `1px solid ${showGuestsTable ? "rgba(0,200,160,0.3)" : "rgba(148,163,184,0.15)"}`,
+              color: showGuestsTable ? "#7dd3fc" : "#94A3B8",
+              borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
+            }}
+          >
+            {showGuestsTable ? "Ukryj" : "Pokaż"} {guestsTotal > 0 ? `(${guestsTotal})` : ""}
+          </button>
         </div>
-        <button
-          onClick={onToggle}
-          style={{
-            background: showGuestsTable ? "rgba(0,200,160,0.12)" : "#243052",
-            border: `1px solid ${showGuestsTable ? "rgba(0,200,160,0.3)" : "rgba(148,163,184,0.15)"}`,
-            color: showGuestsTable ? "#7dd3fc" : "#94A3B8",
-            borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
-          }}
-        >
-          {showGuestsTable ? "Ukryj" : "Pokaż"}
-        </button>
       </div>
 
       {showGuestsTable && (

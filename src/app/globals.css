@@ -2107,3 +2107,176 @@ select {
     font-size: 24px;
   }
 }
+
+/* ================================================================== */
+/*  Confirm Dialog                                                      */
+/* ================================================================== */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.15s ease;
+}
+.confirm-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border-hover);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  animation: slide-down 0.2s ease;
+}
+.confirm-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--txt);
+  margin-bottom: 8px;
+}
+.confirm-message {
+  font-size: 13px;
+  color: var(--txt-sec);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.confirm-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.confirm-btn--cancel {
+  background: var(--surface-2);
+  color: var(--txt-sec);
+  border: 1px solid var(--border);
+}
+.confirm-btn--cancel:hover {
+  background: var(--surface-3);
+  color: var(--txt);
+}
+.confirm-btn--danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.confirm-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+}
+.confirm-btn--primary {
+  background: var(--accent-muted);
+  color: var(--accent-light);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.confirm-btn--primary:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+/* ================================================================== */
+/*  Card fade-in animation                                              */
+/* ================================================================== */
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stagger fade-in for analytics grid children */
+.viewer-analytics-grid > * {
+  animation: card-enter 0.35s ease both;
+}
+.viewer-analytics-grid > *:nth-child(1) { animation-delay: 0ms; }
+.viewer-analytics-grid > *:nth-child(2) { animation-delay: 50ms; }
+.viewer-analytics-grid > *:nth-child(3) { animation-delay: 100ms; }
+.viewer-analytics-grid > *:nth-child(4) { animation-delay: 150ms; }
+.viewer-analytics-grid > *:nth-child(5) { animation-delay: 200ms; }
+.viewer-analytics-grid > *:nth-child(6) { animation-delay: 250ms; }
+.viewer-analytics-grid > *:nth-child(7) { animation-delay: 300ms; }
+.viewer-analytics-grid > *:nth-child(8) { animation-delay: 350ms; }
+
+/* Fade-in for KPI strip cards */
+.viewer-kpi-strip > * {
+  animation: card-enter 0.3s ease both;
+}
+.viewer-kpi-strip > *:nth-child(1) { animation-delay: 0ms; }
+.viewer-kpi-strip > *:nth-child(2) { animation-delay: 60ms; }
+.viewer-kpi-strip > *:nth-child(3) { animation-delay: 120ms; }
+.viewer-kpi-strip > *:nth-child(4) { animation-delay: 180ms; }
+
+/* ================================================================== */
+/*  Print styles                                                        */
+/* ================================================================== */
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --surface-3: #f1f5f9;
+    --border: #e2e8f0;
+    --border-hover: #cbd5e1;
+    --txt: #0f172a;
+    --txt-sec: #475569;
+    --txt-muted: #94a3b8;
+  }
+  body { background: #fff; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Hide interactive elements */
+  .viewer-header-right,
+  .viewer-logout-btn,
+  .viewer-date-picker,
+  .viewer-client-selector,
+  .viewer-vcard-actions,
+  .confirm-overlay,
+  .toast-container,
+  .sidebar,
+  .sidebar-hamburger { display: none !important; }
+
+  /* Full width for print */
+  .viewer-dashboard,
+  .viewer-main { max-width: 100% !important; padding: 0 !important; }
+
+  /* Cards: no shadow, simple border */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .viewer-kpi-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+  }
+  .viewer-analytics-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Header clean */
+  .viewer-header {
+    border-bottom: 2px solid #0f172a !important;
+    background: transparent !important;
+    padding: 8px 0 !important;
+  }
+  .viewer-logo { color: #0f172a !important; }
+  .viewer-footer {
+    color: #94a3b8 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-top: 24px;
+  }
+}
