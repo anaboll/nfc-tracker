@@ -93,12 +93,11 @@ export default function DashboardFilterBar({
 
           {/* Custom range popover */}
           {showCustomPopover && (
-            <div ref={customPopoverRef} className="dash-custom-popover" style={{
-              position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 200,
-              background: "#161a22", border: "1px solid #363b48", borderRadius: 8,
-              padding: "16px 18px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-              display: "flex", flexDirection: "column", gap: 12, minWidth: 280,
-            }}>
+            <>
+            {/* Mobile backdrop */}
+            <div className="dash-custom-backdrop" onClick={() => setShowCustomPopover(false)} />
+            <div ref={customPopoverRef} className="dash-custom-popover">
+
               <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.8 }}>Niestandardowy zakres</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <label style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>Od</label>
@@ -116,9 +115,9 @@ export default function DashboardFilterBar({
                     style={{ width: 80, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--txt)", borderRadius: 8, padding: "0.5rem 0.4rem", fontSize: "0.875rem", outline: "none" }} />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div className="dash-custom-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button onClick={() => setShowCustomPopover(false)}
-                  style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: "#94A3B8", borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                  className="dash-custom-cancel"
                 >Anuluj</button>
                 <button
                   onClick={async () => {
@@ -131,10 +130,11 @@ export default function DashboardFilterBar({
                     await fetchStats({ from: fromStr || undefined, to: toStr || undefined });
                     setLoading(false);
                   }}
-                  className="btn-primary" style={{ padding: "6px 18px", fontSize: 12 }}
+                  className="btn-primary dash-custom-apply"
                 >Zastosuj</button>
               </div>
             </div>
+            </>
           )}
         </div>
 
