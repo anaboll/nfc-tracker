@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { THEME_VALID_VALUES } from "@/types/vcard";
+import type { VCardTheme } from "@/types/vcard";
 
 /* ------------------------------------------------------------------ */
 /*  Allowed vCard fields for self-service editing                      */
@@ -10,6 +12,56 @@ const ALLOWED_FIELDS = [
   "instagram", "facebook", "linkedin", "whatsapp",
   "tiktok", "youtube", "telegram", "note", "photo",
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Theme validation & sanitization                                    */
+/* ------------------------------------------------------------------ */
+function sanitizeTheme(raw: unknown): VCardTheme | null {
+  if (!raw || typeof raw !== "object") return null;
+  const input = raw as Record<string, unknown>;
+  const cleaned: Record<string, unknown> = {};
+
+  // String enum fields
+  const enumFields = [
+    "bgMode", "bgPattern", "buttonStyle", "buttonVariant",
+    "fontFamily", "layoutVariant", "avatarShape", "socialIconStyle",
+  ] as const;
+
+  for (const key of enumFields) {
+    if (key in input) {
+      const allowed = THEME_VALID_VALUES[key] as readonly string[];
+      if (allowed.includes(input[key] as string)) {
+        cleaned[key] = input[key];
+      }
+    }
+  }
+
+  // Color fields (hex format)
+  const colorFields = [
+    "primaryColor", "bgGradientFrom", "bgGradientTo",
+    "bgSolidColor", "avatarBorderColor",
+  ];
+  const hexPattern = /^#[0-9a-fA-F]{3,8}$/;
+
+  for (const key of colorFields) {
+    if (key in input && typeof input[key] === "string") {
+      const val = input[key] as string;
+      if (val === "" || hexPattern.test(val)) {
+        cleaned[key] = val;
+      }
+    }
+  }
+
+  // Numeric fields
+  if ("avatarBorderWidth" in input) {
+    const w = Number(input.avatarBorderWidth);
+    if (!isNaN(w) && w >= 0 && w <= 6) {
+      cleaned.avatarBorderWidth = Math.round(w);
+    }
+  }
+
+  return Object.keys(cleaned).length > 0 ? (cleaned as VCardTheme) : null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  PUT — Self-service vCard update (token auth)                       */
@@ -46,6 +98,15 @@ export async function PUT(req: Request) {
   for (const field of ALLOWED_FIELDS) {
     if (field in body) {
       updatedLinks[field] = body[field];
+    }
+  }
+
+  /* Handle theme separately — validate and merge */
+  if ("theme" in body) {
+    const sanitized = sanitizeTheme(body.theme);
+    if (sanitized) {
+      const currentTheme = (currentLinks.theme as Record<string, unknown>) || {};
+      updatedLinks.theme = { ...currentTheme, ...sanitized };
     }
   }
 

@@ -10,6 +10,7 @@ import { ActionEditor } from "@/components/actions/ActionEditor";
 import { ActionsTable, CtxMenuPortal } from "@/components/actions/ActionsTable";
 import { UsersPanel } from "@/components/users/UsersPanel";
 import { useToast } from "@/components/ui/Toast";
+import ViewerDashboard from "@/components/dashboard/ViewerDashboard";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1784,6 +1785,11 @@ function DashboardPage() {
   if (status === "unauthenticated") {
     if (typeof window !== "undefined") window.location.href = "/login";
     return null;
+  }
+
+  /* ---- Viewer (non-admin) gets simplified dashboard ---- */
+  if (session && !isAdmin) {
+    return <ViewerDashboard session={session} />;
   }
 
   /* ---- computed data ---- */

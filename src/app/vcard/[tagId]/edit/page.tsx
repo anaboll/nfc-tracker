@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { VCardData } from "@/types/vcard";
+import type { VCardData, VCardTheme } from "@/types/vcard";
+import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import { useParams, useSearchParams } from "next/navigation";
+import VCardLivePreview from "@/components/vcard/VCardLivePreview";
+import ThemeEditor from "@/components/vcard/ThemeEditor";
 
 /* ------------------------------------------------------------------ */
 /*  Field config                                                       */
@@ -60,11 +63,13 @@ export default function VCardEditPage() {
   const token = searchParams.get("token") || "";
 
   const [vcard, setVcard] = useState<VCardData | null>(null);
+  const [theme, setTheme] = useState<VCardTheme>({ ...DEFAULT_VCARD_THEME });
   const [tagName, setTagName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [socialExpanded, setSocialExpanded] = useState(false);
 
   /* -- Load vCard data -- */
   useEffect(() => {
@@ -82,7 +87,11 @@ export default function VCardEditPage() {
         return res.json();
       })
       .then((data) => {
-        setVcard(data.vcard || {});
+        const vcardData = data.vcard || {};
+        setVcard(vcardData);
+        if (vcardData.theme) {
+          setTheme({ ...DEFAULT_VCARD_THEME, ...vcardData.theme });
+        }
         setTagName(data.name || "");
       })
       .catch((e) => setError(e.message))
@@ -95,11 +104,15 @@ export default function VCardEditPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const res = await fetch(`/api/vcard?tagId=${encodeURIComponent(tagId)}&token=${encodeURIComponent(token)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(vcard),
-      });
+      const payload = { ...vcard, theme };
+      const res = await fetch(
+        `/api/vcard?tagId=${encodeURIComponent(tagId)}&token=${encodeURIComponent(token)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Blad ${res.status}`);
@@ -120,26 +133,53 @@ export default function VCardEditPage() {
     setVcard({ ...vcard, [key]: value });
   };
 
+  /* -- Photo upload -- */
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !vcard) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Dozwolone tylko pliki graficzne");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Maksymalny rozmiar zdjecia to 5MB");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("tagId", tagId);
+    formData.append("token", token);
+
+    try {
+      const res = await fetch("/api/vcard/photo", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setVcard({ ...vcard, photo: data.path });
+    } catch {
+      setError("Nie udalo sie wgrac zdjecia");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   /* -- Loading / Error states -- */
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>Ladowanie...</div>
-        </div>
+      <div className="vcard-edit-page">
+        <div className="vcard-edit-loading">Ladowanie...</div>
       </div>
     );
   }
 
   if (error && !vcard) {
     return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: "#151D35", marginBottom: 8 }}>Brak dostepu</h1>
-            <p style={{ color: "#666", fontSize: 14 }}>{error}</p>
-          </div>
+      <div className="vcard-edit-page">
+        <div className="vcard-edit-error-screen">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>&#128274;</div>
+          <h1>Brak dostepu</h1>
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -147,154 +187,160 @@ export default function VCardEditPage() {
 
   if (!vcard) return null;
 
+  /* -- Build merged vcard for preview -- */
+  const previewVcard: VCardData = { ...vcard };
+
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Edycja wizytowki</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#151D35" }}>
-            {vcard.firstName || ""} {vcard.lastName || ""}
-          </h1>
-          {tagName && (
-            <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{tagName}</div>
-          )}
-        </div>
+    <div className="vcard-edit-page">
+      <div className="vcard-edit-layout">
+        {/* LEFT: Edit Form */}
+        <div className="vcard-edit-form-col">
+          {/* Header */}
+          <div className="vcard-edit-header">
+            <span className="vcard-edit-header-sub">Edycja wizytowki</span>
+            <h1 className="vcard-edit-header-title">
+              {vcard.firstName || ""} {vcard.lastName || ""}
+            </h1>
+            {tagName && <span className="vcard-edit-header-tag">{tagName}</span>}
+          </div>
 
-        {/* Sections */}
-        {SECTIONS.map((section) => (
-          <div key={section.title} style={{ marginBottom: 28 }}>
-            <h2 style={styles.sectionTitle}>{section.title}</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {section.fields.map((field) => (
-                <div key={field.key}>
-                  <label style={styles.label}>
-                    {field.label}
-                    {field.required && <span style={{ color: "#e63946" }}> *</span>}
-                  </label>
-                  <input
-                    style={styles.input}
-                    type={field.type || "text"}
-                    value={(vcard as unknown as Record<string, string>)[field.key] || ""}
-                    onChange={(e) => updateField(field.key, e.target.value)}
-                    placeholder={field.placeholder || ""}
-                  />
+          {/* Photo upload */}
+          <div className="vcard-edit-photo-section">
+            <label className="vcard-edit-photo-label">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                style={{ display: "none" }}
+              />
+              {vcard.photo ? (
+                <div className="vcard-edit-photo-preview">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={vcard.photo} alt="Avatar" />
+                  <div className="vcard-edit-photo-overlay">Zmien</div>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="vcard-edit-photo-placeholder">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>Dodaj zdjecie</span>
+                </div>
+              )}
+            </label>
           </div>
-        ))}
 
-        {/* Note */}
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={styles.sectionTitle}>Notatka</h2>
-          <textarea
-            style={{ ...styles.input, minHeight: 80, resize: "vertical" }}
-            value={vcard.note || ""}
-            onChange={(e) => updateField("note", e.target.value)}
-            placeholder="Dodatkowe informacje..."
-          />
-        </div>
+          {/* Data Sections */}
+          {SECTIONS.map((section, sIdx) => {
+            const isSocial = section.title === "Social Media";
+            if (isSocial && !socialExpanded) {
+              return (
+                <div key={section.title} className="vcard-edit-section">
+                  <button
+                    type="button"
+                    className="vcard-edit-section-toggle"
+                    onClick={() => setSocialExpanded(true)}
+                  >
+                    <h2 className="vcard-edit-section-title">{section.title}</h2>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            }
 
-        {/* Error/Success toast */}
-        {error && (
-          <div style={{ padding: "10px 16px", borderRadius: 10, background: "#fee2e2", color: "#b91c1c", fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
-            {error}
+            return (
+              <div key={section.title} className="vcard-edit-section">
+                {isSocial ? (
+                  <button
+                    type="button"
+                    className="vcard-edit-section-toggle"
+                    onClick={() => setSocialExpanded(false)}
+                  >
+                    <h2 className="vcard-edit-section-title">{section.title}</h2>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ transform: "rotate(180deg)" }}>
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                ) : (
+                  <h2 className="vcard-edit-section-title">{section.title}</h2>
+                )}
+                <div className={`vcard-edit-fields ${sIdx === 0 ? "vcard-edit-fields--2col" : ""}`}>
+                  {section.fields.map((field) => (
+                    <div key={field.key} className="vcard-edit-field">
+                      <label className="vcard-edit-label">
+                        {field.label}
+                        {field.required && <span className="vcard-edit-required"> *</span>}
+                      </label>
+                      <input
+                        className="vcard-edit-input"
+                        type={field.type || "text"}
+                        value={(vcard as unknown as Record<string, string>)[field.key] || ""}
+                        onChange={(e) => updateField(field.key, e.target.value)}
+                        placeholder={field.placeholder || ""}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Note */}
+          <div className="vcard-edit-section">
+            <h2 className="vcard-edit-section-title">Notatka</h2>
+            <textarea
+              className="vcard-edit-input vcard-edit-textarea"
+              value={vcard.note || ""}
+              onChange={(e) => updateField("note", e.target.value)}
+              placeholder="Dodatkowe informacje..."
+              rows={3}
+            />
           </div>
-        )}
-        {saved && (
-          <div style={{ padding: "10px 16px", borderRadius: 10, background: "#dcfce7", color: "#166534", fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
-            ✓ Zmiany zapisane!
+
+          {/* Theme Editor */}
+          <div className="vcard-edit-section">
+            <h2 className="vcard-edit-section-title" style={{ marginBottom: 0 }}>Motyw wizytowki</h2>
+            <ThemeEditor theme={theme} onChange={setTheme} />
           </div>
-        )}
 
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            width: "100%",
-            padding: "14px 0",
-            borderRadius: 8,
-            border: "none",
-            background: saving ? "#a78bfa" : "#7c3aed",
-            color: "#fff",
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: saving ? "wait" : "pointer",
-            transition: "background 0.2s",
-            marginBottom: 16,
-          }}
-        >
-          {saving ? "Zapisywanie..." : "Zapisz zmiany"}
-        </button>
+          {/* Error / Success toasts */}
+          {error && (
+            <div className="vcard-edit-toast vcard-edit-toast--error">{error}</div>
+          )}
+          {saved && (
+            <div className="vcard-edit-toast vcard-edit-toast--success">&#10003; Zmiany zapisane!</div>
+          )}
 
-        {/* Preview link */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <a
-            href={`/vcard/${tagId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: 13, color: "#7c3aed", textDecoration: "none", fontWeight: 500 }}
+          {/* Save button */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="vcard-edit-save-btn"
           >
-            Podglad wizytowki →
-          </a>
+            {saving ? "Zapisywanie..." : "Zapisz zmiany"}
+          </button>
+
+          {/* Preview link */}
+          <div className="vcard-edit-preview-link">
+            <a href={`/vcard/${tagId}`} target="_blank" rel="noopener noreferrer">
+              Otworz wizytowke &rarr;
+            </a>
+          </div>
+
+          {/* Footer */}
+          <div className="vcard-edit-footer">
+            Powered by TwojeNFC.pl
+          </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ textAlign: "center", paddingBottom: 16 }}>
-          <p style={{ fontSize: 11, color: "#ccc" }}>
-            Powered by TwojeNFC.pl
-          </p>
-        </div>
+        {/* RIGHT: Live Preview */}
+        <VCardLivePreview vcard={previewVcard} theme={theme} />
       </div>
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Styles (light theme, mobile-first)                                 */
-/* ------------------------------------------------------------------ */
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#f7f7fb",
-    display: "flex",
-    justifyContent: "center",
-    padding: "24px 16px",
-    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  },
-  container: {
-    width: "100%",
-    maxWidth: 440,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.06em",
-    color: "#999",
-    marginBottom: 12,
-    paddingLeft: 2,
-  },
-  label: {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#444",
-    marginBottom: 4,
-  },
-  input: {
-    width: "100%",
-    padding: "11px 14px",
-    borderRadius: 10,
-    border: "1px solid #e0e0e8",
-    fontSize: 14,
-    color: "#151D35",
-    background: "#fff",
-    outline: "none",
-    transition: "border-color 0.2s, box-shadow 0.2s",
-    boxSizing: "border-box" as const,
-  },
-};

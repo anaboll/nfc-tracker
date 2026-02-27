@@ -1,11 +1,29 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import MobileMenu from "@/components/landing/MobileMenu";
+import ContactForm from "@/components/landing/ContactForm";
+import AnimateOnScroll from "@/components/landing/AnimateOnScroll";
 
 export const metadata: Metadata = {
-  title: "TwojeNFC — Wizytówka, której nikt nie wyrzuci",
+  title: "TwojeNFC — Gadżety NFC, które pracują za Ciebie",
   description:
-    "Breloki i karty NFC z wizytówką, social mediami i stroną WWW. Jedno dotknięcie telefonu — i klient ma wszystko. Dla handlowców, restauracji, salonów i każdego, kto chce się wyróżnić.",
+    "Breloki NFC z Twoją wizytówką, stroną i social mediami. Klient przykłada telefon — i ma do Ciebie kontakt. Dla handlowców, restauracji, salonów i każdego, kto chce więcej klientów.",
   robots: { index: true, follow: true },
+  openGraph: {
+    title: "TwojeNFC — Gadżety NFC, które pracują za Ciebie",
+    description:
+      "Breloki NFC z Twoją wizytówką, stroną i social mediami. Klient przykłada telefon — i ma do Ciebie kontakt.",
+    type: "website",
+    locale: "pl_PL",
+    url: "https://twojenfc.pl",
+    siteName: "TwojeNFC",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TwojeNFC — Gadżety NFC, które pracują za Ciebie",
+    description:
+      "Breloki NFC z wizytówką, stroną i social mediami. Klient przykłada telefon — i ma do Ciebie kontakt.",
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -93,6 +111,7 @@ export default function HomePage() {
             <a href="#kontakt">Kontakt</a>
             <Link href="/login" className="nav-cta">Panel klienta</Link>
           </div>
+          <MobileMenu />
         </div>
       </nav>
 
@@ -103,15 +122,15 @@ export default function HomePage() {
         <div className="landing-container hero-inner">
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            Zbliżeniowa wizytówka NFC
+            Gadżety NFC dla biznesu
           </div>
           <h1 className="hero-title">
-            Wizytówka, której<br />
-            <span className="gradient-text">nikt nie wyrzuci</span>
+            Jeden gest.<br />
+            <span className="gradient-text">Pełen kontakt.</span>
           </h1>
           <p className="hero-subtitle">
-            Brelok na kluczach klienta z&nbsp;Twoim numerem, stroną i&nbsp;social mediami.
-            Jedno dotknięcie telefonem — i&nbsp;ma do Ciebie kontakt na zawsze.
+            Klient przykłada telefon do breloka i&nbsp;od razu ma Twój numer,
+            stronę, social media. Bez aplikacji, bez wpisywania, bez szukania.
           </p>
           <div className="hero-actions">
             <a href="#kontakt" className="btn-primary hero-btn">
@@ -121,20 +140,45 @@ export default function HomePage() {
               Panel klienta &rarr;
             </Link>
           </div>
+          <div className="hero-product-mockup">
+            <div className="mockup-keychain">
+              <div className="mockup-ring" />
+              <div className="mockup-body">
+                <div className="mockup-nfc-icon"><IconNfc /></div>
+                <span className="mockup-label">TwojeNFC</span>
+              </div>
+            </div>
+            <div className="mockup-wave" />
+            <div className="mockup-wave mockup-wave-2" />
+            <div className="mockup-phone">
+              <div className="mockup-phone-screen">
+                <div className="mockup-phone-notch" />
+                <div className="mockup-phone-content">
+                  <div className="mockup-avatar" />
+                  <div className="mockup-lines">
+                    <div className="mockup-line mockup-line-name" />
+                    <div className="mockup-line mockup-line-phone" />
+                    <div className="mockup-line mockup-line-email" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="hero-stats">
             <div className="hero-stat">
               <span className="hero-stat-value">Każdy telefon</span>
-              <span className="hero-stat-label">iPhone i Android</span>
+              <span className="hero-stat-label">iPhone i&nbsp;Android — bez aplikacji</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
-              <span className="hero-stat-value">Bez aplikacji</span>
-              <span className="hero-stat-label">wystarczy dotknąć</span>
+              <span className="hero-stat-value">Brelok NFC</span>
+              <span className="hero-stat-label">personalizowany pod Twój biznes</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat">
               <span className="hero-stat-value">Zmieniasz zdalnie</span>
-              <span className="hero-stat-label">bez wymiany breloka</span>
+              <span className="hero-stat-label">nowa treść w&nbsp;każdej chwili</span>
             </div>
           </div>
         </div>
@@ -148,21 +192,27 @@ export default function HomePage() {
             <h2 className="section-title">Prościej niż wizytówka papierowa</h2>
           </div>
           <div className="hiw-grid">
-            <StepCard
-              step="01"
-              title="Mówisz, co chcesz"
-              desc="Wizytówkę z numerem telefonu? Link do strony? Social media? Wybierasz — my programujemy brelok pod Ciebie."
-            />
-            <StepCard
-              step="02"
-              title="Wręczasz brelok"
-              desc="Klient zakłada go na klucze. Nie zgubi, nie wyrzuci, nie zapomni w szufladzie — nosi ze sobą codziennie."
-            />
-            <StepCard
-              step="03"
-              title="Klient skanuje, kiedy chce"
-              desc="Przyłoży telefon do breloka — i Twoje dane zapisują się w jego kontaktach. Tydzień, miesiąc, rok później."
-            />
+            <AnimateOnScroll delay={0}>
+              <StepCard
+                step="01"
+                title="Mówisz, co potrzebujesz"
+                desc="Wizytówkę? Stronę? Social media? Recenzje Google? Ty mówisz — my przygotowujemy brelok z&nbsp;NFC gotowy do działania."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <StepCard
+                step="02"
+                title="Klient przykłada telefon"
+                desc="Wystarczy zbliżyć smartfon do breloka. Bez instalowania czegokolwiek — działa od razu, na każdym telefonie."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <StepCard
+                step="03"
+                title="Ma do Ciebie kontakt"
+                desc="Twoje dane, strona, linki — wszystko pojawia się na ekranie klienta w sekundę. Zapisuje i wraca, kiedy potrzebuje."
+              />
+            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -172,43 +222,55 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Zastosowania</span>
-            <h2 className="section-title">Kto korzysta z breloków NFC?</h2>
+            <h2 className="section-title">Kto już korzysta z&nbsp;NFC?</h2>
             <p className="section-subtitle">
-              Wszędzie tam, gdzie papierowa wizytówka ląduje w&nbsp;koszu —
-              brelok NFC zostaje.
+              Wszędzie tam, gdzie kontakt z&nbsp;klientem jest na wagę złota —
+              NFC robi robotę za Ciebie.
             </p>
           </div>
           <div className="features-grid">
-            <FeatureCard
-              icon={<IconBriefcase />}
-              title="Handlowcy i sprzedaż"
-              desc="Kończysz spotkanie — wręczasz brelok. Klient ma Twój numer i ofertę w telefonie, zanim jeszcze wyjdziesz za drzwi."
-            />
-            <FeatureCard
-              icon={<IconStar />}
-              title="Restauracje i kawiarnie"
-              desc="Brelok do rachunku albo na stolik. Klient skanuje i zostawia recenzję Google — albo widzi menu i rezerwuje kolejną wizytę."
-            />
-            <FeatureCard
-              icon={<IconCard />}
-              title="Salony i usługi"
-              desc="Fryzjer, kosmetyczka, fizjoterapeuta — klientka przykłada telefon i ma numer, cennik i link do rezerwacji wizyty."
-            />
-            <FeatureCard
-              icon={<IconLink />}
-              title="Twórcy i influencerzy"
-              desc="Instagram, TikTok, YouTube, Spotify — wszystko w jednym breloku. Fan skanuje i od razu Cię obserwuje."
-            />
-            <FeatureCard
-              icon={<IconKey />}
-              title="Firmowe gadżety"
-              desc="Brelok z logiem na kluczach klienta. Widzi go codziennie, a jak potrzebuje — skanuje i ma kontakt do Twojej firmy."
-            />
-            <FeatureCard
-              icon={<IconUsers />}
-              title="Eventy i networking"
-              desc="Konferencja, branżówka, targi — dajesz brelok zamiast kartki. Nikt go nie zgubi i&nbsp;nie zapomni, kto go wręczył."
-            />
+            <AnimateOnScroll delay={0}>
+              <FeatureCard
+                icon={<IconBriefcase />}
+                title="Handlowcy i sprzedaż"
+                desc="Kończysz spotkanie — przykładasz brelok do telefonu klienta. Ma Twój numer, ofertę i&nbsp;stronę, zanim wstaniesz od stołu."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <FeatureCard
+                icon={<IconStar />}
+                title="Restauracje i kawiarnie"
+                desc="Karta NFC na stoliku — gość przykłada telefon i&nbsp;widzi Twoje menu. Rano śniadaniowe, po południu obiadowe. Albo zostawia recenzję Google jednym gestem."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <FeatureCard
+                icon={<IconCard />}
+                title="Salony i usługi"
+                desc="Fryzjer, kosmetyczka, fizjoterapeuta — klientka przykłada telefon i&nbsp;ma Twój numer, cennik i&nbsp;link do rezerwacji wizyty online."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <FeatureCard
+                icon={<IconLink />}
+                title="Twórcy i influencerzy"
+                desc="Instagram, TikTok, YouTube, Spotify — wszystko pod jednym dotknięciem. Fan przykłada telefon i&nbsp;od razu Cię obserwuje."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <FeatureCard
+                icon={<IconKey />}
+                title="Firmowe gadżety"
+                desc="Brelok z&nbsp;logiem na kluczach klienta. Widzi go codziennie, a&nbsp;jak potrzebuje — przykłada telefon i&nbsp;ma kontakt do Ciebie."
+              />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={300}>
+              <FeatureCard
+                icon={<IconUsers />}
+                title="Eventy i networking"
+                desc="Konferencja, targi, branżówka — zamiast papierowej wizytówki dajesz coś, co zostaje. Jeden gest i&nbsp;kontakt zapisany."
+              />
+            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -218,19 +280,31 @@ export default function HomePage() {
         <div className="landing-container">
           <div className="section-header">
             <span className="section-tag">Możliwości</span>
-            <h2 className="section-title">Jeden brelok, wiele funkcji</h2>
+            <h2 className="section-title">Co zobaczy Twój klient?</h2>
             <p className="section-subtitle">
-              Programujemy brelok pod Ciebie. Zmienisz treść w&nbsp;każdej chwili
-              — brelok natychmiast pokazuje nowe dane.
+              Ty decydujesz, co wyświetli się po przyłożeniu telefonu.
+              Zmienisz treść w&nbsp;każdej chwili — bez wymiany breloka.
             </p>
           </div>
           <div className="types-grid">
-            <TypeCard icon={<IconCard />} title="Wizytówka kontaktowa" desc="Imię, telefon, email, adres, stanowisko — jedno dotknięcie i dane zapisują się w kontaktach klienta." />
-            <TypeCard icon={<IconGlobe />} title="Strona internetowa" desc="Przekierowanie na Twoją stronę — sklep, portfolio, ofertę, rezerwację wizyt, cokolwiek potrzebujesz." />
-            <TypeCard icon={<IconLink />} title="Lista linków" desc="Instagram, Facebook, LinkedIn, TikTok, YouTube — wszystkie kanały w jednym miejscu, jak Linktree ale Twoje." />
-            <TypeCard icon={<IconStar />} title="Recenzje Google" desc="Klient skanuje i od razu pisze opinię. Bez szukania, bez wpisywania — pięć sekund i gotowe." />
-            <TypeCard icon={<IconRefresh />} title="Zdalna zmiana treści" desc="Nowy numer? Nowa strona? Zmieniasz w panelu — brelok natychmiast wyświetla nową treść. Bez wymiany." />
-            <TypeCard icon={<IconChart />} title="Statystyki skanów" desc="Ile osób skanuje, skąd są, kiedy to robią — panel analityczny pokazuje wszystko w czasie rzeczywistym." />
+            <AnimateOnScroll delay={0}>
+              <TypeCard icon={<IconCard />} title="Wizytówka kontaktowa" desc="Imię, telefon, email, stanowisko — klient przykłada telefon i&nbsp;Twoje dane zapisują się w&nbsp;jego kontaktach." />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <TypeCard icon={<IconGlobe />} title="Twoja strona" desc="Klient od razu widzi Twoją stronę — sklep, portfolio, ofertę, rezerwację. Bez wpisywania adresu." />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <TypeCard icon={<IconLink />} title="Wszystkie linki" desc="Instagram, Facebook, LinkedIn, TikTok — klient wybiera, gdzie Cię obserwować. Wszystko w&nbsp;jednym miejscu." />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <TypeCard icon={<IconStar />} title="Recenzje Google" desc="Klient przykłada telefon i&nbsp;od razu widzi formularz opinii. Bez szukania, bez wpisywania — pięć sekund." />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <TypeCard icon={<IconRefresh />} title="Zmiana treści zdalnie" desc="Nowy numer? Nowa oferta? Zmieniasz w&nbsp;panelu — brelok od razu pokazuje nowe dane. Bez wymiany." />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={300}>
+              <TypeCard icon={<IconChart />} title="Statystyki" desc="Ile osób skanuje, kiedy i&nbsp;skąd — masz dane, które pomagają zrozumieć, co działa." />
+            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -245,52 +319,63 @@ export default function HomePage() {
               Opcjonalny panel z&nbsp;danymi. Sprawdź, ile osób skanuje Twoje breloki
               i&nbsp;co ich interesuje.
             </p>
+            <div className="demo-data-badge">
+              Przykładowe dane poglądowe
+            </div>
           </div>
           <div className="analytics-grid">
-            <div className="analytics-card">
-              <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>📊</div>
-                <span>Ile osób skanuje</span>
+            <AnimateOnScroll delay={0}>
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>📊</div>
+                  <span>Ile osób skanuje</span>
+                </div>
+                <div className="analytics-card-value">1 247</div>
+                <div className="analytics-card-sub">wszystkich skanów &middot; 489 unikalnych osób</div>
+                <div className="analytics-mini-bar">
+                  <div className="analytics-mini-fill" style={{ width: "72%" }} />
+                </div>
               </div>
-              <div className="analytics-card-value">1 247</div>
-              <div className="analytics-card-sub">wszystkich skanów &middot; 489 unikalnych osób</div>
-              <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "72%" }} />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={100}>
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>🌍</div>
+                  <span>Skąd skanują</span>
+                </div>
+                <div className="analytics-card-value">12 miast</div>
+                <div className="analytics-card-sub">Warszawa 38% &middot; Kraków 22% &middot; Wrocław 14%</div>
+                <div className="analytics-mini-bar">
+                  <div className="analytics-mini-fill" style={{ width: "67%" }} />
+                </div>
               </div>
-            </div>
-            <div className="analytics-card">
-              <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>🌍</div>
-                <span>Skąd skanują</span>
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={200}>
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>📱</div>
+                  <span>Jakim telefonem</span>
+                </div>
+                <div className="analytics-card-value">92% mobile</div>
+                <div className="analytics-card-sub">iPhone 54% &middot; Android 38% &middot; inny 8%</div>
+                <div className="analytics-mini-bar">
+                  <div className="analytics-mini-fill" style={{ width: "92%", background: "#22c55e" }} />
+                </div>
               </div>
-              <div className="analytics-card-value">12 miast</div>
-              <div className="analytics-card-sub">Warszawa 38% &middot; Kraków 22% &middot; Wrocław 14%</div>
-              <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "67%" }} />
+            </AnimateOnScroll>
+            <AnimateOnScroll delay={300}>
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>⏰</div>
+                  <span>O której skanują</span>
+                </div>
+                <div className="analytics-card-value">Szczyt: 14:00</div>
+                <div className="analytics-card-sub">Rozkład aktywności w ciągu dnia i tygodnia</div>
+                <div className="analytics-mini-bar">
+                  <div className="analytics-mini-fill" style={{ width: "68%" }} />
+                </div>
               </div>
-            </div>
-            <div className="analytics-card">
-              <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>📱</div>
-                <span>Jakim telefonem</span>
-              </div>
-              <div className="analytics-card-value">92% mobile</div>
-              <div className="analytics-card-sub">iPhone 54% &middot; Android 38% &middot; inny 8%</div>
-              <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "92%", background: "#22c55e" }} />
-              </div>
-            </div>
-            <div className="analytics-card">
-              <div className="analytics-card-header">
-                <div className="analytics-card-icon" style={{ background: "rgba(56,189,248,0.12)", color: "#38BDF8" }}>⏰</div>
-                <span>O której skanują</span>
-              </div>
-              <div className="analytics-card-value">Szczyt: 14:00</div>
-              <div className="analytics-card-sub">Rozkład aktywności w ciągu dnia i tygodnia</div>
-              <div className="analytics-mini-bar">
-                <div className="analytics-mini-fill" style={{ width: "68%" }} />
-              </div>
-            </div>
+            </AnimateOnScroll>
           </div>
         </div>
       </section>
@@ -299,23 +384,17 @@ export default function HomePage() {
       <section id="kontakt" className="cta-section">
         <div className="landing-container cta-inner">
           <h2 className="cta-title">
-            Porozmawiajmy o&nbsp;Twoich brelokach
+            Opowiedz, czym się zajmujesz
           </h2>
           <p className="cta-subtitle">
-            Powiedz nam, czym się zajmujesz — dobierzemy formę breloka
-            i&nbsp;to, co wyświetli się po zeskanowaniu.
+            Dobierzemy brelok NFC i&nbsp;to, co zobaczy Twój klient
+            po przyłożeniu telefonu.
           </p>
-          <div className="cta-actions">
-            <a
-              href="mailto:kontakt@twojenfc.pl"
-              className="btn-primary hero-btn"
-            >
-              kontakt@twojenfc.pl
-            </a>
-            <Link href="/login" className="hero-btn-secondary">
-              Panel klienta &rarr;
-            </Link>
-          </div>
+          <ContactForm />
+          <p className="cta-email-fallback">
+            lub napisz bezpośrednio:{" "}
+            <a href="mailto:kontakt@twojenfc.pl">kontakt@twojenfc.pl</a>
+          </p>
         </div>
       </section>
 
@@ -328,6 +407,11 @@ export default function HomePage() {
               <span className="gradient-text">TwojeNFC</span>
             </div>
             <p className="footer-tagline">Zbliżeniowe wizytówki NFC</p>
+          </div>
+          <div className="footer-links">
+            <a href="/polityka-prywatnosci">Polityka prywatności</a>
+            <a href="/regulamin">Regulamin</a>
+            <a href="mailto:kontakt@twojenfc.pl">kontakt@twojenfc.pl</a>
           </div>
           <div className="footer-copy">
             &copy; {new Date().getFullYear()} TwojeNFC. Wszelkie prawa zastrzeżone.

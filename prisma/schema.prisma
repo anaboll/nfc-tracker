@@ -37,6 +37,7 @@ model Client {
   slug        String   @unique  // URL-friendly name, e.g. "bulderownia"
   description String?
   color       String?  // Brand color hex, e.g. "#ff6600"
+  tier        String   @default("basic")  // "basic" | "pro" | "business"
   isActive    Boolean  @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

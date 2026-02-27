@@ -4,11 +4,11 @@ import { getUserAccess } from "@/lib/user-access";
 import crypto from "crypto";
 
 /* ------------------------------------------------------------------ */
-/*  POST — Generate / regenerate edit token (admin only)               */
+/*  POST — Generate / regenerate edit token (admin or assigned viewer)  */
 /* ------------------------------------------------------------------ */
 export async function POST(req: Request) {
   const access = await getUserAccess();
-  if (!access?.isAdmin) {
+  if (!access) {
     return NextResponse.json({ error: "Brak uprawnien" }, { status: 403 });
   }
 
@@ -25,6 +25,13 @@ export async function POST(req: Request) {
   }
   if (tag.tagType !== "vcard") {
     return NextResponse.json({ error: "Token edycji dostepny tylko dla wizytowek (vCard)" }, { status: 400 });
+  }
+
+  /* Viewer can only generate tokens for their assigned clients */
+  if (!access.isAdmin) {
+    if (!access.allowedClientIds || !tag.clientId || !access.allowedClientIds.includes(tag.clientId)) {
+      return NextResponse.json({ error: "Brak uprawnien do tego tagu" }, { status: 403 });
+    }
   }
 
   const editToken = crypto.randomBytes(24).toString("base64url");

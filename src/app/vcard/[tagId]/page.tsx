@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import VCardActions from "./VCardActions";
-import type { VCardData } from "@/types/vcard";
+import type { VCardData, VCardTheme } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import {
   PhoneIcon, EmailIcon, WebsiteIcon, AddressIcon,
@@ -9,6 +9,103 @@ import {
   TikTokIcon, YouTubeIcon, TelegramIcon, NoteIcon,
   SOCIAL_COLORS,
 } from "@/components/vcard/SocialIcons";
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+type ResolvedTheme = Required<VCardTheme>;
+
+function resolveTheme(raw?: VCardTheme): ResolvedTheme {
+  const t = { ...DEFAULT_VCARD_THEME, ...(raw || {}) };
+  // Auto avatar border color from primary
+  if (!t.avatarBorderColor) {
+    t.avatarBorderColor = t.primaryColor + "40";
+  }
+  return t;
+}
+
+function getBackground(t: ResolvedTheme): string {
+  if (t.bgMode === "solid") return t.bgSolidColor || t.bgGradientFrom;
+  return `linear-gradient(135deg, ${t.bgGradientFrom} 0%, ${t.bgGradientTo} 100%)`;
+}
+
+function getPatternOverlay(t: ResolvedTheme): React.CSSProperties | null {
+  if (t.bgPattern === "none") return null;
+  const base: React.CSSProperties = {
+    position: "absolute" as const,
+    inset: 0,
+    pointerEvents: "none" as const,
+    zIndex: 0,
+  };
+  switch (t.bgPattern) {
+    case "dots":
+      return {
+        ...base,
+        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+      };
+    case "grid":
+      return {
+        ...base,
+        backgroundImage:
+          "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+      };
+    case "waves":
+      return {
+        ...base,
+        backgroundImage:
+          `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.015) 10px, rgba(255,255,255,0.015) 20px)`,
+      };
+    default:
+      return null;
+  }
+}
+
+function getLinkRadius(style: string): number {
+  switch (style) {
+    case "pill": return 50;
+    case "square": return 4;
+    default: return 8;
+  }
+}
+
+function getIconBoxRadius(style: string): number {
+  switch (style) {
+    case "circle": return 50;
+    case "square": return 4;
+    case "pill": return 12;
+    default: return 8; // rounded
+  }
+}
+
+function getAvatarRadius(shape: string): string {
+  switch (shape) {
+    case "rounded-square": return "16px";
+    case "square": return "4px";
+    default: return "50%";
+  }
+}
+
+function getFontStack(family: string): string {
+  switch (family) {
+    case "inter": return "'Inter', system-ui, -apple-system, sans-serif";
+    case "serif": return "'Georgia', 'Times New Roman', serif";
+    default: return "var(--font-geist-sans), system-ui, -apple-system, sans-serif";
+  }
+}
+
+/** Detect if background is light (for text color) */
+function isLightBg(t: ResolvedTheme): boolean {
+  const hex = t.bgMode === "solid" ? (t.bgSolidColor || t.bgGradientFrom) : t.bgGradientFrom;
+  if (!hex || !hex.startsWith("#")) return false;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
@@ -27,10 +124,23 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
   if (!vcard) notFound();
 
   const fullName = [vcard.firstName, vcard.lastName].filter(Boolean).join(" ");
-  const theme = {
-    ...DEFAULT_VCARD_THEME,
-    ...(vcard.theme || {}),
-  };
+  const theme = resolveTheme(vcard.theme);
+  const light = isLightBg(theme);
+
+  // Text colors adapt to light/dark background
+  const textPrimary = light ? "#1e293b" : "#fff";
+  const textSecondary = light ? "rgba(30,41,59,0.6)" : "rgba(255,255,255,0.6)";
+  const textMuted = light ? "rgba(30,41,59,0.35)" : "rgba(255,255,255,0.35)";
+  const cardBg = light ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.05)";
+  const cardBorder = light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)";
+  const footerColor = light ? "rgba(30,41,59,0.2)" : "rgba(255,255,255,0.2)";
+  const footerLinkColor = light ? "rgba(30,41,59,0.3)" : "rgba(255,255,255,0.3)";
+
+  const linkRadius = getLinkRadius(theme.buttonStyle);
+  const iconRadius = getIconBoxRadius(theme.socialIconStyle);
+  const avatarRadius = getAvatarRadius(theme.avatarShape);
+  const fontStack = getFontStack(theme.fontFamily);
+  const patternStyle = getPatternOverlay(theme);
 
   /* -- Build contact links -- */
   const contactLinks = [
@@ -75,22 +185,63 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
     whatsapp: WhatsAppIcon, tiktok: TikTokIcon, youtube: YouTubeIcon, telegram: TelegramIcon,
   };
 
+  /* -- Link card styles -- */
+  const linkCardStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "14px 16px",
+    borderRadius: linkRadius,
+    background: cardBg,
+    border: `1px solid ${cardBorder}`,
+    textDecoration: "none",
+    transition: "all 0.2s",
+    backdropFilter: "blur(8px)",
+  };
+
+  const iconBoxStyle = (color: string): React.CSSProperties => ({
+    width: 44,
+    height: 44,
+    borderRadius: iconRadius,
+    background: `${color}15`,
+    border: `1px solid ${color}30`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  });
+
+  /* -- Minimal layout: social links as icon row -- */
+  const isMinimal = theme.layoutVariant === "minimal";
+  const isModern = theme.layoutVariant === "modern";
+
   return (
     <main
       className="min-h-screen flex flex-col items-center px-4 py-8"
-      style={{ background: `linear-gradient(135deg, ${theme.bgGradientFrom} 0%, ${theme.bgGradientTo} 100%)` }}
+      style={{
+        background: getBackground(theme),
+        fontFamily: fontStack,
+        position: "relative",
+      }}
     >
-      <div className="w-full" style={{ maxWidth: 440 }}>
+      {/* Pattern overlay */}
+      {patternStyle && <div style={patternStyle} />}
+
+      <div className="w-full" style={{ maxWidth: 440, position: "relative", zIndex: 1 }}>
 
         {/* ============================================================ */}
         {/*  HEADER — photo/initials + name + title                      */}
         {/* ============================================================ */}
-        <div className="text-center" style={{ marginBottom: 24 }}>
+        <div className="text-center" style={{ marginBottom: isModern ? 32 : 24 }}>
           {/* Avatar */}
           {vcard.photo ? (
             <div style={{
-              width: 120, height: 120, borderRadius: "50%", margin: "0 auto 16px",
-              overflow: "hidden", border: `3px solid ${theme.primaryColor}40`,
+              width: isModern ? 140 : 120,
+              height: isModern ? 140 : 120,
+              borderRadius: avatarRadius,
+              margin: "0 auto 16px",
+              overflow: "hidden",
+              border: `${theme.avatarBorderWidth}px solid ${theme.avatarBorderColor}`,
               boxShadow: `0 0 30px ${theme.primaryColor}20`,
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -99,10 +250,17 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
           ) : (
             <div
               style={{
-                width: 120, height: 120, borderRadius: "50%", margin: "0 auto 16px",
+                width: isModern ? 140 : 120,
+                height: isModern ? 140 : 120,
+                borderRadius: avatarRadius,
+                margin: "0 auto 16px",
                 background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.primaryColor}88)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 42, fontWeight: 700, color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: isModern ? 48 : 42,
+                fontWeight: 700,
+                color: "#fff",
                 boxShadow: `0 0 30px ${theme.primaryColor}20`,
               }}
             >
@@ -110,11 +268,17 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
             </div>
           )}
 
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: "#fff", marginBottom: 4, letterSpacing: "-0.01em" }}>
+          <h1 style={{
+            fontSize: isModern ? 30 : 26,
+            fontWeight: 700,
+            color: textPrimary,
+            marginBottom: 4,
+            letterSpacing: "-0.01em",
+          }}>
             {fullName}
           </h1>
           {vcard.jobTitle && (
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 2 }}>{vcard.jobTitle}</p>
+            <p style={{ fontSize: 14, color: textSecondary, marginBottom: 2 }}>{vcard.jobTitle}</p>
           )}
           {vcard.company && (
             <p style={{ fontSize: 14, fontWeight: 600, color: theme.primaryColor }}>{vcard.company}</p>
@@ -124,19 +288,27 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
         {/* ============================================================ */}
         {/*  SAVE CONTACT BUTTON                                         */}
         {/* ============================================================ */}
-        <VCardActions vcfBase64={vcfBase64} fullName={fullName} primaryColor={theme.primaryColor} />
+        <VCardActions
+          vcfBase64={vcfBase64}
+          fullName={fullName}
+          primaryColor={theme.primaryColor}
+          buttonStyle={theme.buttonStyle}
+          buttonVariant={theme.buttonVariant}
+        />
 
         {/* ============================================================ */}
         {/*  CONTACT section                                             */}
         {/* ============================================================ */}
         {contactLinks.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-              color: "rgba(255,255,255,0.35)", marginBottom: 10, paddingLeft: 4,
-            }}>
-              Kontakt
-            </div>
+            {!isMinimal && (
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                color: textMuted, marginBottom: 10, paddingLeft: 4,
+              }}>
+                Kontakt
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {contactLinks.map((link) => {
                 const Icon = ICON_MAP[link.key];
@@ -147,26 +319,15 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
                     href={link.url}
                     target={link.key === "phone" ? "_self" : "_blank"}
                     rel="noopener noreferrer"
-                    style={{
-                      display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 16px", borderRadius: 8,
-                      background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-                      textDecoration: "none", transition: "all 0.2s",
-                      backdropFilter: "blur(8px)",
-                    }}
+                    style={linkCardStyle}
                   >
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 8,
-                      background: `${color}15`, border: `1px solid ${color}30`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
+                    <div style={iconBoxStyle(color)}>
                       {Icon && <Icon size={20} color={color} />}
                     </div>
-                    <span style={{ color: "#fff", fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
+                    <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
                       {link.label}
                     </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9 18l6-6-6-6" />
                     </svg>
                   </a>
@@ -181,50 +342,65 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
         {/* ============================================================ */}
         {socialLinks.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-              color: "rgba(255,255,255,0.35)", marginBottom: 10, paddingLeft: 4,
-            }}>
-              Social Media
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {socialLinks.map((link) => {
-                const Icon = ICON_MAP[link.key];
-                const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
-                return (
-                  <a
-                    key={link.key}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 16px", borderRadius: 8,
-                      background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-                      textDecoration: "none", transition: "all 0.2s",
-                      backdropFilter: "blur(8px)",
-                    }}
-                  >
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 8,
-                      background: `${color}15`, border: `1px solid ${color}30`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
+            {!isMinimal && (
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                color: textMuted, marginBottom: 10, paddingLeft: 4,
+              }}>
+                Social Media
+              </div>
+            )}
+
+            {isMinimal ? (
+              /* Minimal layout: icon-only row */
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+                {socialLinks.map((link) => {
+                  const Icon = ICON_MAP[link.key];
+                  const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
+                  return (
+                    <a
+                      key={link.key}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={iconBoxStyle(color)}
+                      title={link.label}
+                    >
                       {Icon && <Icon size={20} color={color} />}
-                    </div>
-                    <span style={{ color: "#fff", fontSize: 14, fontWeight: 500, flex: 1 }}>
-                      {link.label}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </a>
-                );
-              })}
-            </div>
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Classic / Modern layout: full cards */
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {socialLinks.map((link) => {
+                  const Icon = ICON_MAP[link.key];
+                  const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
+                  return (
+                    <a
+                      key={link.key}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={linkCardStyle}
+                    >
+                      <div style={iconBoxStyle(color)}>
+                        {Icon && <Icon size={20} color={color} />}
+                      </div>
+                      <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1 }}>
+                        {link.label}
+                      </span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -233,16 +409,22 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
         {/* ============================================================ */}
         {vcard.note && (
           <div style={{ marginTop: 24 }}>
+            {!isMinimal && (
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                color: textMuted, marginBottom: 10, paddingLeft: 4,
+              }}>
+                O mnie
+              </div>
+            )}
             <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-              color: "rgba(255,255,255,0.35)", marginBottom: 10, paddingLeft: 4,
-            }}>
-              O mnie
-            </div>
-            <div style={{
-              padding: "16px 18px", borderRadius: 8,
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-              fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.7)",
+              padding: "16px 18px",
+              borderRadius: linkRadius,
+              background: cardBg,
+              border: `1px solid ${cardBorder}`,
+              fontSize: 14,
+              lineHeight: 1.7,
+              color: textSecondary,
               whiteSpace: "pre-wrap",
             }}>
               {vcard.note}
@@ -254,9 +436,9 @@ export default async function VCardPage({ params }: { params: { tagId: string } 
         {/*  FOOTER                                                      */}
         {/* ============================================================ */}
         <div style={{ marginTop: 40, textAlign: "center", paddingBottom: 16 }}>
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>
+          <p style={{ fontSize: 11, color: footerColor, fontWeight: 500 }}>
             Powered by{" "}
-            <a href="https://twojenfc.pl" style={{ color: "rgba(255,255,255,0.3)", textDecoration: "none" }}>
+            <a href="https://twojenfc.pl" style={{ color: footerLinkColor, textDecoration: "none" }}>
               TwojeNFC.pl
             </a>
           </p>

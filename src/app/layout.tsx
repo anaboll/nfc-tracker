@@ -7,7 +7,6 @@ import Providers from "./providers";
 export const metadata: Metadata = {
   title: "TwojeNFC - Analytics Portal",
   description: "Track and analyze your NFC tag interactions",
-  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
