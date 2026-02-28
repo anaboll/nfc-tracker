@@ -13,18 +13,26 @@ import type { StatsData } from "@/types/dashboard";
 interface PanelFilters {
   from: string;
   to: string;
+  clientId: string;
   campaignId: string;
   tagId: string;
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
 }
 
 interface CampaignOption {
   id: string;
   name: string;
+  clientId: string;
 }
 
 interface TagOption {
   id: string;
   name: string;
+  clientId: string | null;
 }
 
 interface DailyPoint {
@@ -199,20 +207,21 @@ export default function ComparisonPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Shared: campaigns & tags for dropdowns
+  // Shared: clients, campaigns & tags for dropdowns
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [tags, setTags] = useState<TagOption[]>([]);
 
   // Panel A state
   const [filtersA, setFiltersA] = useState<PanelFilters>({
-    from: "2026-01-01", to: "2026-01-31", campaignId: "", tagId: "",
+    from: "2026-01-01", to: "2026-01-31", clientId: "", campaignId: "", tagId: "",
   });
   const [statsA, setStatsA] = useState<StatsData | null>(null);
   const [loadingA, setLoadingA] = useState(false);
 
   // Panel B state — same defaults as A
   const [filtersB, setFiltersB] = useState<PanelFilters>({
-    from: "2026-01-01", to: "2026-01-31", campaignId: "", tagId: "",
+    from: "2026-01-01", to: "2026-01-31", clientId: "", campaignId: "", tagId: "",
   });
   const [statsB, setStatsB] = useState<StatsData | null>(null);
   const [loadingB, setLoadingB] = useState(false);
@@ -225,18 +234,22 @@ export default function ComparisonPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Load campaigns & tags
+  // Load clients, campaigns & tags
   useEffect(() => {
     if (status !== "authenticated") return;
-    Promise.all([fetch("/api/campaigns"), fetch("/api/tags")])
-      .then(async ([cRes, tRes]) => {
+    Promise.all([fetch("/api/clients"), fetch("/api/campaigns"), fetch("/api/tags")])
+      .then(async ([clRes, cRes, tRes]) => {
+        if (clRes.ok) {
+          const cl = await clRes.json();
+          setClients(cl.map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })));
+        }
         if (cRes.ok) {
           const c = await cRes.json();
-          setCampaigns(c.map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })));
+          setCampaigns(c.map((x: { id: string; name: string; clientId: string }) => ({ id: x.id, name: x.name, clientId: x.clientId })));
         }
         if (tRes.ok) {
           const t = await tRes.json();
-          setTags(t.map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })));
+          setTags(t.map((x: { id: string; name: string; clientId: string | null }) => ({ id: x.id, name: x.name, clientId: x.clientId })));
         }
       })
       .catch(console.error);
@@ -249,6 +262,7 @@ export default function ComparisonPage() {
       const p = new URLSearchParams();
       if (filters.from) p.set("from", filters.from);
       if (filters.to) p.set("to", filters.to);
+      if (filters.clientId) p.set("clientId", filters.clientId);
       if (filters.campaignId) p.set("campaignId", filters.campaignId);
       if (filters.tagId) p.set("tags", filters.tagId);
       const res = await fetch(`/api/stats?${p.toString()}`);
@@ -335,17 +349,24 @@ export default function ComparisonPage() {
                 <input type="date" className="comp-filter-input comp-filter-date" value={filtersA.to} onChange={(e) => setFiltersA((f) => ({ ...f, to: e.target.value }))} />
               </div>
               <div className="comp-filter-row">
+                <label className="comp-filter-label">Klient</label>
+                <select className="comp-filter-input" value={filtersA.clientId} onChange={(e) => setFiltersA((f) => ({ ...f, clientId: e.target.value, campaignId: "", tagId: "" }))}>
+                  <option value="">Wszyscy klienci</option>
+                  {clients.map((cl) => <option key={cl.id} value={cl.id}>{cl.name}</option>)}
+                </select>
+              </div>
+              <div className="comp-filter-row">
                 <label className="comp-filter-label">Kampania</label>
                 <select className="comp-filter-input" value={filtersA.campaignId} onChange={(e) => setFiltersA((f) => ({ ...f, campaignId: e.target.value }))}>
                   <option value="">Wszystkie</option>
-                  {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {(filtersA.clientId ? campaigns.filter((c) => c.clientId === filtersA.clientId) : campaigns).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="comp-filter-row">
                 <label className="comp-filter-label">Tag</label>
                 <select className="comp-filter-input" value={filtersA.tagId} onChange={(e) => setFiltersA((f) => ({ ...f, tagId: e.target.value }))}>
                   <option value="">Wszystkie</option>
-                  {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {(filtersA.clientId ? tags.filter((t) => t.clientId === filtersA.clientId) : tags).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <button className="comp-filter-btn comp-filter-btn--a" onClick={() => fetchPanel(filtersA, setStatsA, setLoadingA)} disabled={loadingA}>
@@ -369,17 +390,24 @@ export default function ComparisonPage() {
                 <input type="date" className="comp-filter-input comp-filter-date" value={filtersB.to} onChange={(e) => setFiltersB((f) => ({ ...f, to: e.target.value }))} />
               </div>
               <div className="comp-filter-row">
+                <label className="comp-filter-label">Klient</label>
+                <select className="comp-filter-input" value={filtersB.clientId} onChange={(e) => setFiltersB((f) => ({ ...f, clientId: e.target.value, campaignId: "", tagId: "" }))}>
+                  <option value="">Wszyscy klienci</option>
+                  {clients.map((cl) => <option key={cl.id} value={cl.id}>{cl.name}</option>)}
+                </select>
+              </div>
+              <div className="comp-filter-row">
                 <label className="comp-filter-label">Kampania</label>
                 <select className="comp-filter-input" value={filtersB.campaignId} onChange={(e) => setFiltersB((f) => ({ ...f, campaignId: e.target.value }))}>
                   <option value="">Wszystkie</option>
-                  {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {(filtersB.clientId ? campaigns.filter((c) => c.clientId === filtersB.clientId) : campaigns).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="comp-filter-row">
                 <label className="comp-filter-label">Tag</label>
                 <select className="comp-filter-input" value={filtersB.tagId} onChange={(e) => setFiltersB((f) => ({ ...f, tagId: e.target.value }))}>
                   <option value="">Wszystkie</option>
-                  {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {(filtersB.clientId ? tags.filter((t) => t.clientId === filtersB.clientId) : tags).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <button className="comp-filter-btn comp-filter-btn--b" onClick={() => fetchPanel(filtersB, setStatsB, setLoadingB)} disabled={loadingB}>
