@@ -26,9 +26,9 @@ import GuestsTable from "@/components/dashboard/GuestsTable";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardFilterBar from "@/components/dashboard/DashboardFilterBar";
-import ComparisonToggle from "@/components/dashboard/ComparisonToggle";
+import type { ComparisonMode } from "@/components/dashboard/ComparisonToggle";
 import TagManagement from "@/components/dashboard/TagManagement";
-import { getPreviousPeriod } from "@/lib/periodComparison";
+import { getComparisonPeriods } from "@/lib/periodComparison";
 import type {
   Devices, TopTag, Language,
   NfcChip, HourlyData, StatsData,
@@ -49,9 +49,9 @@ import {
 
 function DashboardSkeleton() {
   return (
-    <div style={{ minHeight: "100vh", background: "#0B0F1A" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       {/* fake header */}
-      <div style={{ height: 56, background: "#151D35", borderBottom: "1px solid rgba(148,163,184,0.08)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
+      <div style={{ height: 56, background: "var(--surface)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
         <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 10 }} />
         <div className="skeleton skeleton-text" style={{ width: 100, height: 20, marginBottom: 0 }} />
       </div>
@@ -100,10 +100,10 @@ function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0B0F1A" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(148,163,184,0.15)", borderTopColor: "#38BDF8", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ color: "#94A3B8" }}>Ladowanie...</p>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid var(--border-hover)", borderTopColor: "var(--accent)", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "var(--txt-sec)" }}>Ladowanie...</p>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </div>
@@ -196,6 +196,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
 
   // period comparison
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("off");
   const [previousStats, setPreviousStats] = useState<StatsData | null>(null);
 
   // create tag
@@ -344,16 +345,23 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       // Use opts.source if provided (avoids stale closure after setScanSourceFilter)
       const effectiveSource = opts?.source !== undefined ? opts.source : scanSourceFilter;
       if (effectiveSource !== "all") params.set("source", effectiveSource);
-      // Comparison: build previous period fetch in parallel
+      // Comparison: for preset modes (day/week/month) override the main fetch dates too
+      if (comparisonEnabled && comparisonMode !== "off" && comparisonMode !== "custom") {
+        const periods = getComparisonPeriods(comparisonMode, effectiveFrom || null, effectiveTo || null);
+        if (periods) {
+          params.set("from", periods.current.from);
+          params.set("to", periods.current.to);
+        }
+      }
+
       const fetchPromises: Promise<Response>[] = [fetch(`/api/stats?${params.toString()}`)];
 
-      if (comparisonEnabled && effectiveFrom) {
-        const periods = getPreviousPeriod(effectiveFrom, effectiveTo || null);
+      if (comparisonEnabled && comparisonMode !== "off") {
+        const periods = getComparisonPeriods(comparisonMode, effectiveFrom || null, effectiveTo || null);
         if (periods) {
           const prevParams = new URLSearchParams(params);
           prevParams.set("from", periods.previous.from);
           prevParams.set("to", periods.previous.to);
-          // Remove weekOffset for comparison — we want the same scope
           fetchPromises.push(fetch(`/api/stats?${prevParams.toString()}`));
         }
       }
@@ -376,7 +384,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       setFetchError(`Blad polaczenia: ${e}`);
       console.error("Stats fetch failed:", e);
     }
-  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter, selectedTagIds, comparisonEnabled]);
+  }, [dateFrom, dateTo, timeFrom, timeTo, tagFilter, weekOffset, selectedClientId, selectedCampaignId, scanSourceFilter, selectedTagIds, comparisonEnabled, comparisonMode]);
 
   const fetchScans = useCallback(async (opts?: { page?: number; sortBy?: string; sortDir?: "asc" | "desc"; nfcId?: string | null; source?: "all" | "nfc" | "qr" }) => {
     setScanLoading(true);
@@ -1253,7 +1261,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
   /* ================================================================ */
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0B0F1A", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", overflowX: "hidden" }}>
       {/* ---- Spinner keyframes ---- */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -1326,8 +1334,6 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
           {/* ============================================================ */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
             <DashboardFilterBar
               clients={clients}
               campaigns={campaigns}
@@ -1336,18 +1342,13 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
               fetchScans={fetchScans}
               setLoading={setLoading}
               onResetFilters={handleResetFilters}
+              comparisonEnabled={comparisonEnabled}
+              comparisonMode={comparisonMode}
             />
-          </div>
-          <ComparisonToggle
-            enabled={comparisonEnabled}
-            onChange={setComparisonEnabled}
-            disabled={!dateFrom && !dateTo}
-          />
-        </div>
 
         {/* ---- Error display ---- */}
         {fetchError && (
-          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+          <div style={{ margin: "20px 0", padding: "16px 20px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--error)", fontSize: 13, fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
             {fetchError}
           </div>
         )}
@@ -1465,10 +1466,10 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
               <section className="card" style={{ marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                   <div>
-                    <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 2 }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--txt-muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 2 }}>
                       <span style={{ marginRight: 8 }}>📱</span>Skanowania QR
                     </h3>
-                    <p style={{ fontSize: 12, color: "#64748B" }}>
+                    <p style={{ fontSize: 12, color: "var(--txt-muted)" }}>
                       {scanSourceFilter === "qr"
                         ? `Skany wyłącznie ze źródła QR — ${stats.kpi.totalScans} łącznie`
                         : "Statystyki akcji (wszystkie źródła). Filtruj QR aby zobaczyć tylko skany z kodów QR."}
@@ -1478,17 +1479,17 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {topTags.slice(0, 5).map((t, idx) => (
                     <div key={t.tagId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 10, color: "#3d4250", minWidth: 16, textAlign: "right" }}>{idx + 1}</span>
+                      <span style={{ fontSize: 10, color: "var(--border-hover)", minWidth: 16, textAlign: "right" }}>{idx + 1}</span>
                       <button
                         onClick={() => setTagFilter(t.tagId)}
-                        style={{ background: "none", border: "none", color: "#7dd3fc", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0, textAlign: "left", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        style={{ background: "none", border: "none", color: "var(--accent-light)", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0, textAlign: "left", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                         title={t.tagId}
                       >{t.tagName}</button>
-                      <span style={{ fontSize: 11, color: "#F1F5F9", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{t.count}</span>
+                      <span style={{ fontSize: 11, color: "var(--txt)", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{t.count}</span>
                       <div style={{ width: 60, height: 4, background: "transparent", borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
-                        <div style={{ width: `${t.percent}%`, height: "100%", background: "#10b981", borderRadius: 2 }} />
+                        <div style={{ width: `${t.percent}%`, height: "100%", background: "var(--success)", borderRadius: 2 }} />
                       </div>
-                      <span style={{ fontSize: 10, color: "#64748B", minWidth: 28 }}>{t.percent}%</span>
+                      <span style={{ fontSize: 10, color: "var(--txt-muted)", minWidth: 28 }}>{t.percent}%</span>
                     </div>
                   ))}
                 </div>
@@ -1525,7 +1526,16 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
                 setGuestScans([]);
                 setGuestLoading(true);
                 try {
-                  const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(ipHash)}`);
+                  const gp = new URLSearchParams();
+                  gp.set("ipHash", ipHash);
+                  if (dateFrom) gp.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+                  if (dateTo) gp.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+                  if (scanSourceFilter !== "all") gp.set("source", scanSourceFilter);
+                  if (selectedTagIds.length > 0) gp.set("tags", selectedTagIds.join(","));
+                  else if (tagFilter) gp.set("tagId", tagFilter);
+                  if (selectedCampaignId) gp.set("campaignId", selectedCampaignId);
+                  if (selectedClientId) gp.set("clientId", selectedClientId);
+                  const res = await fetch(`/api/scans/guest?${gp.toString()}`);
                   const data = await res.json();
                   setGuestScans(data.rows ?? []);
                 } catch { /* ignore */ }
@@ -1552,6 +1562,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
                     if (selectedClientId) params.set("clientId", selectedClientId);
                     if (dateFrom) params.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
                     if (dateTo) params.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+                    if (scanSourceFilter !== "all") params.set("source", scanSourceFilter);
                     const res = await fetch(`/api/scans/guests?${params.toString()}`);
                     const data = await res.json();
                     setGuestsData(data.guests ?? []);
@@ -1565,7 +1576,16 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
                 setGuestScans([]);
                 setGuestLoading(true);
                 try {
-                  const res = await fetch(`/api/scans/guest?ipHash=${encodeURIComponent(ipHash)}`);
+                  const gp = new URLSearchParams();
+                  gp.set("ipHash", ipHash);
+                  if (dateFrom) gp.set("from", timeFrom ? `${dateFrom}T${timeFrom}` : dateFrom);
+                  if (dateTo) gp.set("to", timeTo ? `${dateTo}T${timeTo}` : dateTo);
+                  if (scanSourceFilter !== "all") gp.set("source", scanSourceFilter);
+                  if (selectedTagIds.length > 0) gp.set("tags", selectedTagIds.join(","));
+                  else if (tagFilter) gp.set("tagId", tagFilter);
+                  if (selectedCampaignId) gp.set("campaignId", selectedCampaignId);
+                  if (selectedClientId) gp.set("clientId", selectedClientId);
+                  const res = await fetch(`/api/scans/guest?${gp.toString()}`);
                   const data = await res.json();
                   setGuestScans(data.rows ?? []);
                 } catch { /* ignore */ }
@@ -1654,7 +1674,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       <div
         style={{
           position: "fixed", bottom: 32, left: "50%", transform: `translateX(-50%) translateY(${copyToast ? 0 : 16}px)`,
-          background: "#1a2d1a", border: "1px solid #22c55e", color: "#86efac",
+          background: "rgba(22,163,74,0.15)", border: "1px solid var(--success)", color: "var(--success)",
           borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600,
           display: "flex", alignItems: "center", gap: 8, zIndex: 99999,
           opacity: copyToast ? 1 : 0, pointerEvents: "none",

@@ -24,8 +24,9 @@ import HourlyChart from "@/components/dashboard/charts/HourlyChart";
 import WeeklyChart from "@/components/dashboard/charts/WeeklyChart";
 import ViewerDateRangePicker from "@/components/dashboard/ViewerDateRangePicker";
 import ComparisonToggle from "@/components/dashboard/ComparisonToggle";
+import type { ComparisonMode } from "@/components/dashboard/ComparisonToggle";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { getPreviousPeriod } from "@/lib/periodComparison";
+import { getComparisonPeriods } from "@/lib/periodComparison";
 
 /* ------------------------------------------------------------------ */
 /*  Tag type used by viewer (subset — API returns more than TagFull)    */
@@ -82,6 +83,7 @@ export default function ViewerDashboard({ session }: Props) {
 
   /* -- Period comparison state -- */
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("off");
   const [previousStats, setPreviousStats] = useState<StatsData | null>(null);
 
   /* -- Date change handler -- */
@@ -98,6 +100,15 @@ export default function ViewerDashboard({ session }: Props) {
       if (dateFrom) params.set("from", dateFrom);
       if (dateTo) params.set("to", dateTo);
 
+      // Comparison: for preset modes override the main fetch dates too
+      if (comparisonEnabled && comparisonMode !== "off" && comparisonMode !== "custom") {
+        const periods = getComparisonPeriods(comparisonMode, dateFrom, dateTo);
+        if (periods) {
+          params.set("from", periods.current.from);
+          params.set("to", periods.current.to);
+        }
+      }
+
       const fetches: Promise<Response>[] = [
         fetch(`/api/stats?${params.toString()}`),
         fetch("/api/tags"),
@@ -107,8 +118,8 @@ export default function ViewerDashboard({ session }: Props) {
 
       // Comparison: fetch previous period stats in parallel
       let prevFetchIdx = -1;
-      if (comparisonEnabled && dateFrom) {
-        const periods = getPreviousPeriod(dateFrom, dateTo);
+      if (comparisonEnabled && comparisonMode !== "off") {
+        const periods = getComparisonPeriods(comparisonMode, dateFrom, dateTo);
         if (periods) {
           const prevParams = new URLSearchParams();
           prevParams.set("from", periods.previous.from);
@@ -150,7 +161,7 @@ export default function ViewerDashboard({ session }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [selectedClientId, dateFrom, dateTo, comparisonEnabled]);
+  }, [selectedClientId, dateFrom, dateTo, comparisonEnabled, comparisonMode]);
 
   useEffect(() => {
     fetchAll();
@@ -295,8 +306,11 @@ export default function ViewerDashboard({ session }: Props) {
           <ViewerDateRangePicker onChange={handleDateChange} />
           <ComparisonToggle
             enabled={comparisonEnabled}
-            onChange={setComparisonEnabled}
-            disabled={!dateFrom}
+            mode={comparisonMode}
+            onChange={(enabled, mode) => {
+              setComparisonEnabled(enabled);
+              setComparisonMode(mode);
+            }}
           />
         </div>
 

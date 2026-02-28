@@ -38,25 +38,25 @@ export default function VideoRetentionChart({ videoStats, formatWatchTime }: Pro
     <section className="card" style={{ marginBottom: 24 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+          <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--txt-muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
             Retencja video
           </h3>
-          <p style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+          <p style={{ fontSize: 12, color: "var(--txt-muted)", marginTop: 2 }}>
             Ile % widzow dotarlo do kazdego momentu
           </p>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: "#10b981" }}>{videoStats.plays}</p>
-            <p style={{ fontSize: 10, color: "#94A3B8" }}>Odtworzen</p>
+            <p style={{ fontSize: 22, fontWeight: 700, color: "var(--success)" }}>{videoStats.plays}</p>
+            <p style={{ fontSize: 10, color: "var(--txt-sec)" }}>Odtworzen</p>
           </div>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: "#60a5fa" }}>{videoStats.completions}</p>
-            <p style={{ fontSize: 10, color: "#94A3B8" }}>Do konca</p>
+            <p style={{ fontSize: 22, fontWeight: 700, color: "var(--accent)" }}>{videoStats.completions}</p>
+            <p style={{ fontSize: 10, color: "var(--txt-sec)" }}>Do konca</p>
           </div>
           <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: "#7dd3fc" }}>{formatWatchTime(videoStats.avgWatchTime)}</p>
-            <p style={{ fontSize: 10, color: "#94A3B8" }}>Sred. czas</p>
+            <p style={{ fontSize: 22, fontWeight: 700, color: "var(--accent-light)" }}>{formatWatchTime(videoStats.avgWatchTime)}</p>
+            <p style={{ fontSize: 10, color: "var(--txt-sec)" }}>Sred. czas</p>
           </div>
         </div>
       </div>
@@ -66,8 +66,8 @@ export default function VideoRetentionChart({ videoStats, formatWatchTime }: Pro
         <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", height: "auto", maxHeight: 220 }}>
           <defs>
             <linearGradient id="retentionGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="var(--success)" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="var(--success)" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -76,7 +76,7 @@ export default function VideoRetentionChart({ videoStats, formatWatchTime }: Pro
             const y = padT + innerH - (v / 100) * innerH;
             return (
               <g key={v}>
-                <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke="rgba(148,163,184,0.15)" strokeWidth="1" />
+                <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke="var(--border-hover)" strokeWidth="1" />
                 <text x={padL - 6} y={y + 4} fill="#6060a0" fontSize="10" textAnchor="end">{v}%</text>
               </g>
             );
@@ -86,12 +86,12 @@ export default function VideoRetentionChart({ videoStats, formatWatchTime }: Pro
           <path d={areaPath} fill="url(#retentionGrad)" />
 
           {/* Line */}
-          <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={linePath} fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
           {/* Data points + labels */}
           {points.map((p, i) => (
             <g key={i}>
-              <circle cx={xCoords[i]} cy={yCoords[i]} r="5" fill="#0f0f1a" stroke="#10b981" strokeWidth="2.5" />
+              <circle cx={xCoords[i]} cy={yCoords[i]} r="5" fill="#0f0f1a" stroke="var(--success)" strokeWidth="2.5" />
               <text x={xCoords[i]} y={yCoords[i] - 12} fill="#f0f0ff" fontSize="11" fontWeight="700" textAnchor="middle">
                 {p.pct}%
               </text>
@@ -125,9 +125,9 @@ export default function VideoRetentionChart({ videoStats, formatWatchTime }: Pro
               <p style={{
                 fontSize: 18,
                 fontWeight: 700,
-                color: p.pct >= 75 ? "#10b981" : p.pct >= 50 ? "#60a5fa" : p.pct >= 25 ? "#f59e0b" : "#f87171",
+                color: p.pct >= 75 ? "var(--success)" : p.pct >= 50 ? "var(--accent)" : p.pct >= 25 ? "var(--warning)" : "var(--error)",
               }}>{p.pct}%</p>
-              <p style={{ fontSize: 10, color: "#94A3B8" }}>dotarli do {p.label}</p>
+              <p style={{ fontSize: 10, color: "var(--txt-sec)" }}>dotarli do {p.label}</p>
             </div>
           ))}
         </div>

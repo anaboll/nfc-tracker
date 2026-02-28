@@ -282,6 +282,72 @@ async function main() {
     console.log("VideoEvent telemetry columns ensured");
 
     // =======================================================================
+    // 7. USER TABLE – role + viewerSections
+    // =======================================================================
+    console.log("\n--- User table (role, viewerSections) ---");
+
+    await run("User.role column",
+      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'admin'`);
+    await run("User.viewerSections column",
+      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "viewerSections" TEXT`);
+    console.log("User columns ensured");
+
+    // =======================================================================
+    // 8. CLIENT TABLE – tier column
+    // =======================================================================
+    console.log("\n--- Client.tier ---");
+
+    await run("Client.tier column",
+      `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "tier" TEXT NOT NULL DEFAULT 'basic'`);
+    console.log("Client.tier ensured");
+
+    // =======================================================================
+    // 9. USERCLIENT junction table (viewer → client access)
+    // =======================================================================
+    console.log("\n--- UserClient table ---");
+
+    await run("UserClient table",
+      `CREATE TABLE IF NOT EXISTS "UserClient" (
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "clientId" TEXT NOT NULL,
+        CONSTRAINT "UserClient_pkey" PRIMARY KEY ("id")
+      )`);
+    // Unique constraint (idempotent via DO block)
+    await run("UserClient unique constraint",
+      `DO $$ BEGIN
+        ALTER TABLE "UserClient" ADD CONSTRAINT "UserClient_userId_clientId_key" UNIQUE ("userId", "clientId");
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`);
+    // Foreign keys (idempotent via DO block)
+    await run("UserClient.userId FK",
+      `DO $$ BEGIN
+        ALTER TABLE "UserClient" ADD CONSTRAINT "UserClient_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`);
+    await run("UserClient.clientId FK",
+      `DO $$ BEGIN
+        ALTER TABLE "UserClient" ADD CONSTRAINT "UserClient_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`);
+    await run("UserClient.userId index",
+      `CREATE INDEX IF NOT EXISTS "UserClient_userId_idx" ON "UserClient"("userId")`);
+    await run("UserClient.clientId index",
+      `CREATE INDEX IF NOT EXISTS "UserClient_clientId_idx" ON "UserClient"("clientId")`);
+    console.log("UserClient table ensured");
+
+    // =======================================================================
+    // 10. TAG – editToken + editTokenExp (self-service vCard editing)
+    // =======================================================================
+    console.log("\n--- Tag.editToken + Tag.editTokenExp ---");
+
+    await run("Tag.editToken column",
+      `ALTER TABLE "Tag" ADD COLUMN IF NOT EXISTS "editToken" TEXT`);
+    await run("Tag.editTokenExp column",
+      `ALTER TABLE "Tag" ADD COLUMN IF NOT EXISTS "editTokenExp" TIMESTAMP(3)`);
+    console.log("Tag edit token columns ensured");
+
+    // =======================================================================
     // COMMIT transaction
     // =======================================================================
     await prisma.$executeRawUnsafe("COMMIT");
@@ -319,7 +385,10 @@ async function main() {
         "ipPrefix", "ipVersion",
       ],
       Campaign: ["id", "name", "clientId", "isActive"],
-      Tag: ["id", "clientId", "campaignId"],
+      Tag: ["id", "clientId", "campaignId", "editToken", "editTokenExp"],
+      User: ["id", "email", "password", "role", "viewerSections"],
+      Client: ["id", "name", "slug", "isActive", "tier"],
+      UserClient: ["id", "userId", "clientId"],
     };
 
     const missing = [];

@@ -147,7 +147,7 @@ export default function TagFormVCardSection({
                 <div key={f.key} style={styles.field}>
                   <label style={styles.label}>
                     {f.label}
-                    {f.required && <span style={{ color: "#f87171" }}> *</span>}
+                    {f.required && <span style={{ color: "var(--error)" }}> *</span>}
                   </label>
                   <input
                     style={styles.input}
@@ -173,15 +173,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 8,
-    background: "#151D35",
-    border: "1px solid #1C2541",
+    background: "var(--surface)",
+    border: "1px solid var(--surface-2)",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     marginBottom: 16,
   },
   subsectionTitle: {
@@ -189,7 +189,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#64748B",
+    color: "var(--txt-muted)",
     marginBottom: 10,
   },
   fieldGrid: {
@@ -205,14 +205,14 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontSize: 12,
     fontWeight: 600,
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
   },
   input: {
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#F1F5F9",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt)",
     fontSize: 13,
     outline: "none",
     boxSizing: "border-box" as const,
@@ -223,9 +223,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#94A3B8",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt-sec)",
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
@@ -239,13 +239,13 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "auto",
     fontSize: 11,
     fontWeight: 500,
-    color: "#64748B",
+    color: "var(--txt-muted)",
     textTransform: "none" as const,
     letterSpacing: 0,
   },
   error: {
     fontSize: 12,
-    color: "#f87171",
+    color: "var(--error)",
     fontWeight: 500,
   },
 };

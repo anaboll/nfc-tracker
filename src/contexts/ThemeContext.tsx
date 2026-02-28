@@ -35,14 +35,13 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
 
-  // Read saved preference on mount
+  // Read saved preference on mount (default is always dark)
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme | null;
     if (saved === "light" || saved === "dark") {
       setThemeState(saved);
-    } else if (window.matchMedia?.("(prefers-color-scheme: light)").matches) {
-      setThemeState("light");
     }
+    // No prefers-color-scheme detection — app defaults to dark
   }, []);
 
   // Sync to DOM + localStorage

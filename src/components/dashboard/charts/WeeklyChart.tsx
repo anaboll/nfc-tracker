@@ -22,7 +22,7 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
           marginBottom: 20,
         }}
       >
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--txt-muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
           Trend tygodniowy
         </h3>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -31,8 +31,8 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
               onClick={() => onWeekChange(-1)}
               style={{
                 background: "transparent",
-                border: "1px solid rgba(148,163,184,0.08)",
-                color: "#94A3B8",
+                border: "1px solid var(--border)",
+                color: "var(--txt-sec)",
                 borderRadius: 6,
                 width: 32,
                 height: 32,
@@ -43,13 +43,13 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
                 fontSize: 16,
                 transition: "border-color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#38BDF8")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
             >
               &#8249;
             </button>
           )}
-          <span style={{ fontSize: 12, color: "#94A3B8", minWidth: 100, textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "var(--txt-sec)", minWidth: 100, textAlign: "center" }}>
             {weekly
               ? formatWeekRange(weekly.weekStart, weekly.weekEnd)
               : "---"}
@@ -60,8 +60,8 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
               disabled={(weekOffset ?? 0) >= 0}
               style={{
                 background: "transparent",
-                border: "1px solid rgba(148,163,184,0.08)",
-                color: (weekOffset ?? 0) >= 0 ? "#3d4250" : "#a0a0c0",
+                border: "1px solid var(--border)",
+                color: (weekOffset ?? 0) >= 0 ? "var(--border-hover)" : "var(--txt-sec)",
                 borderRadius: 6,
                 width: 32,
                 height: 32,
@@ -73,9 +73,9 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
                 transition: "border-color 0.2s",
               }}
               onMouseEnter={(e) => {
-                if ((weekOffset ?? 0) < 0) e.currentTarget.style.borderColor = "#38BDF8";
+                if ((weekOffset ?? 0) < 0) e.currentTarget.style.borderColor = "var(--accent)";
               }}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
             >
               &#8250;
             </button>
@@ -107,10 +107,10 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
                 gap: 4,
               }}
             >
-              <span style={{ fontSize: 10, fontWeight: 600, color: d.count > 0 ? "#7dd3fc" : "#3d4250" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: d.count > 0 ? "var(--accent-light)" : "var(--border-hover)" }}>
                 {d.count}
               </span>
-              <span style={{ fontSize: 9, fontWeight: 600, color: d.uniqueUsers > 0 ? "#10b981" : "#3d4250" }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: d.uniqueUsers > 0 ? "var(--success)" : "var(--border-hover)" }}>
                 {d.uniqueUsers} un.
               </span>
               <div style={{ position: "relative", width: "100%", maxWidth: 48, height: Math.max(barH, 4) }}>
@@ -123,7 +123,7 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
                     right: 0,
                     height: Math.max(barH, 4),
                     borderRadius: "6px 6px 2px 2px",
-                    background: d.count > 0 ? "#38BDF8" : "#243052",
+                    background: d.count > 0 ? "var(--accent)" : "var(--surface-3)",
                     transition: "height 0.4s ease",
                     opacity: 0.35,
                   }}
@@ -137,12 +137,12 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
                     right: "15%",
                     height: Math.max(uBarH, d.uniqueUsers > 0 ? 4 : 0),
                     borderRadius: "4px 4px 2px 2px",
-                    background: d.uniqueUsers > 0 ? "#10b981" : "transparent",
+                    background: d.uniqueUsers > 0 ? "var(--success)" : "transparent",
                     transition: "height 0.4s ease",
                   }}
                 />
               </div>
-              <span style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500 }}>
+              <span style={{ fontSize: 11, color: "var(--txt-sec)", fontWeight: 500 }}>
                 {d.day}
               </span>
             </div>
@@ -150,11 +150,11 @@ export default function WeeklyChart({ weekly, maxWeeklyCount, weekOffset, onWeek
         })}
       </div>
       <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
-        <span style={{ fontSize: 10, color: "#7dd3fc", display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#7dd3fc", opacity: 0.5, display: "inline-block" }} /> Wszystkie
+        <span style={{ fontSize: 10, color: "var(--accent-light)", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent-light)", opacity: 0.5, display: "inline-block" }} /> Wszystkie
         </span>
-        <span style={{ fontSize: 10, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10b981", display: "inline-block" }} /> Unikalne
+        <span style={{ fontSize: 10, color: "var(--success)", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--success)", display: "inline-block" }} /> Unikalne
         </span>
       </div>
     </div>

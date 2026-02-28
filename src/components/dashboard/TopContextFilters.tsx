@@ -200,7 +200,7 @@ function Combobox({
             left: 0,
             minWidth: "100%",
             width: Math.max(width, 200),
-            background: "#14171e",
+            background: "var(--bg)",
             border: "1px solid #2a2e38",
             borderRadius: 10,
             boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
@@ -286,7 +286,7 @@ function Combobox({
                       padding: "9px 14px",
                       background: isSelected ? "rgba(0,200,160,0.08)" : "transparent",
                       border: "none",
-                      color: isSelected ? (opt.accent ?? "#2ee8c0") : "#c8d0dc",
+                      color: isSelected ? (opt.accent ?? "#2ee8c0") : "var(--txt)",
                       fontSize: 13,
                       fontWeight: isSelected ? 600 : 400,
                       cursor: "pointer",
@@ -379,7 +379,7 @@ export function TopContextFilters({
     ...campaigns.map((c) => ({
       id: c.id,
       label: c.name,
-      accent: "#60a5fa",
+      accent: "var(--accent)",
     })),
   ];
 

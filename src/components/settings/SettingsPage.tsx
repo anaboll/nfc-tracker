@@ -6,25 +6,6 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 
 /* ------------------------------------------------------------------ */
-/*  Section definitions for viewer dashboard preferences               */
-/* ------------------------------------------------------------------ */
-
-const DASHBOARD_SECTIONS = [
-  { key: "kpi", label: "KPI (statystyki glowne)" },
-  { key: "vcards", label: "Moje wizytowki" },
-  { key: "tags", label: "Tagi / akcje" },
-  { key: "hourly", label: "Wykres godzinowy" },
-  { key: "weekly", label: "Wykres tygodniowy" },
-  { key: "geo", label: "Kraje" },
-  { key: "cities", label: "Miasta" },
-  { key: "languages", label: "Jezyki" },
-  { key: "devices", label: "Urzadzenia" },
-  { key: "nfcChips", label: "Chipy NFC" },
-];
-
-const ALL_SECTION_KEYS = DASHBOARD_SECTIONS.map((s) => s.key);
-
-/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -46,10 +27,6 @@ export default function SettingsPage({ session }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  /* -- Dashboard sections state -- */
-  const [viewerSections, setViewerSections] = useState<string[]>(ALL_SECTION_KEYS);
-  const [savingSections, setSavingSections] = useState(false);
-
   /* -- Load profile -- */
   useEffect(() => {
     fetch("/api/users/me")
@@ -59,9 +36,6 @@ export default function SettingsPage({ session }: Props) {
       })
       .then((data) => {
         setProfile({ name: data.name || "", email: data.email || "", role: data.role || "viewer" });
-        if (data.viewerSections && Array.isArray(data.viewerSections)) {
-          setViewerSections(data.viewerSections);
-        }
       })
       .catch(() => {
         toastError("Nie udalo sie wczytac profilu");
@@ -106,34 +80,6 @@ export default function SettingsPage({ session }: Props) {
       setChangingPassword(false);
     }
   };
-
-  /* -- Toggle section -- */
-  const toggleSection = (key: string) => {
-    setViewerSections((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
-
-  /* -- Save sections -- */
-  const handleSaveSections = async () => {
-    setSavingSections(true);
-    try {
-      const res = await fetch("/api/users/me", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ viewerSections }),
-      });
-
-      if (!res.ok) throw new Error("Failed");
-      toastSuccess("Preferencje zapisane");
-    } catch {
-      toastError("Nie udalo sie zapisac preferencji");
-    } finally {
-      setSavingSections(false);
-    }
-  };
-
-  const isViewer = profile?.role !== "admin";
 
   if (loading) {
     return (
@@ -235,34 +181,6 @@ export default function SettingsPage({ session }: Props) {
         </form>
       </div>
 
-      {/* Dashboard preferences (viewer only) */}
-      {isViewer && (
-        <div className="settings-card">
-          <h2 className="settings-section-title">Sekcje dashboardu</h2>
-          <p className="settings-hint">Wybierz ktore sekcje widoczne na Twoim panelu</p>
-          <div className="settings-sections-grid">
-            {DASHBOARD_SECTIONS.map((section) => (
-              <label key={section.key} className="settings-checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={viewerSections.includes(section.key)}
-                  onChange={() => toggleSection(section.key)}
-                  className="settings-checkbox"
-                />
-                <span className="settings-checkbox-label">{section.label}</span>
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="settings-btn settings-btn--primary"
-            onClick={handleSaveSections}
-            disabled={savingSections}
-          >
-            {savingSections ? "Zapisywanie..." : "Zapisz preferencje"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

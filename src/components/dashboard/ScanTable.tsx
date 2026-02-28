@@ -44,13 +44,13 @@ export default function ScanTable({
     <section ref={scanTableRef} className="card" style={{ marginBottom: 24 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
+          <h3 style={{ fontSize: 11, fontWeight: 600, color: "var(--txt-muted)", textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
             Lista skanow
           </h3>
           <button
             onClick={onToggle}
             style={{
-              background: showScanTable ? "rgba(0,200,160,0.12)" : "#243052",
+              background: showScanTable ? "rgba(0,200,160,0.12)" : "var(--surface-3)",
               border: `1px solid ${showScanTable ? "rgba(0,200,160,0.3)" : "rgba(148,163,184,0.15)"}`,
               color: showScanTable ? "#7dd3fc" : "#94A3B8",
               borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600,
@@ -72,14 +72,14 @@ export default function ScanTable({
         {showScanTable && scanNfcFilter && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
             <span style={{ fontSize: 11, color: "#a78bfa" }}>NFC: {scanNfcFilter}</span>
-            <button onClick={() => onNfcFilter(null)} style={{ background: "none", border: "none", color: "#64748B", cursor: "pointer", fontSize: 14 }}>×</button>
+            <button onClick={() => onNfcFilter(null)} style={{ background: "none", border: "none", color: "var(--txt-muted)", cursor: "pointer", fontSize: 14 }}>×</button>
           </div>
         )}
       </div>
 
       {showScanTable && (
         <>
-          {scanLoading && <p style={{ fontSize: 12, color: "#64748B", padding: "20px 0", textAlign: "center" }}>Ladowanie...</p>}
+          {scanLoading && <p style={{ fontSize: 12, color: "var(--txt-muted)", padding: "20px 0", textAlign: "center" }}>Ladowanie...</p>}
           {scanData && !scanLoading && (
             <>
               <div style={{ overflowX: "auto" }}>
@@ -115,8 +115,8 @@ export default function ScanTable({
                           )}
                         </th>
                       ))}
-                      <th style={{ textAlign: "left", padding: "8px 8px", color: "#94A3B8", fontWeight: 600 }}>Jezyk</th>
-                      <th style={{ textAlign: "left", padding: "8px 8px", color: "#94A3B8", fontWeight: 600 }} title="Czy ta osoba skanowala te sama akcje wczesniej">Ponowny</th>
+                      <th style={{ textAlign: "left", padding: "8px 8px", color: "var(--txt-sec)", fontWeight: 600 }}>Jezyk</th>
+                      <th style={{ textAlign: "left", padding: "8px 8px", color: "var(--txt-sec)", fontWeight: 600 }} title="Czy ta osoba skanowala te sama akcje wczesniej">Ponowny</th>
                       <th
                         onClick={() => onSort("ipHash")}
                         style={{ textAlign: "left", padding: "8px 8px", color: scanSortBy === "ipHash" ? "#7dd3fc" : "#94A3B8", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}
@@ -132,56 +132,56 @@ export default function ScanTable({
                         onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        <td style={{ padding: "6px 8px", color: "#64748B", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+                        <td style={{ padding: "6px 8px", color: "var(--txt-muted)", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
                           {scan.seq}
                         </td>
-                        <td style={{ padding: "6px 8px", color: "#F1F5F9", fontFamily: "var(--font-mono)", fontSize: 10 }}>
+                        <td style={{ padding: "6px 8px", color: "var(--txt)", fontFamily: "var(--font-mono)", fontSize: 10 }}>
                           {new Date(scan.timestamp).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                         </td>
                         <td style={{ padding: "6px 8px" }}>
                           <button
                             onClick={() => onTagFilter(scan.tagId)}
-                            style={{ background: "none", border: "none", color: "#7dd3fc", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textDecoration: "underline" }}
+                            style={{ background: "none", border: "none", color: "var(--accent-light)", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textDecoration: "underline" }}
                             title={`Filtruj po: ${scan.tagName}`}
                           >
                             {scan.tagName}
                           </button>
-                          <span style={{ fontSize: 9, color: "#64748B", marginLeft: 4 }}>{scan.tagId}</span>
+                          <span style={{ fontSize: 9, color: "var(--txt-muted)", marginLeft: 4 }}>{scan.tagId}</span>
                         </td>
                         <td style={{ padding: "6px 8px" }}>
                           {scan.eventSource === "qr" ? (
-                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
+                            <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "var(--success)", border: "1px solid rgba(16,185,129,0.25)", letterSpacing: 0.5 }}>QR</span>
                           ) : scan.nfcId ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                              <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "#7dd3fc", border: "1px solid rgba(0,200,160,0.25)", letterSpacing: 0.5 }}>NFC</span>
+                              <span style={{ padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700, background: "rgba(0,200,160,0.12)", color: "var(--accent-light)", border: "1px solid rgba(0,200,160,0.25)", letterSpacing: 0.5 }}>NFC</span>
                               <button
                                 onClick={() => onNfcFilter(scan.nfcId)}
                                 style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10, fontFamily: "var(--font-mono)", padding: 0, textDecoration: "underline" }}
                               >{scan.nfcId}</button>
                             </div>
                           ) : (
-                            <span style={{ color: "#3d4250" }}>—</span>
+                            <span style={{ color: "var(--border-hover)" }}>—</span>
                           )}
                         </td>
-                        <td style={{ padding: "6px 8px", color: "#94A3B8" }}>
+                        <td style={{ padding: "6px 8px", color: "var(--txt-sec)" }}>
                           <span style={{
                             padding: "2px 6px", borderRadius: 3, fontSize: 10, fontWeight: 600,
                             background: scan.deviceType === "iOS" ? "rgba(96,165,250,0.1)" : scan.deviceType === "Android" ? "rgba(16,185,129,0.1)" : "rgba(139,149,168,0.1)",
-                            color: scan.deviceType === "iOS" ? "#60a5fa" : scan.deviceType === "Android" ? "#10b981" : "#94A3B8",
+                            color: scan.deviceType === "iOS" ? "var(--accent)" : scan.deviceType === "Android" ? "#10b981" : "#94A3B8",
                           }}>
                             {scan.deviceType}
                           </span>
                         </td>
-                        <td style={{ padding: "6px 8px", color: "#94A3B8" }}>
+                        <td style={{ padding: "6px 8px", color: "var(--txt-sec)" }}>
                           {scan.country ? `${getCountryFlag(scan.country)} ${scan.country}` : "—"}
                         </td>
-                        <td style={{ padding: "6px 8px", color: "#94A3B8" }}>{scan.city || "—"}</td>
-                        <td style={{ padding: "6px 8px", color: "#64748B", fontSize: 10 }}>{scan.browserLang || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: "var(--txt-sec)" }}>{scan.city || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: "var(--txt-muted)", fontSize: 10 }}>{scan.browserLang || "—"}</td>
                         <td style={{ padding: "6px 8px" }}>
                           {scan.isReturning ? (
-                            <span style={{ color: "#f59e0b", fontSize: 10, fontWeight: 600 }}>Tak</span>
+                            <span style={{ color: "var(--warning)", fontSize: 10, fontWeight: 600 }}>Tak</span>
                           ) : (
-                            <span style={{ color: "#3d4250", fontSize: 10 }}>Nie</span>
+                            <span style={{ color: "var(--border-hover)", fontSize: 10 }}>Nie</span>
                           )}
                         </td>
                         <td style={{ padding: "6px 8px" }}>
@@ -208,7 +208,7 @@ export default function ScanTable({
                               #{scan.guestKey ?? scan.ipHash!.slice(0, 7)}
                             </button>
                           ) : (
-                            <span style={{ color: "#3d4250" }}>—</span>
+                            <span style={{ color: "var(--border-hover)" }}>—</span>
                           )}
                         </td>
                       </tr>
@@ -218,22 +218,22 @@ export default function ScanTable({
               </div>
 
               {/* Pagination */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
-                <span style={{ fontSize: 11, color: "#64748B" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 11, color: "var(--txt-muted)" }}>
                   {scanData.total} skanów • strona {scanData.page}/{scanData.totalPages}
                 </span>
                 <div style={{ display: "flex", gap: 4 }}>
                   <button
                     disabled={scanData.page <= 1}
                     onClick={() => onPageChange(scanData.page - 1)}
-                    style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page <= 1 ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
+                    style={{ background: "transparent", border: "1px solid var(--border)", color: scanData.page <= 1 ? "var(--border-hover)" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page <= 1 ? "default" : "pointer" }}
                   >
                     ← Poprz.
                   </button>
                   <button
                     disabled={scanData.page >= scanData.totalPages}
                     onClick={() => onPageChange(scanData.page + 1)}
-                    style={{ background: "transparent", border: "1px solid rgba(148,163,184,0.08)", color: scanData.page >= scanData.totalPages ? "#3d4250" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
+                    style={{ background: "transparent", border: "1px solid var(--border)", color: scanData.page >= scanData.totalPages ? "var(--border-hover)" : "#94A3B8", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: scanData.page >= scanData.totalPages ? "default" : "pointer" }}
                   >
                     Nast. →
                   </button>

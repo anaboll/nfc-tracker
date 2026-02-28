@@ -36,9 +36,11 @@ async function main() {
         "userAgent", "deviceType", "referrer", "path", "query", "rawMeta",
         "ipPrefix", "ipVersion",
       ],
-      Tag: ["id", "name", "tagType", "targetUrl", "isActive", "clientId", "campaignId"],
-      Client: ["id", "name", "slug", "isActive"],
+      Tag: ["id", "name", "tagType", "targetUrl", "isActive", "clientId", "campaignId", "editToken", "editTokenExp"],
+      Client: ["id", "name", "slug", "isActive", "tier"],
       Campaign: ["id", "name", "clientId", "isActive"],
+      User: ["id", "email", "password", "role", "viewerSections"],
+      UserClient: ["id", "userId", "clientId"],
     };
 
     const missingColumns = [];

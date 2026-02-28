@@ -73,13 +73,13 @@ export default function EmptyState({ icon, message, hint }: EmptyStateProps) {
         justifyContent: "center",
         padding: "28px 16px",
         gap: 10,
-        color: "#3d4250",
+        color: "var(--border-hover)",
       }}
     >
       {ICONS[icon]}
-      <p style={{ fontSize: 13, color: "#64748B", margin: 0, textAlign: "center" }}>{message}</p>
+      <p style={{ fontSize: 13, color: "var(--txt-muted)", margin: 0, textAlign: "center" }}>{message}</p>
       {hint && (
-        <p style={{ fontSize: 11, color: "#3d4250", margin: 0, textAlign: "center" }}>{hint}</p>
+        <p style={{ fontSize: 11, color: "var(--border-hover)", margin: 0, textAlign: "center" }}>{hint}</p>
       )}
     </div>
   );

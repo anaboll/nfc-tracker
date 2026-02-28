@@ -194,7 +194,7 @@ export function ActionEditor({
             title="Kopiuj link publiczny"
             style={{
               background: linkCopied ? "rgba(34,197,94,0.12)" : "#232730",
-              border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "#3d4250"}`,
+              border: `1px solid ${linkCopied ? "rgba(34,197,94,0.4)" : "var(--border-hover)"}`,
               color: linkCopied ? "#34d399" : "#eaf0f6",
               borderRadius: 7,
               padding: "6px 12px",
@@ -233,7 +233,7 @@ export function ActionEditor({
             title="Otwórz w nowej karcie"
             style={{
               background: "#232730",
-              border: "1px solid #3d4250",
+              border: "1px solid var(--border-hover)",
               color: "#8a92a4",
               borderRadius: 7,
               padding: "6px 10px",
@@ -248,7 +248,7 @@ export function ActionEditor({
               transition: "color 0.15s, border-color 0.15s",
             }}
             onMouseEnter={e => { e.currentTarget.style.color = "#eaf0f6"; e.currentTarget.style.borderColor = "#3a5070"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "#8a92a4"; e.currentTarget.style.borderColor = "#3d4250"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#8a92a4"; e.currentTarget.style.borderColor = "var(--border-hover)"; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -284,7 +284,7 @@ export function ActionEditor({
         <div>
           <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Typ
-            <span style={{ marginLeft: 4, fontSize: 10, color: "#3d4250", fontWeight: 400 }}>(zablokowany)</span>
+            <span style={{ marginLeft: 4, fontSize: 10, color: "var(--border-hover)", fontWeight: 400 }}>(zablokowany)</span>
           </label>
           <select
             className="input-field"
@@ -329,14 +329,14 @@ export function ActionEditor({
         <div>
           <label style={{ display: "block", fontSize: 11, color: "#8a92a4", marginBottom: 3 }}>
             Kanał
-            <span style={{ marginLeft: 4, fontSize: 10, color: "#3d4250", fontWeight: 400 }}>(atrybucja)</span>
+            <span style={{ marginLeft: 4, fontSize: 10, color: "var(--border-hover)", fontWeight: 400 }}>(atrybucja)</span>
           </label>
           <div style={{ display: "flex", gap: 0, borderRadius: 8, overflow: "hidden", border: "1px solid #2a2e38", width: "fit-content", ...disabledStyle }}>
             <button type="button" onClick={() => !readOnly && setEditChannel("nfc")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: readOnly ? "default" : "pointer", background: editChannel === "nfc" ? "#2ee8c0" : "#232730", color: editChannel === "nfc" ? "#0b0d12" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", cursor: readOnly ? "default" : "pointer", background: editChannel === "nfc" ? "#2ee8c0" : "#232730", color: editChannel === "nfc" ? "var(--bg)" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
             >NFC</button>
             <button type="button" onClick={() => !readOnly && setEditChannel("qr")}
-              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #2a2e38", cursor: readOnly ? "default" : "pointer", background: editChannel === "qr" ? "#10b981" : "#232730", color: editChannel === "qr" ? "#0b0d12" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
+              style={{ padding: "6px 14px", fontSize: 11, fontWeight: 600, border: "none", borderLeft: "1px solid #2a2e38", cursor: readOnly ? "default" : "pointer", background: editChannel === "qr" ? "var(--success)" : "#232730", color: editChannel === "qr" ? "var(--bg)" : "#8a92a4", transition: "background 0.15s, color 0.15s" }}
             >QR</button>
           </div>
         </div>
@@ -347,7 +347,7 @@ export function ActionEditor({
         <div style={{
           marginBottom: 12,
           padding: 14,
-          background: "#0f1524",
+          background: "var(--bg)",
           borderRadius: 10,
           border: "1px solid #2a2e38",
         }}>
@@ -357,7 +357,7 @@ export function ActionEditor({
               <button
                 type="button"
                 onClick={() => setEditTagLinks([...editTagLinks, { label: "", url: "", icon: "link" }])}
-                style={{ background: "#232730", border: "1px solid #2a2e38", color: "#10b981", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                style={{ background: "#232730", border: "1px solid #2a2e38", color: "var(--success)", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
               >
                 + Dodaj link
               </button>
@@ -417,7 +417,7 @@ export function ActionEditor({
         <div style={{
           marginBottom: 12,
           padding: 14,
-          background: "#0f1524",
+          background: "var(--bg)",
           borderRadius: 10,
           border: "1px solid #2a2e38",
         }}>
@@ -461,7 +461,7 @@ export function ActionEditor({
         <div style={{
           marginBottom: 14,
           padding: 14,
-          background: "#0f1524",
+          background: "var(--bg)",
           borderRadius: 10,
           border: "1px solid #2a2e38",
         }}>
@@ -500,7 +500,7 @@ export function ActionEditor({
                 <button
                   type="button"
                   onClick={handleRevokeEditToken}
-                  style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}
+                  style={{ background: "transparent", border: "1px solid #2e1e1e", color: "var(--error)", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}
                 >
                   Uniewaznij
                 </button>
@@ -566,7 +566,7 @@ export function ActionEditor({
                 <button
                   onClick={() => onResetStats(tagId)}
                   disabled={resetting}
-                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--error)", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
                 >
                   {resetting ? "..." : "Potwierdź reset"}
                 </button>
@@ -580,14 +580,14 @@ export function ActionEditor({
             ) : (
               <button
                 onClick={() => setResetTagConfirm(tagId)}
-                style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f59e0b", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
+                style={{ background: "transparent", border: "1px solid #2e1e1e", color: "var(--warning)", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
               >
                 Reset statystyk
               </button>
             )}
             <button
               onClick={() => onDeleteTag(tagId)}
-              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "#f87171", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
+              style={{ background: "transparent", border: "1px solid #2e1e1e", color: "var(--error)", borderRadius: 6, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}
             >
               Usuń akcję
             </button>

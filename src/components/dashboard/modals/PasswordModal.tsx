@@ -51,19 +51,19 @@ export default function PasswordModal({
             right: 0,
             height: 3,
             borderRadius: "12px 12px 0 0",
-            background: "#38BDF8",
+            background: "var(--accent)",
           }}
         />
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "#F1F5F9" }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: "var(--txt)" }}>
           Zmiana hasla
         </h2>
-        <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: "var(--txt-sec)", marginBottom: 20 }}>
           Ze wzgledow bezpieczenstwa musisz ustawic nowe haslo przy pierwszym logowaniu.
         </p>
 
         <form onSubmit={handlePasswordChange}>
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#94A3B8", marginBottom: 4, fontWeight: 500 }}>
+            <label style={{ display: "block", fontSize: 12, color: "var(--txt-sec)", marginBottom: 4, fontWeight: 500 }}>
               Nowe haslo
             </label>
             <input
@@ -76,7 +76,7 @@ export default function PasswordModal({
             />
           </div>
           <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#94A3B8", marginBottom: 4, fontWeight: 500 }}>
+            <label style={{ display: "block", fontSize: 12, color: "var(--txt-sec)", marginBottom: 4, fontWeight: 500 }}>
               Powtorz haslo
             </label>
             <input
@@ -96,7 +96,7 @@ export default function PasswordModal({
                 borderRadius: 8,
                 fontSize: 13,
                 background: "rgba(239,68,68,0.1)",
-                color: "#f87171",
+                color: "var(--error)",
                 border: "1px solid rgba(239,68,68,0.2)",
               }}
             >

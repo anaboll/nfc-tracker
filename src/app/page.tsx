@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import MobileMenu from "@/components/landing/MobileMenu";
 import ContactForm from "@/components/landing/ContactForm";
 import AnimateOnScroll from "@/components/landing/AnimateOnScroll";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "TwojeNFC — Gadżety NFC, które pracują za Ciebie",
@@ -109,9 +110,13 @@ export default function HomePage() {
             <a href="#dla-kogo">Zastosowania</a>
             <a href="#mozliwosci">Możliwości</a>
             <a href="#kontakt">Kontakt</a>
+            <ThemeToggle />
             <Link href="/login" className="nav-cta">Panel klienta</Link>
           </div>
-          <MobileMenu />
+          <div className="nav-mobile-right">
+            <ThemeToggle />
+            <MobileMenu />
+          </div>
         </div>
       </nav>
 

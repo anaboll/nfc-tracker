@@ -21,7 +21,7 @@ function NewTagPageInner() {
 
 export default function NewTagPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0b0d12" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
       <NewTagPageInner />
     </Suspense>
   );

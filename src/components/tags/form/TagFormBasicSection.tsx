@@ -38,12 +38,12 @@ export default function TagFormBasicSection({
         {/* Tag ID */}
         <div style={styles.field}>
           <label style={styles.label}>
-            ID akcji {mode === "create" && <span style={{ color: "#f87171" }}>*</span>}
+            ID akcji {mode === "create" && <span style={{ color: "var(--error)" }}>*</span>}
           </label>
           {mode === "create" ? (
             <>
               <input
-                style={{ ...styles.input, borderColor: errors.tagId ? "#f87171" : "#1C2541" }}
+                style={{ ...styles.input, borderColor: errors.tagId ? "var(--error)" : "var(--surface-2)" }}
                 value={tagId}
                 onChange={(e) => {
                   setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-"));
@@ -54,7 +54,7 @@ export default function TagFormBasicSection({
               />
               {tagId && (
                 <div style={styles.hint}>
-                  Link: <span style={{ color: "#7dd3fc" }}>/s/{tagId}</span>
+                  Link: <span style={{ color: "var(--accent-light)" }}>/s/{tagId}</span>
                 </div>
               )}
               {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
@@ -67,10 +67,10 @@ export default function TagFormBasicSection({
         {/* Name */}
         <div style={styles.field}>
           <label style={styles.label}>
-            Nazwa <span style={{ color: "#f87171" }}>*</span>
+            Nazwa <span style={{ color: "var(--error)" }}>*</span>
           </label>
           <input
-            style={{ ...styles.input, borderColor: errors.name ? "#f87171" : "#1C2541" }}
+            style={{ ...styles.input, borderColor: errors.name ? "var(--error)" : "var(--surface-2)" }}
             value={name}
             onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
             placeholder="Nazwa akcji"
@@ -82,10 +82,10 @@ export default function TagFormBasicSection({
         {/* Client */}
         <div style={styles.field}>
           <label style={styles.label}>
-            Klient <span style={{ color: "#f87171" }}>*</span>
+            Klient <span style={{ color: "var(--error)" }}>*</span>
           </label>
           <select
-            style={{ ...styles.input, borderColor: errors.clientId ? "#f87171" : "#1C2541" }}
+            style={{ ...styles.input, borderColor: errors.clientId ? "var(--error)" : "var(--surface-2)" }}
             value={clientId}
             onChange={(e) => { setClientId(e.target.value); clearFieldError("clientId"); }}
             disabled={readOnly}
@@ -101,12 +101,12 @@ export default function TagFormBasicSection({
         {/* Campaign */}
         <div style={styles.field}>
           <label style={styles.label}>
-            Kampania <span style={{ color: "#f87171" }}>*</span>
+            Kampania <span style={{ color: "var(--error)" }}>*</span>
           </label>
           <select
             style={{
               ...styles.input,
-              borderColor: errors.campaignId ? "#f87171" : "#1C2541",
+              borderColor: errors.campaignId ? "var(--error)" : "var(--surface-2)",
               opacity: !clientId ? 0.4 : 1,
             }}
             value={campaignId}
@@ -132,9 +132,9 @@ export default function TagFormBasicSection({
           <label style={styles.label}>Jak bedzie uzywany ten tag?</label>
           <div style={styles.channelWrap}>
             {([
-              { value: "both" as const, label: "NFC + QR", color: "#10b981", desc: "Chip NFC i kod QR" },
-              { value: "nfc" as const, label: "Tylko NFC", color: "#60a5fa", desc: "Brelok / naklejka NFC" },
-              { value: "qr" as const, label: "Tylko QR", color: "#7dd3fc", desc: "Kod QR do druku" },
+              { value: "both" as const, label: "NFC + QR", color: "#10b981", cssVar: "var(--success)", desc: "Chip NFC i kod QR" },
+              { value: "nfc" as const, label: "Tylko NFC", color: "#60a5fa", cssVar: "var(--accent)", desc: "Brelok / naklejka NFC" },
+              { value: "qr" as const, label: "Tylko QR", color: "#7dd3fc", cssVar: "var(--accent-light)", desc: "Kod QR do druku" },
             ]).map((ch) => (
               <button
                 key={ch.value}
@@ -143,8 +143,8 @@ export default function TagFormBasicSection({
                 style={{
                   ...styles.channelBtn,
                   background: channel === ch.value ? `${ch.color}18` : "transparent",
-                  borderColor: channel === ch.value ? ch.color : "#1C2541",
-                  color: channel === ch.value ? ch.color : "#64748B",
+                  borderColor: channel === ch.value ? ch.cssVar : "var(--surface-2)",
+                  color: channel === ch.value ? ch.cssVar : "var(--txt-muted)",
                 }}
               >
                 <span style={{ fontWeight: 700 }}>{ch.label}</span>
@@ -176,15 +176,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 8,
-    background: "#151D35",
-    border: "1px solid #1C2541",
+    background: "var(--surface)",
+    border: "1px solid var(--surface-2)",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     marginBottom: 16,
   },
   grid: {
@@ -200,15 +200,15 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#F1F5F9",
+    color: "var(--txt)",
   },
   input: {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#F1F5F9",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt)",
     fontSize: 14,
     outline: "none",
     transition: "border-color 0.2s",
@@ -217,20 +217,20 @@ const styles: Record<string, React.CSSProperties> = {
   lockedValue: {
     padding: "10px 12px",
     borderRadius: 8,
-    background: "#1C2541",
-    border: "1px solid #1C2541",
-    color: "#7dd3fc",
+    background: "var(--surface-2)",
+    border: "1px solid var(--surface-2)",
+    color: "var(--accent-light)",
     fontSize: 14,
     fontFamily: "var(--font-mono)",
     opacity: 0.8,
   },
   hint: {
     fontSize: 11,
-    color: "#64748B",
+    color: "var(--txt-muted)",
   },
   error: {
     fontSize: 12,
-    color: "#f87171",
+    color: "var(--error)",
     fontWeight: 500,
   },
   channelWrap: {
@@ -241,7 +241,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: "8px 0",
     borderRadius: 8,
-    border: "1.5px solid #1C2541",
+    border: "1.5px solid var(--surface-2)",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",

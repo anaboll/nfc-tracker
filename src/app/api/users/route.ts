@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const SUPER_ADMIN_EMAIL = "marcins91";
+// Protected admin accounts — cannot be deleted/edited by other users
+const PROTECTED_ADMINS = ["marcins91", "admin"];
 
 function isAdmin(session: { user: { role?: string } } | null): boolean {
   return session?.user?.role === "admin";
@@ -35,7 +36,7 @@ export async function GET() {
   });
 
   const result = users
-    .filter((u) => u.email !== SUPER_ADMIN_EMAIL)
+    .filter((u) => !PROTECTED_ADMINS.includes(u.email))
     .map((u) => ({
       ...u,
       clients: u.clients.map((uc) => uc.client),
@@ -122,8 +123,8 @@ export async function PUT(request: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Użytkownik nie znaleziony" }, { status: 404 });
 
-  // Protect super admin
-  if (existing.email === SUPER_ADMIN_EMAIL) {
+  // Protect master admin accounts
+  if (PROTECTED_ADMINS.includes(existing.email)) {
     return NextResponse.json({ error: "Nie można edytować tego konta" }, { status: 403 });
   }
 
@@ -179,9 +180,9 @@ export async function DELETE(request: NextRequest) {
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
-  // Protect super admin
+  // Protect master admin accounts
   const target = await prisma.user.findUnique({ where: { id }, select: { email: true, role: true } });
-  if (target?.email === SUPER_ADMIN_EMAIL) {
+  if (target && PROTECTED_ADMINS.includes(target.email)) {
     return NextResponse.json({ error: "Nie można usunąć tego konta" }, { status: 403 });
   }
 

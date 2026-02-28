@@ -17,10 +17,18 @@ export async function GET(request: NextRequest) {
   const campaignFilter = url.searchParams.get("campaignId") || null;
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
+  const sourceParam = url.searchParams.get("source");
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
 
   // Build where clause (same logic as /api/scans)
   const where: Record<string, unknown> = {};
+
+  // Source filter (nfc/qr)
+  if (sourceParam === "nfc") {
+    where.eventSource = "nfc";
+  } else if (sourceParam === "qr") {
+    where.eventSource = "qr";
+  }
 
   if (fromParam || toParam) {
     const ts: Record<string, Date> = {};

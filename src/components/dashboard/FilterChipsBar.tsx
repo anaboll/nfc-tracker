@@ -55,8 +55,8 @@ export default function FilterChipsBar({ chips, onReset, showOverflow, setShowOv
   if (chips.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "#151D35", border: "1px solid rgba(148,163,184,0.08)", minWidth: 0 }}>
-      <span style={{ fontSize: 10, color: "#64748B", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>Filtry:</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", minWidth: 0 }}>
+      <span style={{ fontSize: 10, color: "var(--txt-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>Filtry:</span>
 
       {/* Chip row — flex-wrap:wrap so all chips are rendered; we measure which ones overflow */}
       <div ref={rowRef} style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1, minWidth: 0, overflow: "hidden", maxHeight: 32 }}>
@@ -76,16 +76,16 @@ export default function FilterChipsBar({ chips, onReset, showOverflow, setShowOv
         <div ref={overflowRef} style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
           <button
             onClick={() => setShowOverflow(v => !v)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "rgba(139,149,168,0.12)", border: "1px solid #363b48", fontSize: 11, color: "#94A3B8", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 8px", borderRadius: 20, background: "var(--surface-2)", border: "1px solid var(--border-hover)", fontSize: 11, color: "var(--txt-sec)", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
           >+{overflowChips.length}</button>
           {showOverflow && (
             <div style={{
               position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 400,
-              background: "#161a22", border: "1px solid #363b48", borderRadius: 10,
+              background: "var(--bg)", border: "1px solid var(--border-hover)", borderRadius: 10,
               boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: "10px",
               display: "flex", flexDirection: "column", gap: 6, minWidth: 200, maxWidth: 280,
             }}>
-              <div style={{ fontSize: 10, color: "#64748B", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              <div style={{ fontSize: 10, color: "var(--txt-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8 }}>
                 Pozostałe filtry ({overflowChips.length})
               </div>
               {overflowChips.map(ch => (
@@ -99,9 +99,9 @@ export default function FilterChipsBar({ chips, onReset, showOverflow, setShowOv
       {/* Wyczyść — always last */}
       <button
         onClick={onReset}
-        style={{ marginLeft: overflowChips.length === 0 ? "auto" : 0, flexShrink: 0, background: "transparent", border: "none", fontSize: 10, color: "#3d4250", cursor: "pointer", padding: "2px 6px", borderRadius: 4 }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#3d4250")}
+        style={{ marginLeft: overflowChips.length === 0 ? "auto" : 0, flexShrink: 0, background: "transparent", border: "none", fontSize: 10, color: "var(--txt-muted)", cursor: "pointer", padding: "2px 6px", borderRadius: 4, opacity: 0.6 }}
+        onMouseEnter={e => { e.currentTarget.style.color = "var(--error)"; e.currentTarget.style.opacity = "1"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "var(--txt-muted)"; e.currentTarget.style.opacity = "0.6"; }}
       >Wyczyść ×</button>
     </div>
   );

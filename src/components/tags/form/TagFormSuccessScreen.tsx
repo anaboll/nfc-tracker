@@ -40,7 +40,7 @@ export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props)
     <div style={styles.wrapper}>
       {/* Success icon */}
       <div style={styles.iconWrap}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
@@ -48,7 +48,7 @@ export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props)
 
       <h2 style={styles.title}>Akcja utworzona!</h2>
       <p style={styles.subtitle}>
-        Tag <span style={{ color: "#7dd3fc", fontWeight: 700 }}>{tagId}</span> jest gotowy do uzycia.
+        Tag <span style={{ color: "var(--accent-light)", fontWeight: 700 }}>{tagId}</span> jest gotowy do uzycia.
       </p>
 
       {/* Public URL */}
@@ -123,12 +123,12 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 24,
     fontWeight: 700,
-    color: "#F1F5F9",
+    color: "var(--txt)",
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     marginBottom: 24,
   },
   urlBox: {
@@ -144,11 +144,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   urlLabel: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
   },
   urlCode: {
     fontSize: 13,
-    color: "#7dd3fc",
+    color: "var(--accent-light)",
     fontFamily: "var(--font-mono)",
   },
   qrSection: {
@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     marginBottom: 12,
   },
   qrGrid: {
@@ -170,8 +170,8 @@ const styles: Record<string, React.CSSProperties> = {
   qrBtn: {
     padding: "14px 10px",
     borderRadius: 10,
-    border: "1px solid #1C2541",
-    background: "#151D35",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface)",
     cursor: "pointer",
     transition: "all 0.15s",
     textAlign: "center" as const,
@@ -179,12 +179,12 @@ const styles: Record<string, React.CSSProperties> = {
   qrBtnLabel: {
     fontSize: 13,
     fontWeight: 700,
-    color: "#F1F5F9",
+    color: "var(--txt)",
     marginBottom: 2,
   },
   qrBtnDesc: {
     fontSize: 11,
-    color: "#64748B",
+    color: "var(--txt-muted)",
   },
   actions: {
     display: "flex",
@@ -194,9 +194,9 @@ const styles: Record<string, React.CSSProperties> = {
   secondaryBtn: {
     padding: "10px 20px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
+    border: "1px solid var(--surface-2)",
     background: "transparent",
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -206,8 +206,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 24px",
     borderRadius: 8,
     border: "none",
-    background: "#38BDF8",
-    color: "#151D35",
+    background: "var(--accent)",
+    color: "var(--surface)",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",

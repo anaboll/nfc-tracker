@@ -134,7 +134,7 @@ export default function TagFormAdvancedSection({
                   setResetConfirm(false);
                 }}
                 disabled={resetting}
-                style={{ ...styles.dangerBtn, background: "#f87171", color: "#fff" }}
+                style={{ ...styles.dangerBtn, background: "var(--error)", color: "#fff" }}
               >
                 {resetting ? "Resetowanie..." : "Potwierdz reset"}
               </button>
@@ -153,7 +153,7 @@ export default function TagFormAdvancedSection({
                   onDeleteTag(tagId);
                 }
               }}
-              style={{ ...styles.dangerBtn, borderColor: "#ef4444", color: "#ef4444" }}
+              style={{ ...styles.dangerBtn, borderColor: "var(--error)", color: "var(--error)" }}
             >
               Usun
             </button>
@@ -170,15 +170,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 28,
     padding: 20,
     borderRadius: 8,
-    background: "#151D35",
-    border: "1px solid #1C2541",
+    background: "var(--surface)",
+    border: "1px solid var(--surface-2)",
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
-    color: "#94A3B8",
+    color: "var(--txt-sec)",
     marginBottom: 16,
   },
   block: {
@@ -187,12 +187,12 @@ const styles: Record<string, React.CSSProperties> = {
   blockLabel: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#F1F5F9",
+    color: "var(--txt)",
     marginBottom: 4,
   },
   blockHint: {
     fontSize: 11,
-    color: "#64748B",
+    color: "var(--txt-muted)",
     marginBottom: 8,
   },
   linkRow: {
@@ -204,9 +204,9 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#7dd3fc",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--accent-light)",
     fontSize: 12,
     fontFamily: "var(--font-mono)",
     outline: "none",
@@ -215,9 +215,9 @@ const styles: Record<string, React.CSSProperties> = {
   copyBtn: {
     padding: "8px 14px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#94A3B8",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt-sec)",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
@@ -227,9 +227,9 @@ const styles: Record<string, React.CSSProperties> = {
   openBtn: {
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #1C2541",
-    background: "#1C2541",
-    color: "#94A3B8",
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt-sec)",
     fontSize: 14,
     textDecoration: "none",
     display: "flex",
@@ -238,9 +238,9 @@ const styles: Record<string, React.CSSProperties> = {
   generateBtn: {
     padding: "8px 16px",
     borderRadius: 8,
-    border: "1px solid #10b981",
+    border: "1px solid var(--success)",
     background: "rgba(16,185,129,0.1)",
-    color: "#10b981",
+    color: "var(--success)",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -250,23 +250,23 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 6,
     padding: "6px 12px",
     borderRadius: 6,
-    border: "1px solid #f87171",
+    border: "1px solid var(--error)",
     background: "transparent",
-    color: "#f87171",
+    color: "var(--error)",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
   },
   dangerDetails: {
     marginTop: 8,
-    borderTop: "1px solid #1C2541",
+    borderTop: "1px solid var(--surface-2)",
     paddingTop: 8,
   },
   dangerSummary: {
     cursor: "pointer",
     fontSize: 12,
     fontWeight: 700,
-    color: "#f87171",
+    color: "var(--error)",
     textTransform: "uppercase" as const,
     letterSpacing: "0.06em",
     padding: "6px 0",
@@ -284,18 +284,18 @@ const styles: Record<string, React.CSSProperties> = {
   dangerLabel: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#F1F5F9",
+    color: "var(--txt)",
   },
   dangerHint: {
     fontSize: 11,
-    color: "#64748B",
+    color: "var(--txt-muted)",
   },
   dangerBtn: {
     padding: "6px 14px",
     borderRadius: 6,
-    border: "1px solid #f87171",
+    border: "1px solid var(--error)",
     background: "transparent",
-    color: "#f87171",
+    color: "var(--error)",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
