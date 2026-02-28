@@ -18,7 +18,7 @@ interface Props {
   onDeleteClient: (id: string) => void;
   onCreateCampaign: () => Promise<void>;
   onDeleteCampaign: (id: string) => void;
-  fetchStats: (opts?: { tagIds?: string[] }) => void;
+  fetchStats: (opts?: { tagIds?: string[]; clientId?: string | null; campaignId?: string | null }) => void;
   fetchScans: () => void;
   /* client form state lifted from parent — for create-client handler to work */
   showAddClient: boolean;
@@ -138,7 +138,7 @@ export default function DashboardSidebar({
         <div style={{ marginLeft: -4, marginRight: -4 }}>
           {/* "Wszyscy klienci" row */}
           <button
-            onClick={() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+            onClick={() => { setSelectedClientId(null); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [], clientId: null, campaignId: null }); }}
             style={{
               display: "flex", alignItems: "center", gap: 8, width: "100%",
               padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
@@ -169,7 +169,7 @@ export default function DashboardSidebar({
               return (
                 <button
                   key={c.id}
-                  onClick={() => { setSelectedClientId(c.id); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+                  onClick={() => { setSelectedClientId(c.id); setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [], clientId: c.id, campaignId: null }); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 8, width: "100%",
                     padding: "7px 8px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
@@ -245,7 +245,7 @@ export default function DashboardSidebar({
           <div style={{ marginLeft: -4, marginRight: -4 }}>
             {/* "Wszystkie kampanie" row */}
             <button
-              onClick={() => { setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [] }); }}
+              onClick={() => { setSelectedCampaignId(null); setSelectedTagIds([]); setActionsMode("NA"); fetchStats({ tagIds: [], campaignId: null }); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8, width: "100%",
                 padding: "6px 8px", borderRadius: 7, fontSize: 12,
@@ -284,7 +284,7 @@ export default function DashboardSidebar({
                       setSelectedCampaignId(c.id);
                       setSelectedTagIds([]);
                       setActionsMode("ALL");
-                      fetchStats({ tagIds: [] });
+                      fetchStats({ tagIds: [], campaignId: c.id });
                     }}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, width: "100%",

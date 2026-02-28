@@ -324,7 +324,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
 
   /* ---- fetch helpers ---- */
 
-  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[]; from?: string; to?: string }) => {
+  const fetchStats = useCallback(async (opts?: { wo?: number; source?: "all" | "nfc" | "qr"; tagIds?: string[]; from?: string; to?: string; clientId?: string | null; campaignId?: string | null }) => {
     try {
       setFetchError("");
       const params = new URLSearchParams();
@@ -339,8 +339,11 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       } else if (tagFilter) {
         params.set("tag", tagFilter);
       }
-      if (selectedClientId) params.set("clientId", selectedClientId);
-      if (selectedCampaignId) params.set("campaignId", selectedCampaignId);
+      // Use opts.clientId/campaignId if provided (avoids stale closure after setState)
+      const effectiveClientId = opts?.clientId !== undefined ? opts.clientId : selectedClientId;
+      const effectiveCampaignId = opts?.campaignId !== undefined ? opts.campaignId : selectedCampaignId;
+      if (effectiveClientId) params.set("clientId", effectiveClientId);
+      if (effectiveCampaignId) params.set("campaignId", effectiveCampaignId);
       params.set("weekOffset", String(opts?.wo ?? weekOffset));
       // Use opts.source if provided (avoids stale closure after setScanSourceFilter)
       const effectiveSource = opts?.source !== undefined ? opts.source : scanSourceFilter;
