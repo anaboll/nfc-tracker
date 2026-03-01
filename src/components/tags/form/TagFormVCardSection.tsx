@@ -274,62 +274,70 @@ export default function TagFormVCardSection({
           {displayOpen && (
             <div style={{ padding: "12px 0" }}>
               <div style={styles.subsectionTitle}>Kolejnosc i widocznosc</div>
+              <p style={{ fontSize: 11, color: "var(--txt-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                Kliknij nazwe aby ja zmienic. Dodaj wlasne linki lub naglowki.
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {(() => {
                   const items = computeDisplayItems(vcard);
                   const updateItems = (newItems: DisplayItem[]) => setVcard({ ...vcard, displayItems: newItems });
 
+                  const toggleBtn = (isHidden: boolean, onClick: () => void) => (
+                    <button
+                      type="button"
+                      onClick={onClick}
+                      style={{
+                        width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
+                        background: isHidden ? "var(--surface)" : "var(--accent)",
+                        position: "relative", transition: "background 0.2s", flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                        position: "absolute", top: 2,
+                        left: isHidden ? 2 : 18, transition: "left 0.2s",
+                      }} />
+                    </button>
+                  );
+
+                  const moveBtn = (label: string, disabled: boolean, onClick: () => void) => (
+                    <button type="button" disabled={disabled} onClick={onClick}
+                      style={{ background: "none", border: "none", color: disabled ? "var(--txt-muted)" : "var(--txt-sec)", cursor: disabled ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}>
+                      {label}
+                    </button>
+                  );
+
+                  const deleteBtn = (onClick: () => void, title: string) => (
+                    <button type="button" onClick={onClick}
+                      style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 16, padding: "2px 4px", lineHeight: 1 }}
+                      title={title}>×</button>
+                  );
+
                   return items.map((item, idx, arr) => {
                     const isHidden = item.visible === false;
-                    const isHeader = item.type === "header";
 
-                    // Toggle switch (shared)
-                    const toggleBtn = (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const ni = [...arr];
-                          ni[idx] = { ...item, visible: !isHidden };
-                          updateItems(ni);
-                        }}
-                        style={{
-                          width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
-                          background: isHidden ? "var(--surface)" : "var(--accent)",
-                          position: "relative", transition: "background 0.2s", flexShrink: 0,
-                        }}
-                      >
-                        <div style={{
-                          width: 14, height: 14, borderRadius: "50%", background: "#fff",
-                          position: "absolute", top: 2,
-                          left: isHidden ? 2 : 18, transition: "left 0.2s",
-                        }} />
-                      </button>
-                    );
+                    const onToggle = () => {
+                      const ni = [...arr];
+                      ni[idx] = { ...item, visible: isHidden };
+                      updateItems(ni);
+                    };
+                    const onMoveUp = () => {
+                      const ni = [...arr]; [ni[idx - 1], ni[idx]] = [ni[idx], ni[idx - 1]]; updateItems(ni);
+                    };
+                    const onMoveDown = () => {
+                      const ni = [...arr]; [ni[idx], ni[idx + 1]] = [ni[idx + 1], ni[idx]]; updateItems(ni);
+                    };
+                    const onDelete = () => { updateItems(arr.filter((_, i) => i !== idx)); };
 
-                    // Move buttons (shared)
-                    const moveUp = (
-                      <button type="button" disabled={idx === 0} onClick={() => {
-                        const ni = [...arr]; [ni[idx - 1], ni[idx]] = [ni[idx], ni[idx - 1]]; updateItems(ni);
-                      }} style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}>
-                        ▲
-                      </button>
-                    );
-                    const moveDown = (
-                      <button type="button" disabled={idx === arr.length - 1} onClick={() => {
-                        const ni = [...arr]; [ni[idx], ni[idx + 1]] = [ni[idx + 1], ni[idx]]; updateItems(ni);
-                      }} style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}>
-                        ▼
-                      </button>
-                    );
-
-                    if (isHeader) {
+                    /* ---- HEADER ---- */
+                    if (item.type === "header") {
                       return (
                         <div key={item.key} style={{
                           display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
                           borderRadius: 6, background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)",
                           opacity: isHidden ? 0.5 : 1,
                         }}>
-                          {toggleBtn}
+                          {toggleBtn(isHidden, onToggle)}
                           <input
                             type="text"
                             value={item.text || ""}
@@ -347,45 +355,130 @@ export default function TagFormVCardSection({
                             placeholder="Naglowek..."
                             disabled={readOnly}
                           />
-                          {moveUp}{moveDown}
-                          <button type="button" onClick={() => { updateItems(arr.filter((_, i) => i !== idx)); }}
-                            style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 16, padding: "2px 4px", lineHeight: 1 }}
-                            title="Usun naglowek"
-                          >×</button>
+                          {moveBtn("▲", idx === 0, onMoveUp)}
+                          {moveBtn("▼", idx === arr.length - 1, onMoveDown)}
+                          {deleteBtn(onDelete, "Usun naglowek")}
                         </div>
                       );
                     }
 
+                    /* ---- CUSTOM LINK ---- */
+                    if (item.type === "custom-link") {
+                      return (
+                        <div key={item.key} style={{
+                          display: "flex", flexDirection: "column", gap: 4, padding: "6px 10px",
+                          borderRadius: 6, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.18)",
+                          opacity: isHidden ? 0.5 : 1,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {toggleBtn(isHidden, onToggle)}
+                            <input
+                              type="text"
+                              value={item.label || ""}
+                              onChange={(e) => {
+                                const ni = [...arr]; ni[idx] = { ...item, label: e.target.value }; updateItems(ni);
+                              }}
+                              style={{
+                                flex: 1, fontSize: 12, fontWeight: 600, color: "var(--txt)",
+                                background: "transparent", border: "1px solid transparent", borderRadius: 4,
+                                outline: "none", padding: "2px 6px",
+                              }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; }}
+                              placeholder="Nazwa linku..."
+                              disabled={readOnly}
+                            />
+                            {moveBtn("▲", idx === 0, onMoveUp)}
+                            {moveBtn("▼", idx === arr.length - 1, onMoveDown)}
+                            {deleteBtn(onDelete, "Usun link")}
+                          </div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", paddingLeft: 40 }}>
+                            <input
+                              type="url"
+                              value={item.url || ""}
+                              onChange={(e) => {
+                                const ni = [...arr]; ni[idx] = { ...item, url: e.target.value }; updateItems(ni);
+                              }}
+                              style={{
+                                flex: 1, fontSize: 11, color: "var(--txt-sec)",
+                                background: "var(--surface-2)", border: "1px solid var(--surface-2)", borderRadius: 4,
+                                outline: "none", padding: "4px 8px",
+                              }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--surface-2)"; }}
+                              placeholder="https://..."
+                              disabled={readOnly}
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    /* ---- FIELD ---- */
                     return (
                       <div key={item.key} style={{
                         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
                         borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1,
                       }}>
-                        {toggleBtn}
-                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{FIELD_LABELS[item.key] || item.key}</span>
-                        {moveUp}{moveDown}
+                        {toggleBtn(isHidden, onToggle)}
+                        <input
+                          type="text"
+                          value={item.label ?? FIELD_LABELS[item.key] ?? item.key}
+                          onChange={(e) => {
+                            const ni = [...arr]; ni[idx] = { ...item, label: e.target.value }; updateItems(ni);
+                          }}
+                          style={{
+                            flex: 1, fontSize: 12, fontWeight: 500, color: "var(--txt-sec)",
+                            background: "transparent", border: "1px solid transparent", borderRadius: 4,
+                            outline: "none", padding: "2px 6px",
+                          }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; }}
+                          disabled={readOnly}
+                        />
+                        {moveBtn("▲", idx === 0, onMoveUp)}
+                        {moveBtn("▼", idx === arr.length - 1, onMoveDown)}
                       </div>
                     );
                   });
                 })()}
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const items = computeDisplayItems(vcard);
-                  items.push({ type: "header", key: `h-${Date.now()}`, text: "", visible: true });
-                  setVcard({ ...vcard, displayItems: items });
-                }}
-                disabled={readOnly}
-                style={{
-                  marginTop: 8, width: "100%", padding: "8px", borderRadius: 6,
-                  border: "1px dashed var(--border-hover, #444)", background: "transparent",
-                  color: "var(--txt-muted)", fontSize: 11, cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                + Dodaj naglowek
-              </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const items = computeDisplayItems(vcard);
+                    items.push({ type: "header", key: `h-${Date.now()}`, text: "", visible: true });
+                    setVcard({ ...vcard, displayItems: items });
+                  }}
+                  disabled={readOnly}
+                  style={{
+                    flex: 1, padding: "8px", borderRadius: 6,
+                    border: "1px dashed var(--border-hover, #444)", background: "transparent",
+                    color: "var(--txt-muted)", fontSize: 11, cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  + Naglowek
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const items = computeDisplayItems(vcard);
+                    items.push({ type: "custom-link", key: `cl-${Date.now()}`, label: "", url: "", visible: true });
+                    setVcard({ ...vcard, displayItems: items });
+                  }}
+                  disabled={readOnly}
+                  style={{
+                    flex: 1, padding: "8px", borderRadius: 6,
+                    border: "1px dashed rgba(16,185,129,0.4)", background: "transparent",
+                    color: "rgba(16,185,129,0.8)", fontSize: 11, cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  + Link
+                </button>
+              </div>
             </div>
           )}
         </div>

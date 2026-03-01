@@ -74,9 +74,12 @@ export interface VCardData {
 
 /* Display item for unified ordering */
 export interface DisplayItem {
-  type: "field" | "header";
-  key: string;        // field key ("phone","instagram",...) or unique header id ("h-contact","h-1",...)
+  type: "field" | "header" | "custom-link";
+  key: string;        // field key ("phone","instagram",...) or unique header id ("h-contact","h-1",...) or custom link id ("cl-123")
   text?: string;      // header text (only for type="header")
+  label?: string;     // custom display label (for type="field" and "custom-link", overrides default)
+  url?: string;       // link URL (only for type="custom-link")
+  logo?: string;      // logo image path (only for type="custom-link")
   visible?: boolean;  // default true, false = hidden
 }
 
@@ -124,8 +127,9 @@ export function computeDisplayItems(vcard: VCardData): DisplayItem[] {
 
   if (vcard.displayItems && vcard.displayItems.length > 0) {
     // Use existing displayItems, but sync with current field values
+    // Keep headers, custom-links, and filled fields; remove empty fields
     const result = vcard.displayItems.filter(
-      i => i.type === "header" || filledKeys.includes(i.key)
+      i => i.type === "header" || i.type === "custom-link" || filledKeys.includes(i.key)
     );
     const existing = new Set(result.filter(i => i.type === "field").map(i => i.key));
     for (const k of filledKeys) {

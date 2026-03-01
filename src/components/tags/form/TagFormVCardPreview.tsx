@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useDeferredValue, useEffect } from "react";
-import type { VCardData, VCardTheme } from "@/types/vcard";
-import { DEFAULT_VCARD_THEME, computeDisplayItems } from "@/types/vcard";
+import type { VCardData, VCardTheme, DisplayItem } from "@/types/vcard";
+import { DEFAULT_VCARD_THEME, FIELD_LABELS, computeDisplayItems } from "@/types/vcard";
 import { SOCIAL_ICONS, SOCIAL_COLORS } from "@/components/vcard/SocialIcons";
 
 interface Props {
@@ -120,18 +120,15 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   const isMinimal = theme.layoutVariant === "minimal";
   const isModern = theme.layoutVariant === "modern";
 
-  const CONTACT_LABELS: Record<string, string> = { phone: "Telefon", email: "E-mail", website: "Strona WWW", address: "Adres" };
-  const CONTACT_KEYS = new Set(["phone", "email", "website", "address"]);
   const SOCIAL_KEYS_SET = new Set(["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"]);
-
-  const displayMode = deferred.contactDisplayMode || "value";
 
   /* Unified display items */
   const rawItems = computeDisplayItems(deferred);
   const visibleItems = rawItems.filter(i => i.visible !== false);
 
-  /* Group into sections (header + fields) */
-  type Section = { header?: { key: string; text?: string }; fields: string[] };
+  /* Group into sections (header + items) */
+  type SectionItem = DisplayItem;
+  type Section = { header?: { key: string; text?: string }; fields: SectionItem[] };
   const sections: Section[] = [];
   let curSec: Section = { fields: [] };
   for (const item of visibleItems) {
@@ -139,7 +136,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
       if (curSec.header || curSec.fields.length > 0) sections.push(curSec);
       curSec = { header: { key: item.key, text: item.text }, fields: [] };
     } else {
-      curSec.fields.push(item.key);
+      curSec.fields.push(item);
     }
   }
   if (curSec.header || curSec.fields.length > 0) sections.push(curSec);
@@ -286,7 +283,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           {/* Unified sections */}
           {sections.map((sec, sIdx) => {
             if (sec.fields.length === 0) return null;
-            const allSocial = sec.fields.every(k => SOCIAL_KEYS_SET.has(k));
+            const allSocial = sec.fields.every(f => f.type === "field" && SOCIAL_KEYS_SET.has(f.key));
             return (
               <div key={sec.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 12 : (sec.header ? 10 : 6), textAlign: "left" }}>
                 {!isMinimal && sec.header && (
@@ -299,11 +296,11 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                 )}
                 {allSocial && isMinimal ? (
                   <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
-                    {sec.fields.map((key) => {
-                      const IconComp = SOCIAL_ICONS[key];
-                      const color = SOCIAL_COLORS[key] || theme.primaryColor;
+                    {sec.fields.map((item) => {
+                      const IconComp = SOCIAL_ICONS[item.key];
+                      const color = SOCIAL_COLORS[item.key] || theme.primaryColor;
                       return (
-                        <div key={key} style={iconBoxStyle(color)} title={key}>
+                        <div key={item.key} style={iconBoxStyle(color)} title={item.key}>
                           {IconComp && <IconComp size={13} color={color} />}
                         </div>
                       );
@@ -311,26 +308,33 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {sec.fields.map((key) => {
-                      const IconComp = SOCIAL_ICONS[key];
-                      const color = SOCIAL_COLORS[key] || theme.primaryColor;
-                      const value = (deferred as unknown as Record<string, string>)[key];
-                      const isContact = CONTACT_KEYS.has(key);
-                      const showLogo = key === "website" && deferred.websiteLogo;
-                      const SOCIAL_LABELS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
-                      const displayVal = isContact
-                        ? (displayMode === "label" ? (CONTACT_LABELS[key] || value) : value)
-                        : (SOCIAL_LABELS[key] || value);
+                    {sec.fields.map((item) => {
+                      const isCustomLink = item.type === "custom-link";
+                      const IconComp = isCustomLink ? null : SOCIAL_ICONS[item.key];
+                      const color = isCustomLink ? theme.primaryColor : (SOCIAL_COLORS[item.key] || theme.primaryColor);
+                      const showLogo = (item.key === "website" && deferred.websiteLogo) || (isCustomLink && item.logo);
+                      const logoUrl = isCustomLink ? item.logo : deferred.websiteLogo;
+
+                      // Use custom label, or field default label, or the raw value
+                      const displayVal = item.label || FIELD_LABELS[item.key] || (deferred as unknown as Record<string, string>)[item.key] || item.url || "";
+
                       return (
-                        <div key={key} style={linkCardStyle}>
-                          {showLogo ? (
+                        <div key={item.key} style={linkCardStyle}>
+                          {showLogo && logoUrl ? (
                             <div style={{ ...iconBoxStyle(color), overflow: "hidden", padding: 0 }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={photoSrc(deferred.websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                              <img src={photoSrc(logoUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                             </div>
                           ) : (
                             <div style={iconBoxStyle(color)}>
-                              {IconComp && <IconComp size={13} color={color} />}
+                              {isCustomLink ? (
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                                </svg>
+                              ) : (
+                                IconComp && <IconComp size={13} color={color} />
+                              )}
                             </div>
                           )}
                           <span style={{

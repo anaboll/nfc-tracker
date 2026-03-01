@@ -10,11 +10,12 @@ import {
 } from "@/components/vcard/SocialIcons";
 
 export interface RenderItem {
-  type: "field" | "header";
+  type: "field" | "header" | "custom-link";
   key: string;
   text?: string;    // header text
-  url?: string;     // field URL
+  url?: string;     // field URL or custom link URL
   label?: string;   // field display text
+  logo?: string;    // custom link logo
 }
 
 interface Props {
@@ -22,12 +23,12 @@ interface Props {
   items: RenderItem[];
   linkCardStyle: React.CSSProperties;
   iconBoxStyleFn: Record<string, React.CSSProperties>;
+  defaultIconBoxStyle: React.CSSProperties;
   textPrimary: string;
   textMuted: string;
   isMinimal: boolean;
   primaryColor: string;
   websiteLogo?: string;
-  contactDisplayMode?: "value" | "label";
 }
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
@@ -38,9 +39,6 @@ const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
 
 const CONTACT_KEYS = new Set(["phone", "email", "website", "address"]);
 const SOCIAL_KEYS = new Set(["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"]);
-const CONTACT_LABELS: Record<string, string> = {
-  phone: "Telefon", email: "E-mail", website: "Strona WWW", address: "Adres",
-};
 
 function photoSrc(p: string): string {
   if (!p) return "";
@@ -49,16 +47,40 @@ function photoSrc(p: string): string {
   return p;
 }
 
+/* External link icon (for social + custom links) */
+const ExternalLinkIcon = ({ color }: { color: string }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+
+/* Chevron icon (for contact fields) */
+const ChevronIcon = ({ color }: { color: string }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
+/* Generic link icon for custom links */
+const LinkIcon = ({ size = 20, color = "#fff" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+  </svg>
+);
+
 interface Section {
   header?: RenderItem;
   fields: RenderItem[];
 }
 
 export default function VCardTrackedLinks({
-  tagId, items, linkCardStyle, iconBoxStyleFn, textPrimary, textMuted,
-  isMinimal, primaryColor, websiteLogo, contactDisplayMode = "value",
+  tagId, items, linkCardStyle, iconBoxStyleFn, defaultIconBoxStyle, textPrimary, textMuted,
+  isMinimal, primaryColor, websiteLogo,
 }: Props) {
-  // Group items into sections (header + following fields)
+  // Group items into sections (header + following fields/custom-links)
   const sections: Section[] = [];
   let current: Section = { fields: [] };
 
@@ -83,7 +105,7 @@ export default function VCardTrackedLinks({
       {sections.map((section, sIdx) => {
         if (section.fields.length === 0) return null;
 
-        const allSocial = section.fields.every(f => SOCIAL_KEYS.has(f.key));
+        const allSocial = section.fields.every(f => f.type === "field" && SOCIAL_KEYS.has(f.key));
 
         return (
           <div key={section.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 24 : (section.header ? 16 : 8) }}>
@@ -103,7 +125,7 @@ export default function VCardTrackedLinks({
                 {section.fields.map(field => {
                   const Icon = ICON_MAP[field.key];
                   const color = SOCIAL_COLORS[field.key] || primaryColor;
-                  const iboxStyle = iconBoxStyleFn[field.key] || {};
+                  const iboxStyle = iconBoxStyleFn[field.key] || defaultIconBoxStyle;
                   return (
                     <TrackedLink
                       key={field.key} tagId={tagId}
@@ -118,14 +140,13 @@ export default function VCardTrackedLinks({
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {section.fields.map(field => {
-                  const Icon = ICON_MAP[field.key];
-                  const color = SOCIAL_COLORS[field.key] || primaryColor;
-                  const iboxStyle = iconBoxStyleFn[field.key] || {};
-                  const isContact = CONTACT_KEYS.has(field.key);
-                  const showLogo = field.key === "website" && websiteLogo;
-                  const displayLabel = contactDisplayMode === "label" && isContact
-                    ? (CONTACT_LABELS[field.key] || field.label)
-                    : field.label;
+                  const isCustomLink = field.type === "custom-link";
+                  const Icon = isCustomLink ? LinkIcon : ICON_MAP[field.key];
+                  const color = isCustomLink ? primaryColor : (SOCIAL_COLORS[field.key] || primaryColor);
+                  const iboxStyle = isCustomLink ? defaultIconBoxStyle : (iconBoxStyleFn[field.key] || defaultIconBoxStyle);
+                  const isContact = !isCustomLink && CONTACT_KEYS.has(field.key);
+                  const showLogo = (field.key === "website" && websiteLogo) || (isCustomLink && field.logo);
+                  const logoUrl = isCustomLink ? field.logo : websiteLogo;
 
                   return (
                     <TrackedLink
@@ -134,10 +155,10 @@ export default function VCardTrackedLinks({
                       target={field.key === "phone" ? "_self" : "_blank"}
                       style={linkCardStyle}
                     >
-                      {showLogo ? (
+                      {showLogo && logoUrl ? (
                         <div style={{ ...iboxStyle, overflow: "hidden", padding: 0 }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={photoSrc(websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                          <img src={photoSrc(logoUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                         </div>
                       ) : (
                         <div style={iboxStyle}>
@@ -145,18 +166,12 @@ export default function VCardTrackedLinks({
                         </div>
                       )}
                       <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
-                        {displayLabel}
+                        {field.label}
                       </span>
                       {isContact ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 18l6-6-6-6" />
-                        </svg>
+                        <ChevronIcon color={textMuted} />
                       ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                          <polyline points="15 3 21 3 21 9" />
-                          <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
+                        <ExternalLinkIcon color={textMuted} />
                       )}
                     </TrackedLink>
                   );

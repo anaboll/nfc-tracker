@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import VCardActions from "./VCardActions";
 import VCardTrackedLinks from "./VCardTrackedLinks";
 import type { VCardData, VCardTheme } from "@/types/vcard";
-import { DEFAULT_VCARD_THEME, computeDisplayItems } from "@/types/vcard";
+import { DEFAULT_VCARD_THEME, FIELD_LABELS, computeDisplayItems } from "@/types/vcard";
 import type { RenderItem } from "./VCardTrackedLinks";
 import {
   PhoneIcon, EmailIcon, WebsiteIcon, AddressIcon,
@@ -204,14 +204,27 @@ export default async function VCardPage({
     if (item.visible === false) continue;
     if (item.type === "header") {
       renderItems.push({ type: "header", key: item.key, text: item.text });
+    } else if (item.type === "custom-link") {
+      if (item.url) {
+        renderItems.push({
+          type: "custom-link", key: item.key,
+          url: item.url.startsWith("http") ? item.url : `https://${item.url}`,
+          label: item.label || item.url,
+          logo: item.logo,
+        });
+      }
     } else {
       const data = fieldData[item.key];
-      if (data) renderItems.push({ type: "field", key: item.key, url: data.url, label: data.label });
+      if (data) {
+        // Use custom label from displayItem if set, otherwise use default
+        const displayLabel = item.label || FIELD_LABELS[item.key] || data.label;
+        renderItems.push({ type: "field", key: item.key, url: data.url, label: displayLabel });
+      }
     }
   }
 
   /* All field keys for icon box styles */
-  const allFieldKeys = renderItems.filter(i => i.type === "field");
+  const allFieldKeys = renderItems.filter(i => i.type === "field" || i.type === "custom-link");
 
   /* -- Build vCard (.vcf) -- */
   const vcfLines = [
@@ -377,12 +390,12 @@ export default async function VCardPage({
               return acc;
             }, {} as Record<string, React.CSSProperties>)
           }
+          defaultIconBoxStyle={iconBoxStyle(theme.primaryColor)}
           textPrimary={textPrimary}
           textMuted={textMuted}
           isMinimal={isMinimal}
           primaryColor={theme.primaryColor}
           websiteLogo={vcard.websiteLogo || ""}
-          contactDisplayMode={vcard.contactDisplayMode || "value"}
         />
 
         {/* ============================================================ */}
