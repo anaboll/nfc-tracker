@@ -1,5 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { headers, cookies } from "next/headers";
+import { hashIp, getGeoLocation } from "@/lib/utils";
+import {
+  resolveVisitorSessionFromCookies,
+  extractCleanIp,
+  ipVersion,
+  ipPrefix,
+  detectDeviceType,
+  buildRawMeta,
+  extractUtm,
+  isSchemaMismatchError,
+  truncateField,
+} from "@/lib/telemetry";
 import VCardActions from "./VCardActions";
 import VCardTrackedLinks from "./VCardTrackedLinks";
 import type { VCardData, VCardTheme } from "@/types/vcard";
@@ -145,13 +158,15 @@ export default async function VCardPage({
   searchParams,
 }: {
   params: { tagId: string };
-  searchParams: { from?: string };
+  searchParams: { from?: string; source?: string };
 }) {
   const fromDashboard = searchParams.from === "dashboard";
 
   // Support "tagId::nfcChipId" — strip NFC UID suffix if present
   const decoded = decodeURIComponent(params.tagId);
-  const tagId = decoded.includes("::") ? decoded.substring(0, decoded.indexOf("::")) : decoded;
+  const hasChipId = decoded.includes("::");
+  const tagId = hasChipId ? decoded.substring(0, decoded.indexOf("::")) : decoded;
+  const nfcId = hasChipId ? decoded.substring(decoded.indexOf("::") + 2) : null;
 
   const tag = await prisma.tag.findUnique({
     where: { id: tagId, isActive: true },
@@ -159,6 +174,98 @@ export default async function VCardPage({
 
   if (!tag || tag.tagType !== "vcard") {
     notFound();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Record scan for direct NFC/QR access (not from /s/ redirect)       */
+  /* ------------------------------------------------------------------ */
+  const isDirectAccess = hasChipId || searchParams.source === "qr";
+  if (isDirectAccess && !fromDashboard) {
+    try {
+      const hdrs = headers();
+      const referer = hdrs.get("referer") || "";
+      const isFromRedirect = referer.includes(`/s/${tagId}`);
+
+      if (!isFromRedirect) {
+        const cleanedIp = extractCleanIp(
+          hdrs.get("x-forwarded-for"),
+          hdrs.get("x-real-ip"),
+          hdrs.get("cf-connecting-ip"),
+        );
+        const ipHash = hashIp(cleanedIp);
+
+        // 30-second dedup window
+        const recentScan = await prisma.scan.findFirst({
+          where: { tagId, ipHash, timestamp: { gte: new Date(Date.now() - 30000) } },
+        });
+
+        if (!recentScan) {
+          const userAgent = hdrs.get("user-agent") || "";
+          const browserLang = hdrs.get("accept-language")?.split(",")[0]?.split(";")[0]?.trim() || null;
+          const isReturning = (await prisma.scan.count({ where: { ipHash, tagId } })) > 0;
+          let geo = { city: null as string | null, country: null as string | null, region: null as string | null };
+          try { geo = await getGeoLocation(cleanedIp); } catch { /* geo failed */ }
+
+          const cookieStore = cookies();
+          const { visitorId, sessionId } = resolveVisitorSessionFromCookies(cookieStore);
+          const ipVer = ipVersion(cleanedIp);
+          const ipPfx = ipPrefix(cleanedIp);
+          const device = detectDeviceType(userAgent);
+          const eventSource = hasChipId ? "nfc" : (searchParams.source || null);
+
+          let pageUrl: URL;
+          try {
+            const proto = hdrs.get("x-forwarded-proto") || "https";
+            const host = hdrs.get("host") || "twojenfc.pl";
+            pageUrl = new URL(`${proto}://${host}/vcard/${decoded}`);
+          } catch { pageUrl = new URL(`https://twojenfc.pl/vcard/${decoded}`); }
+          const utm = extractUtm(pageUrl);
+          const rawMeta = buildRawMeta(hdrs, pageUrl);
+
+          try {
+            await prisma.scan.create({
+              data: {
+                tagId, ipHash,
+                deviceType: device,
+                userAgent: truncateField(userAgent) || null,
+                browserLang,
+                city: geo.city, country: geo.country, region: geo.region,
+                isReturning,
+                referrer: truncateField(referer) || null,
+                eventSource,
+                ...(nfcId ? { nfcId } : {}),
+                visitorId, sessionId,
+                ...utm,
+                acceptLanguage: truncateField(hdrs.get("accept-language"), 500) || null,
+                path: `/vcard/${decoded}`,
+                query: null,
+                rawMeta,
+                ipPrefix: ipPfx,
+                ipVersion: ipVer,
+              },
+            });
+          } catch (err) {
+            if (isSchemaMismatchError(err)) {
+              await prisma.scan.create({
+                data: {
+                  tagId, ipHash,
+                  deviceType: device,
+                  userAgent: truncateField(userAgent) || null,
+                  browserLang,
+                  isReturning: false,
+                  referrer: truncateField(referer) || null,
+                  eventSource,
+                },
+              });
+            } else {
+              console.error("vCard scan record error:", err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("vCard direct scan tracking error:", err);
+    }
   }
 
   const vcard = tag.links as unknown as VCardData;
