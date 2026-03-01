@@ -13,7 +13,11 @@ export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props)
   const router = useRouter();
   const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${tagType === "vcard" ? `/vcard/${tagId}` : `/s/${tagId}`}`;
+  // All tags use /s/ link except laboversum-wizytowka (hardcoded NFC keychains with /vcard/ URL)
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const publicUrl = tagId === "laboversum-wizytowka"
+    ? `${origin}/vcard/${tagId}`
+    : `${origin}/s/${tagId}`;
 
   const handleDownloadQR = async (format: "png" | "svg" | "pdf") => {
     setDownloadingFormat(format);
