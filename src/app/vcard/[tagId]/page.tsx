@@ -149,7 +149,8 @@ export default async function VCardPage({
   const fromDashboard = searchParams.from === "dashboard";
 
   // Support "tagId::nfcChipId" separator (same as /s/ route)
-  const rawTagId = params.tagId;
+  // Next.js may URL-encode the params, so decode first
+  const rawTagId = decodeURIComponent(params.tagId);
   const baseTagId = rawTagId.includes("::") ? rawTagId.substring(0, rawTagId.indexOf("::")) : rawTagId;
 
   let tag = await prisma.tag.findUnique({
