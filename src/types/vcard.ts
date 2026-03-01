@@ -6,7 +6,7 @@ export type BgMode = "gradient" | "solid" | "pattern";
 export type BgPattern = "none" | "dots" | "grid" | "waves";
 export type ButtonStyle = "rounded" | "square" | "pill";
 export type ButtonVariant = "filled" | "outline" | "ghost";
-export type FontFamily = "geist" | "inter" | "serif";
+export type FontFamily = "geist" | "inter" | "serif" | "poppins" | "montserrat" | "playfair" | "raleway" | "dm-sans";
 export type LayoutVariant = "classic" | "modern" | "minimal";
 export type AvatarShape = "circle" | "rounded-square" | "square";
 export type SocialIconStyle = "rounded" | "circle" | "square" | "pill";
@@ -86,7 +86,7 @@ export const THEME_VALID_VALUES = {
   bgPattern: ["none", "dots", "grid", "waves"] as BgPattern[],
   buttonStyle: ["rounded", "square", "pill"] as ButtonStyle[],
   buttonVariant: ["filled", "outline", "ghost"] as ButtonVariant[],
-  fontFamily: ["geist", "inter", "serif"] as FontFamily[],
+  fontFamily: ["geist", "inter", "serif", "poppins", "montserrat", "playfair", "raleway", "dm-sans"] as FontFamily[],
   layoutVariant: ["classic", "modern", "minimal"] as LayoutVariant[],
   avatarShape: ["circle", "rounded-square", "square"] as AvatarShape[],
   socialIconStyle: ["rounded", "circle", "square", "pill"] as SocialIconStyle[],

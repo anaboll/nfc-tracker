@@ -101,8 +101,27 @@ function getFontStack(family: string): string {
   switch (family) {
     case "inter": return "'Inter', system-ui, -apple-system, sans-serif";
     case "serif": return "'Georgia', 'Times New Roman', serif";
+    case "poppins": return "'Poppins', system-ui, -apple-system, sans-serif";
+    case "montserrat": return "'Montserrat', system-ui, -apple-system, sans-serif";
+    case "playfair": return "'Playfair Display', Georgia, serif";
+    case "raleway": return "'Raleway', system-ui, -apple-system, sans-serif";
+    case "dm-sans": return "'DM Sans', system-ui, -apple-system, sans-serif";
     default: return "var(--font-geist-sans), system-ui, -apple-system, sans-serif";
   }
+}
+
+/** Google Fonts URL for premium fonts */
+function getGoogleFontsUrl(family: string): string | null {
+  const fontsMap: Record<string, string> = {
+    poppins: "Poppins:wght@300;400;500;600;700;800",
+    montserrat: "Montserrat:wght@300;400;500;600;700;800",
+    playfair: "Playfair+Display:wght@400;500;600;700;800",
+    raleway: "Raleway:wght@300;400;500;600;700;800",
+    "dm-sans": "DM+Sans:wght@300;400;500;600;700;800",
+    inter: "Inter:wght@300;400;500;600;700;800",
+  };
+  if (!fontsMap[family]) return null;
+  return `https://fonts.googleapis.com/css2?family=${fontsMap[family]}&display=swap`;
 }
 
 /** Detect if background is light (for text color) */
@@ -230,16 +249,23 @@ export default async function VCardPage({
   /* -- Minimal layout: social links as icon row -- */
   const isMinimal = theme.layoutVariant === "minimal";
   const isModern = theme.layoutVariant === "modern";
+  const googleFontsUrl = getGoogleFontsUrl(theme.fontFamily);
 
   return (
-    <main
-      className="min-h-screen flex flex-col items-center px-4 py-8"
-      style={{
-        background: getBackground(theme),
-        fontFamily: fontStack,
-        position: "relative",
-      }}
-    >
+    <>
+      {/* Load Google Fonts if premium font selected */}
+      {googleFontsUrl && (
+        // eslint-disable-next-line @next/next/no-page-custom-font
+        <link rel="stylesheet" href={googleFontsUrl} />
+      )}
+      <main
+        className="min-h-screen flex flex-col items-center px-4 py-8"
+        style={{
+          background: getBackground(theme),
+          fontFamily: fontStack,
+          position: "relative",
+        }}
+      >
       {/* Pattern overlay */}
       {patternStyle && <div style={patternStyle} />}
 
@@ -384,5 +410,6 @@ export default async function VCardPage({
 
       </div>
     </main>
+    </>
   );
 }

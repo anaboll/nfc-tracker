@@ -80,7 +80,7 @@ export default function TagFormVCardSection({
   tagType, vcard, setVcard, readOnly, errors, clearFieldError, tagId, mode,
 }: Props) {
   const [socialOpen, setSocialOpen] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(true);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -200,6 +200,32 @@ export default function TagFormVCardSection({
           )}
         </div>
 
+        {/* ── THEME EDITOR (inline, right after photo) ── */}
+        <div style={{ marginBottom: 20 }}>
+          <button
+            onClick={() => setThemeOpen(!themeOpen)}
+            style={styles.collapseBtn}
+          >
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+              style={{
+                transform: themeOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <span>{"\uD83C\uDFA8"} Motyw wizytowki</span>
+          </button>
+          {themeOpen && (
+            <ThemeEditor
+              theme={vcard.theme || ({} as VCardTheme)}
+              onChange={handleThemeChange}
+            />
+          )}
+        </div>
+
         {/* ── DATA SECTIONS ── */}
         {SECTIONS.map((sec) => {
           const isCollapsible = sec.collapsed;
@@ -286,32 +312,6 @@ export default function TagFormVCardSection({
             </div>
           );
         })}
-      </div>
-
-      {/* ── THEME EDITOR (separate card) ── */}
-      <div style={styles.section}>
-        <button
-          onClick={() => setThemeOpen(!themeOpen)}
-          style={styles.collapseBtn}
-        >
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
-            style={{
-              transform: themeOpen ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-            }}
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span>{"\uD83C\uDFA8"} Motyw wizytowki</span>
-        </button>
-        {themeOpen && (
-          <ThemeEditor
-            theme={vcard.theme || ({} as VCardTheme)}
-            onChange={handleThemeChange}
-          />
-        )}
       </div>
 
       {/* ── IMAGE CROPPER MODAL ── */}

@@ -88,7 +88,7 @@ const BG_MODE_LABELS: Record<BgMode, string> = { gradient: "Gradient", solid: "J
 const BG_PATTERN_LABELS: Record<BgPattern, string> = { none: "Brak", dots: "Kropki", grid: "Siatka", waves: "Fale" };
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { rounded: "Zaokraglone", square: "Kwadratowe", pill: "Pigulka" };
 const BUTTON_VARIANT_LABELS: Record<ButtonVariant, string> = { filled: "Wypelnione", outline: "Obrys", ghost: "Przezroczyste" };
-const FONT_LABELS: Record<FontFamily, string> = { geist: "Geist Sans", inter: "Inter", serif: "Serif" };
+const FONT_LABELS: Record<FontFamily, string> = { geist: "Geist Sans", inter: "Inter", serif: "Serif", poppins: "Poppins", montserrat: "Montserrat", playfair: "Playfair", raleway: "Raleway", "dm-sans": "DM Sans" };
 const LAYOUT_LABELS: Record<LayoutVariant, string> = { classic: "Klasyczny", modern: "Nowoczesny", minimal: "Minimalny" };
 const SOCIAL_ICON_LABELS: Record<SocialIconStyle, string> = { rounded: "Zaokraglone", circle: "Kolo", square: "Kwadrat", pill: "Pigulka" };
 
@@ -218,7 +218,7 @@ export default function ThemeEditor({ theme, onChange }: Props) {
           <SectionTitle>Czcionka</SectionTitle>
           <OptionGrid
             value={t.fontFamily}
-            options={["geist", "inter", "serif"] as FontFamily[]}
+            options={["geist", "inter", "serif", "poppins", "montserrat", "playfair", "raleway", "dm-sans"] as FontFamily[]}
             onChange={(v) => update({ fontFamily: v })}
             renderLabel={(v) => FONT_LABELS[v]}
           />
