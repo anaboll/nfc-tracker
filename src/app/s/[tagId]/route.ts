@@ -123,8 +123,8 @@ export async function GET(
 
     const response = NextResponse.redirect(targetUrl, { status: 302 });
 
-    // Apply telemetry cookies to redirect response
-    applyTelemetryCookies(response, setCookies);
+    // Apply telemetry cookies to redirect response (respects RODO consent)
+    applyTelemetryCookies(response, setCookies, request);
 
     return response;
   } catch (error) {

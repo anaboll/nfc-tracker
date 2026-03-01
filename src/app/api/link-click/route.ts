@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({ ok: true });
-    applyTelemetryCookies(response, setCookies);
+    applyTelemetryCookies(response, setCookies, request);
     return response;
   } catch (error) {
     console.error("LinkClick record error:", error);

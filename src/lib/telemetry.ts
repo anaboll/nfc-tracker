@@ -150,12 +150,24 @@ export function resolveVisitorSessionFromCookies(cookieStore: ReturnType<typeof 
 
 /**
  * Apply Set-Cookie headers to a NextResponse.
+ * Respects RODO cookie consent: telemetry cookies (tn_visitor, tn_sess,
+ * tn_sess_ts) are only set when the user has given analytics consent
+ * (tn_consent=all). If no consent cookie exists or consent is "essential",
+ * only non-telemetry cookies are applied.
  */
+const TELEMETRY_COOKIE_NAMES = new Set([VISITOR_COOKIE, SESSION_COOKIE, SESSION_TS_COOKIE]);
+
 export function applyTelemetryCookies(
   response: NextResponse,
-  setCookies: Array<{ name: string; value: string; options: ReturnType<typeof cookieOpts> }>
+  setCookies: Array<{ name: string; value: string; options: ReturnType<typeof cookieOpts> }>,
+  request?: NextRequest
 ): void {
+  const consent = request?.cookies.get("tn_consent")?.value;
+  const hasAnalyticsConsent = consent === "all";
+
   for (const c of setCookies) {
+    // Skip telemetry cookies when user hasn't given analytics consent
+    if (TELEMETRY_COOKIE_NAMES.has(c.name) && !hasAnalyticsConsent) continue;
     response.cookies.set(c.name, c.value, c.options);
   }
 }
