@@ -74,6 +74,7 @@ export default function TagManagement({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [resetConfirmId, setResetConfirmId] = useState<string | null>(null);
 
   const openCardMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -432,17 +433,37 @@ export default function TagManagement({
                           <div style={{ height: 1, background: "var(--border-hover)", margin: "0 10px" }} />
 
                           {/* Reset statystyk */}
-                          <button
-                            onClick={() => { closeCardMenu(); router.push(`/dashboard/tags/${tag.id}/edit`); }}
-                            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "var(--warning)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-                            </svg>
-                            Reset statystyk
-                          </button>
+                          {resetConfirmId === tag.id ? (
+                            <div style={{ padding: "8px 14px" }}>
+                              <p style={{ fontSize: 12, color: "var(--warning)", marginBottom: 8 }}>Resetowac statystyki?</p>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button
+                                  onClick={() => { closeCardMenu(); setResetConfirmId(null); handleResetStats(tag.id); }}
+                                  style={{ flex: 1, padding: "6px", borderRadius: 6, border: "none", background: "var(--warning)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  Tak
+                                </button>
+                                <button
+                                  onClick={() => setResetConfirmId(null)}
+                                  style={{ flex: 1, padding: "6px", borderRadius: 6, border: "1px solid var(--surface-2)", background: "transparent", color: "var(--txt-sec)", fontSize: 12, cursor: "pointer" }}
+                                >
+                                  Nie
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setResetConfirmId(tag.id)}
+                              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "var(--warning)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(245,158,11,0.08)"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                              </svg>
+                              Reset statystyk
+                            </button>
+                          )}
 
                           {/* Usuń akcję */}
                           <button

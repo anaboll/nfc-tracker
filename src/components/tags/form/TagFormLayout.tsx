@@ -70,6 +70,13 @@ export default function TagFormLayout({ form }: Props) {
 
   return (
     <div style={styles.page}>
+      {/* Responsive: hide preview on mobile */}
+      <style>{`
+        @media (max-width: 768px) {
+          .tagform-preview-col { display: none !important; }
+          .tagform-two-col { flex-direction: column !important; }
+        }
+      `}</style>
       <TagFormHeader
         mode={form.mode}
         tagName={form.name || form.tagId || undefined}
@@ -87,7 +94,7 @@ export default function TagFormLayout({ form }: Props) {
           <div style={styles.errorBanner}>{form.submitError}</div>
         )}
 
-        <div style={styles.twoCol}>
+        <div style={styles.twoCol} className="tagform-two-col">
           {/* Main form column */}
           <div style={styles.mainCol}>
             <TagFormBasicSection
@@ -173,9 +180,9 @@ export default function TagFormLayout({ form }: Props) {
             />
           </div>
 
-          {/* Preview column (vCard only) */}
+          {/* Preview column (vCard only) — hidden on mobile via CSS */}
           {form.tagType === "vcard" && (
-            <div style={styles.previewCol}>
+            <div style={styles.previewCol} className="tagform-preview-col">
               <TagFormVCardPreview
                 tagType={form.tagType}
                 vcard={form.vcard}

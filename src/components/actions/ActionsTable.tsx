@@ -176,6 +176,7 @@ export function ActionsTable({
   onCopySuccess,
   readOnly = false,
 }: ActionsTableProps) {
+  const [resetConfirmId, setResetConfirmId] = useState<string | null>(null);
   const allSelected = tags.length > 0 && tags.every((t) => selectedIds.includes(t.id));
   const someSelected = selectedIds.length > 0;
 
@@ -734,17 +735,37 @@ export function ActionsTable({
                           <div style={{ height: 1, background: "var(--surface-2)", margin: "0 10px" }} />
 
                           {/* Reset statystyk */}
-                          <button
-                            onClick={() => { closeMenu(); onSetResetTagConfirm(tag.id); onStartEdit(tag); }}
-                            style={menuItem("var(--warning)")}
-                            onMouseEnter={(e) => hoverIn(e, "rgba(245,158,11,0.08)")}
-                            onMouseLeave={hoverOut}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-                            </svg>
-                            Reset statystyk
-                          </button>
+                          {resetConfirmId === tag.id ? (
+                            <div style={{ padding: "8px 14px" }}>
+                              <p style={{ fontSize: 12, color: "var(--warning)", marginBottom: 8 }}>Resetowac statystyki?</p>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button
+                                  onClick={() => { closeMenu(); setResetConfirmId(null); onResetStats(tag.id); }}
+                                  style={{ flex: 1, padding: "6px", borderRadius: 6, border: "none", background: "var(--warning)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  Tak
+                                </button>
+                                <button
+                                  onClick={() => setResetConfirmId(null)}
+                                  style={{ flex: 1, padding: "6px", borderRadius: 6, border: "1px solid var(--surface-2)", background: "transparent", color: "var(--txt-sec)", fontSize: 12, cursor: "pointer" }}
+                                >
+                                  Nie
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setResetConfirmId(tag.id)}
+                              style={menuItem("var(--warning)")}
+                              onMouseEnter={(e) => hoverIn(e, "rgba(245,158,11,0.08)")}
+                              onMouseLeave={hoverOut}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                              </svg>
+                              Reset statystyk
+                            </button>
+                          )}
 
                           {/* Usuń akcję */}
                           <button
