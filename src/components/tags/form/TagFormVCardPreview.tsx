@@ -41,9 +41,21 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
 
       <div style={styles.card}>
         {/* Avatar */}
-        <div style={styles.avatar}>
-          <span style={styles.initials}>{initials}</span>
-        </div>
+        {deferred.photo ? (
+          <div style={styles.avatarPhoto}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={deferred.photo.startsWith("/api/uploads/") ? deferred.photo : deferred.photo.startsWith("/uploads/") ? `/api${deferred.photo}` : deferred.photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+        ) : (
+          <div style={styles.avatar}>
+            <span style={styles.initials}>{initials}</span>
+          </div>
+        )}
 
         {/* Name */}
         <div style={styles.name}>{fullName}</div>
@@ -135,6 +147,15 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     margin: "0 auto 12px",
+  },
+  avatarPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: "50%",
+    overflow: "hidden",
+    margin: "0 auto 12px",
+    border: "2px solid rgba(124,58,237,0.3)",
+    boxShadow: "0 0 20px rgba(124,58,237,0.15)",
   },
   initials: {
     color: "#fff",

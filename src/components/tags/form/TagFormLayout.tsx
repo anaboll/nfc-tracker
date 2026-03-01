@@ -142,6 +142,8 @@ export default function TagFormLayout({ form }: Props) {
               readOnly={form.readOnly}
               errors={form.errors}
               clearFieldError={form.clearFieldError}
+              tagId={form.tagId}
+              mode={form.mode}
             />
 
             {showVideoHint && (

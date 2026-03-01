@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import TrackedLink from "./TrackedLink";
+import TrackedLink from "@/components/shared/TrackedLink";
 
 interface LinkItem {
   label: string;

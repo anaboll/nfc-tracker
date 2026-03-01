@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import VCardActions from "./VCardActions";
+import VCardTrackedLinks from "./VCardTrackedLinks";
 import type { VCardData, VCardTheme } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import {
@@ -319,112 +320,27 @@ export default async function VCardPage({
         />
 
         {/* ============================================================ */}
-        {/*  CONTACT section                                             */}
+        {/*  CONTACT + SOCIAL MEDIA (tracked clicks)                     */}
         {/* ============================================================ */}
-        {contactLinks.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            {!isMinimal && (
-              <div style={{
-                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-                color: textMuted, marginBottom: 10, paddingLeft: 4,
-              }}>
-                Kontakt
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {contactLinks.map((link) => {
-                const Icon = ICON_MAP[link.key];
-                const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
-                return (
-                  <a
-                    key={link.key}
-                    href={link.url}
-                    target={link.key === "phone" ? "_self" : "_blank"}
-                    rel="noopener noreferrer"
-                    style={linkCardStyle}
-                  >
-                    <div style={iconBoxStyle(color)}>
-                      {Icon && <Icon size={20} color={color} />}
-                    </div>
-                    <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
-                      {link.label}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/*  SOCIAL MEDIA section                                        */}
-        {/* ============================================================ */}
-        {socialLinks.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            {!isMinimal && (
-              <div style={{
-                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-                color: textMuted, marginBottom: 10, paddingLeft: 4,
-              }}>
-                Social Media
-              </div>
-            )}
-
-            {isMinimal ? (
-              /* Minimal layout: icon-only row */
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-                {socialLinks.map((link) => {
-                  const Icon = ICON_MAP[link.key];
-                  const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
-                  return (
-                    <a
-                      key={link.key}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={iconBoxStyle(color)}
-                      title={link.label}
-                    >
-                      {Icon && <Icon size={20} color={color} />}
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              /* Classic / Modern layout: full cards */
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {socialLinks.map((link) => {
-                  const Icon = ICON_MAP[link.key];
-                  const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
-                  return (
-                    <a
-                      key={link.key}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={linkCardStyle}
-                    >
-                      <div style={iconBoxStyle(color)}>
-                        {Icon && <Icon size={20} color={color} />}
-                      </div>
-                      <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1 }}>
-                        {link.label}
-                      </span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        <VCardTrackedLinks
+          tagId={params.tagId}
+          contactLinks={contactLinks}
+          socialLinks={socialLinks}
+          linkCardStyle={linkCardStyle}
+          iconBoxStyleFn={
+            [...contactLinks, ...socialLinks].reduce((acc, link) => {
+              const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
+              acc[link.key] = iconBoxStyle(color);
+              return acc;
+            }, {} as Record<string, React.CSSProperties>)
+          }
+          textPrimary={textPrimary}
+          textMuted={textMuted}
+          isMinimal={isMinimal}
+          iconMap={{}}
+          socialColors={SOCIAL_COLORS}
+          primaryColor={theme.primaryColor}
+        />
 
         {/* ============================================================ */}
         {/*  NOTE section                                                */}

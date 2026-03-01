@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import type { VCardData } from "@/types/vcard";
+import React, { useState, useRef } from "react";
+import type { VCardData, VCardTheme } from "@/types/vcard";
+import ImageCropper from "@/components/ui/ImageCropper";
+import ThemeEditor from "@/components/vcard/ThemeEditor";
 
 interface Props {
   tagType: string;
@@ -10,6 +12,8 @@ interface Props {
   readOnly: boolean;
   errors: Record<string, string>;
   clearFieldError: (f: string) => void;
+  tagId: string;
+  mode: "create" | "edit";
 }
 
 interface FieldDef {
@@ -20,9 +24,18 @@ interface FieldDef {
   placeholder?: string;
 }
 
-const SECTIONS: { title: string; collapsed?: boolean; fields: FieldDef[] }[] = [
+/** Normalize photo path */
+function photoSrc(photo: string): string {
+  if (!photo) return "";
+  if (photo.startsWith("/api/uploads/")) return photo;
+  if (photo.startsWith("/uploads/")) return `/api${photo}`;
+  return photo;
+}
+
+const SECTIONS: { title: string; icon: string; collapsed?: boolean; fields: FieldDef[] }[] = [
   {
     title: "Dane osobowe",
+    icon: "\uD83D\uDC64",
     fields: [
       { key: "firstName", label: "Imie", required: true },
       { key: "lastName", label: "Nazwisko", required: true },
@@ -32,6 +45,7 @@ const SECTIONS: { title: string; collapsed?: boolean; fields: FieldDef[] }[] = [
   },
   {
     title: "Kontakt",
+    icon: "\uD83D\uDCDE",
     fields: [
       { key: "phone", label: "Telefon", type: "tel", placeholder: "+48..." },
       { key: "email", label: "Email", type: "email" },
@@ -41,6 +55,7 @@ const SECTIONS: { title: string; collapsed?: boolean; fields: FieldDef[] }[] = [
   },
   {
     title: "Social Media",
+    icon: "\uD83D\uDCF1",
     collapsed: true,
     fields: [
       { key: "instagram", label: "Instagram", placeholder: "@username lub URL" },
@@ -54,6 +69,7 @@ const SECTIONS: { title: string; collapsed?: boolean; fields: FieldDef[] }[] = [
   },
   {
     title: "Notatka",
+    icon: "\uD83D\uDCDD",
     fields: [
       { key: "note", label: "Notatka", placeholder: "Dodatkowe informacje..." },
     ],
@@ -61,9 +77,14 @@ const SECTIONS: { title: string; collapsed?: boolean; fields: FieldDef[] }[] = [
 ];
 
 export default function TagFormVCardSection({
-  tagType, vcard, setVcard, readOnly, errors, clearFieldError,
+  tagType, vcard, setVcard, readOnly, errors, clearFieldError, tagId, mode,
 }: Props) {
   const [socialOpen, setSocialOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (tagType !== "vcard") return null;
 
@@ -72,98 +93,236 @@ export default function TagFormVCardSection({
     clearFieldError("vcard");
   };
 
+  /* -- Photo handlers -- */
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Dozwolone tylko pliki graficzne");
+      setTimeout(() => setPhotoError(null), 3000);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoError("Maksymalny rozmiar: 10MB");
+      setTimeout(() => setPhotoError(null), 3000);
+      return;
+    }
+    setCropFile(file);
+  };
+
+  const handleCroppedUpload = async (blob: Blob) => {
+    setCropFile(null);
+    setPhotoUploading(true);
+    try {
+      const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+      const formData = new FormData();
+      formData.append("file", file);
+      if (tagId) formData.append("tagId", tagId);
+
+      const res = await fetch("/api/vcard/photo/admin", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setVcard({ ...vcard, photo: data.path });
+    } catch {
+      setPhotoError("Nie udalo sie wgrac zdjecia");
+      setTimeout(() => setPhotoError(null), 3000);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const handleThemeChange = (t: VCardTheme) => {
+    setVcard({ ...vcard, theme: t });
+  };
+
+  const initials = [vcard.firstName?.[0], vcard.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
+
   return (
-    <div style={styles.section}>
-      <h3 style={styles.sectionTitle}>Wizytowka</h3>
+    <>
+      <div style={styles.section}>
+        <h3 style={styles.sectionTitle}>Wizytowka</h3>
 
-      {errors.vcard && <div style={{ ...styles.error, marginBottom: 12 }}>{errors.vcard}</div>}
+        {errors.vcard && <div style={{ ...styles.error, marginBottom: 12 }}>{errors.vcard}</div>}
 
-      {SECTIONS.map((sec) => {
-        const isCollapsible = sec.collapsed;
-
-        if (isCollapsible) {
-          return (
-            <div key={sec.title} style={{ marginBottom: 16 }}>
-              <button
-                onClick={() => setSocialOpen(!socialOpen)}
-                style={styles.collapseBtn}
-              >
-                <svg
-                  width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
-                  style={{
-                    transform: socialOpen ? "rotate(90deg)" : "rotate(0deg)",
-                    transition: "transform 0.2s",
-                  }}
-                >
-                  <polyline points="9 18 15 12 9 6" />
+        {/* ── PHOTO UPLOAD ── */}
+        <div style={styles.photoSection}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            style={{ display: "none" }}
+            disabled={readOnly}
+          />
+          <div
+            style={styles.photoWrapper}
+            onClick={() => !readOnly && fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+          >
+            {vcard.photo ? (
+              <div style={styles.photoPreview}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoSrc(vcard.photo)}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+                <div style={styles.photoOverlay}>Zmien</div>
+              </div>
+            ) : (
+              <div style={styles.photoPlaceholder}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
                 </svg>
-                <span>{sec.title}</span>
-                <span style={styles.collapseBadge}>{sec.fields.length} pol</span>
-              </button>
+                <span style={{ fontSize: 11, marginTop: 4 }}>Dodaj zdjecie</span>
+              </div>
+            )}
+          </div>
+          {photoUploading && (
+            <span style={{ fontSize: 11, color: "var(--accent)", marginTop: 6 }}>Wgrywanie...</span>
+          )}
+          {photoError && (
+            <span style={{ fontSize: 11, color: "var(--error)", marginTop: 6 }}>{photoError}</span>
+          )}
+          {vcard.photo && !readOnly && (
+            <button
+              type="button"
+              onClick={() => setVcard({ ...vcard, photo: "" })}
+              style={styles.photoRemoveBtn}
+            >
+              Usun zdjecie
+            </button>
+          )}
+        </div>
 
-              {socialOpen && (
-                <div style={styles.fieldGrid}>
-                  {sec.fields.map((f) => (
-                    <div key={f.key} style={styles.field}>
-                      <label style={styles.label}>{f.label}</label>
-                      <input
-                        style={styles.input}
-                        type={f.type || "text"}
-                        value={(vcard as unknown as Record<string, string>)[f.key] || ""}
-                        onChange={(e) => updateField(f.key, e.target.value)}
-                        placeholder={f.placeholder || ""}
-                        disabled={readOnly}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        }
+        {/* ── DATA SECTIONS ── */}
+        {SECTIONS.map((sec) => {
+          const isCollapsible = sec.collapsed;
 
-        /* Note field gets a textarea */
-        if (sec.title === "Notatka") {
+          if (isCollapsible) {
+            return (
+              <div key={sec.title} style={{ marginBottom: 16 }}>
+                <button
+                  onClick={() => setSocialOpen(!socialOpen)}
+                  style={styles.collapseBtn}
+                >
+                  <svg
+                    width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+                    style={{
+                      transform: socialOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s",
+                    }}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  <span>{sec.icon} {sec.title}</span>
+                  <span style={styles.collapseBadge}>{sec.fields.length} pol</span>
+                </button>
+
+                {socialOpen && (
+                  <div style={styles.fieldGrid}>
+                    {sec.fields.map((f) => (
+                      <div key={f.key} style={styles.field}>
+                        <label style={styles.label}>{f.label}</label>
+                        <input
+                          style={styles.input}
+                          type={f.type || "text"}
+                          value={(vcard as unknown as Record<string, string>)[f.key] || ""}
+                          onChange={(e) => updateField(f.key, e.target.value)}
+                          placeholder={f.placeholder || ""}
+                          disabled={readOnly}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          /* Note field gets a textarea */
+          if (sec.title === "Notatka") {
+            return (
+              <div key={sec.title} style={{ marginBottom: 16 }}>
+                <div style={styles.subsectionTitle}>{sec.icon} {sec.title}</div>
+                <textarea
+                  style={{ ...styles.input, minHeight: 70, resize: "vertical" as const, width: "100%" }}
+                  value={vcard.note || ""}
+                  onChange={(e) => updateField("note", e.target.value)}
+                  placeholder="Dodatkowe informacje..."
+                  disabled={readOnly}
+                />
+              </div>
+            );
+          }
+
           return (
             <div key={sec.title} style={{ marginBottom: 16 }}>
-              <div style={styles.subsectionTitle}>{sec.title}</div>
-              <textarea
-                style={{ ...styles.input, minHeight: 70, resize: "vertical" as const, width: "100%" }}
-                value={vcard.note || ""}
-                onChange={(e) => updateField("note", e.target.value)}
-                placeholder="Dodatkowe informacje..."
-                disabled={readOnly}
-              />
+              <div style={styles.subsectionTitle}>{sec.icon} {sec.title}</div>
+              <div style={styles.fieldGrid}>
+                {sec.fields.map((f) => (
+                  <div key={f.key} style={styles.field}>
+                    <label style={styles.label}>
+                      {f.label}
+                      {f.required && <span style={{ color: "var(--error)" }}> *</span>}
+                    </label>
+                    <input
+                      style={styles.input}
+                      type={f.type || "text"}
+                      value={(vcard as unknown as Record<string, string>)[f.key] || ""}
+                      onChange={(e) => updateField(f.key, e.target.value)}
+                      placeholder={f.placeholder || ""}
+                      disabled={readOnly}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
-        }
+        })}
+      </div>
 
-        return (
-          <div key={sec.title} style={{ marginBottom: 16 }}>
-            <div style={styles.subsectionTitle}>{sec.title}</div>
-            <div style={styles.fieldGrid}>
-              {sec.fields.map((f) => (
-                <div key={f.key} style={styles.field}>
-                  <label style={styles.label}>
-                    {f.label}
-                    {f.required && <span style={{ color: "var(--error)" }}> *</span>}
-                  </label>
-                  <input
-                    style={styles.input}
-                    type={f.type || "text"}
-                    value={(vcard as unknown as Record<string, string>)[f.key] || ""}
-                    onChange={(e) => updateField(f.key, e.target.value)}
-                    placeholder={f.placeholder || ""}
-                    disabled={readOnly}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+      {/* ── THEME EDITOR (separate card) ── */}
+      <div style={styles.section}>
+        <button
+          onClick={() => setThemeOpen(!themeOpen)}
+          style={styles.collapseBtn}
+        >
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+            style={{
+              transform: themeOpen ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }}
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+          <span>{"\uD83C\uDFA8"} Motyw wizytowki</span>
+        </button>
+        {themeOpen && (
+          <ThemeEditor
+            theme={vcard.theme || ({} as VCardTheme)}
+            onChange={handleThemeChange}
+          />
+        )}
+      </div>
+
+      {/* ── IMAGE CROPPER MODAL ── */}
+      {cropFile && (
+        <ImageCropper
+          file={cropFile}
+          onCrop={handleCroppedUpload}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -247,5 +406,61 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: "var(--error)",
     fontWeight: 500,
+  },
+  /* Photo styles */
+  photoSection: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 4,
+  },
+  photoWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: "50%",
+    cursor: "pointer",
+    overflow: "hidden",
+    position: "relative" as const,
+    border: "2px dashed var(--border-hover)",
+    transition: "border-color 0.2s, transform 0.2s",
+  },
+  photoPreview: {
+    width: "100%",
+    height: "100%",
+    position: "relative" as const,
+  },
+  photoOverlay: {
+    position: "absolute" as const,
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(0,0,0,0.5)",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+    opacity: 0,
+    transition: "opacity 0.2s",
+    borderRadius: "50%",
+  },
+  photoPlaceholder: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--txt-muted)",
+    background: "var(--surface-2)",
+  },
+  photoRemoveBtn: {
+    background: "none",
+    border: "none",
+    color: "var(--error)",
+    fontSize: 11,
+    cursor: "pointer",
+    padding: "4px 8px",
+    marginTop: 4,
   },
 };
