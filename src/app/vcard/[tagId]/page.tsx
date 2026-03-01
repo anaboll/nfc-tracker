@@ -199,15 +199,16 @@ export default async function VCardPage({
 
   /* -- Compute unified render items -- */
   const displayItems = computeDisplayItems(vcard);
-  const renderItems: RenderItem[] = displayItems
-    .filter(i => i.visible !== false)
-    .map(item => {
-      if (item.type === "header") return { type: "header" as const, key: item.key, text: item.text };
+  const renderItems: RenderItem[] = [];
+  for (const item of displayItems) {
+    if (item.visible === false) continue;
+    if (item.type === "header") {
+      renderItems.push({ type: "header", key: item.key, text: item.text });
+    } else {
       const data = fieldData[item.key];
-      if (!data) return null;
-      return { type: "field" as const, key: item.key, url: data.url, label: data.label };
-    })
-    .filter((i): i is RenderItem => i !== null);
+      if (data) renderItems.push({ type: "field", key: item.key, url: data.url, label: data.label });
+    }
+  }
 
   /* All field keys for icon box styles */
   const allFieldKeys = renderItems.filter(i => i.type === "field");
