@@ -145,8 +145,10 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
     .map((k) => allContact.find((c) => c.key === k))
     .filter((c) => c && (deferred as unknown as Record<string, string>)[c.key] && !hiddenFields.includes(c.key)) as { key: string; label: string }[];
 
-  const socialLinks = allSocial
-    .filter((s) => (deferred as unknown as Record<string, string>)[s.key] && !hiddenFields.includes(s.key));
+  const socialOrder = deferred.socialOrder || ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
+  const socialLinks = socialOrder
+    .map((k) => allSocial.find((s) => s.key === k))
+    .filter((s) => s && (deferred as unknown as Record<string, string>)[s.key] && !hiddenFields.includes(s.key)) as { key: string; label: string }[];
 
   const displayMode = deferred.contactDisplayMode || "value";
   const contactHeader = deferred.contactHeaderText ?? "Kontakt";
@@ -335,7 +337,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
 
           {/* Social */}
           {socialLinks.length > 0 && (
-            <div style={{ marginTop: socialHeader ? 12 : 8, textAlign: "left" }}>
+            <div style={{ marginTop: socialHeader ? 12 : 6, textAlign: "left" }}>
               {!isMinimal && socialHeader && (
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",

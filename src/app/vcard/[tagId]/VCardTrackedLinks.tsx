@@ -135,7 +135,7 @@ export default function VCardTrackedLinks({
 
       {/* SOCIAL MEDIA section */}
       {visibleSocialLinks.length > 0 && (
-        <div style={{ marginTop: showSocialHeader ? 24 : 16 }}>
+        <div style={{ marginTop: showSocialHeader ? 24 : 10 }}>
           {!isMinimal && showSocialHeader && (
             <div style={{
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",

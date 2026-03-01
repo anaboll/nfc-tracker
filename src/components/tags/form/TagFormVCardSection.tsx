@@ -272,49 +272,6 @@ export default function TagFormVCardSection({
           </button>
           {displayOpen && (
             <div style={{ padding: "12px 0", display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Contact display mode */}
-              <div>
-                <div style={styles.subsectionTitle}>Etykiety kontaktowe</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => setVcard({ ...vcard, contactDisplayMode: "value" })}
-                    style={{
-                      ...styles.collapseBtn,
-                      marginBottom: 0,
-                      flex: 1,
-                      justifyContent: "center",
-                      background: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
-                        ? "var(--accent)" : "var(--surface-2)",
-                      color: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
-                        ? "#fff" : "var(--txt-sec)",
-                      border: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
-                        ? "1px solid var(--accent)" : "1px solid var(--surface-2)",
-                    }}
-                  >
-                    +48 123... (wartosc)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVcard({ ...vcard, contactDisplayMode: "label" })}
-                    style={{
-                      ...styles.collapseBtn,
-                      marginBottom: 0,
-                      flex: 1,
-                      justifyContent: "center",
-                      background: vcard.contactDisplayMode === "label"
-                        ? "var(--accent)" : "var(--surface-2)",
-                      color: vcard.contactDisplayMode === "label"
-                        ? "#fff" : "var(--txt-sec)",
-                      border: vcard.contactDisplayMode === "label"
-                        ? "1px solid var(--accent)" : "1px solid var(--surface-2)",
-                    }}
-                  >
-                    Telefon (etykieta)
-                  </button>
-                </div>
-              </div>
-
               {/* Section headers */}
               <div>
                 <div style={styles.subsectionTitle}>Naglowki sekcji</div>
@@ -408,41 +365,72 @@ export default function TagFormVCardSection({
                 </div>
               </div>
 
-              {/* Social fields visibility */}
+              {/* Social fields visibility + order */}
               <div>
-                <div style={styles.subsectionTitle}>Social Media — widocznosc</div>
+                <div style={styles.subsectionTitle}>Social Media — widocznosc i kolejnosc</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"].map((key) => {
-                    const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
-                    const hidden = vcard.hiddenFields || [];
-                    const isHidden = hidden.includes(key);
-                    const hasValue = !!(vcard as unknown as Record<string, string>)[key];
-                    if (!hasValue) return null;
-                    return (
-                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
-                            setVcard({ ...vcard, hiddenFields: newHidden });
-                          }}
-                          style={{
-                            width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
-                            background: isHidden ? "var(--surface)" : "var(--accent)",
-                            position: "relative", transition: "background 0.2s", flexShrink: 0,
-                          }}
-                        >
-                          <div style={{
-                            width: 14, height: 14, borderRadius: "50%", background: "#fff",
-                            position: "absolute", top: 2,
-                            left: isHidden ? 2 : 18,
-                            transition: "left 0.2s",
-                          }} />
-                        </button>
-                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
-                      </div>
-                    );
-                  })}
+                  {(() => {
+                    const allSocialKeys = ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
+                    const filledKeys = allSocialKeys.filter((k) => !!(vcard as unknown as Record<string, string>)[k]);
+                    const order = vcard.socialOrder
+                      ? vcard.socialOrder.filter((k) => filledKeys.includes(k))
+                      : filledKeys;
+                    // Add any filled keys not yet in order
+                    const finalOrder = [...order, ...filledKeys.filter((k) => !order.includes(k))];
+                    return finalOrder.map((key, idx, arr) => {
+                      const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
+                      const hidden = vcard.hiddenFields || [];
+                      const isHidden = hidden.includes(key);
+                      return (
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
+                              setVcard({ ...vcard, hiddenFields: newHidden });
+                            }}
+                            style={{
+                              width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
+                              background: isHidden ? "var(--surface)" : "var(--accent)",
+                              position: "relative", transition: "background 0.2s", flexShrink: 0,
+                            }}
+                          >
+                            <div style={{
+                              width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                              position: "absolute", top: 2,
+                              left: isHidden ? 2 : 18,
+                              transition: "left 0.2s",
+                            }} />
+                          </button>
+                          <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => {
+                              const newOrder = [...arr];
+                              [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+                              setVcard({ ...vcard, socialOrder: newOrder });
+                            }}
+                            style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === arr.length - 1}
+                            onClick={() => {
+                              const newOrder = [...arr];
+                              [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                              setVcard({ ...vcard, socialOrder: newOrder });
+                            }}
+                            style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
