@@ -2,35 +2,6 @@
 
 import React from "react";
 import TrackedLink from "@/components/shared/TrackedLink";
-
-interface LinkItem {
-  key: string;
-  label: string;
-  url: string;
-}
-
-interface Props {
-  tagId: string;
-  contactLinks: LinkItem[];
-  socialLinks: LinkItem[];
-  /* Style params from server component */
-  linkCardStyle: React.CSSProperties;
-  iconBoxStyleFn: Record<string, React.CSSProperties>;
-  textPrimary: string;
-  textMuted: string;
-  isMinimal: boolean;
-  iconMap: Record<string, string>; // key → serialized SVG color
-  socialColors: Record<string, string>;
-  primaryColor: string;
-  websiteLogo?: string;
-  /* Display settings */
-  contactDisplayMode?: "value" | "label";
-  contactHeaderText?: string;
-  socialHeaderText?: string;
-  hiddenFields?: string[];
-}
-
-/* Re-import icons client-side (they're tiny SVG components) */
 import {
   PhoneIcon, EmailIcon, WebsiteIcon, AddressIcon,
   InstagramIcon, FacebookIcon, LinkedInIcon, WhatsAppIcon,
@@ -38,13 +9,39 @@ import {
   SOCIAL_COLORS,
 } from "@/components/vcard/SocialIcons";
 
+export interface RenderItem {
+  type: "field" | "header";
+  key: string;
+  text?: string;    // header text
+  url?: string;     // field URL
+  label?: string;   // field display text
+}
+
+interface Props {
+  tagId: string;
+  items: RenderItem[];
+  linkCardStyle: React.CSSProperties;
+  iconBoxStyleFn: Record<string, React.CSSProperties>;
+  textPrimary: string;
+  textMuted: string;
+  isMinimal: boolean;
+  primaryColor: string;
+  websiteLogo?: string;
+  contactDisplayMode?: "value" | "label";
+}
+
 const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
   phone: PhoneIcon, email: EmailIcon, website: WebsiteIcon, address: AddressIcon,
   instagram: InstagramIcon, facebook: FacebookIcon, linkedin: LinkedInIcon,
   whatsapp: WhatsAppIcon, tiktok: TikTokIcon, youtube: YouTubeIcon, telegram: TelegramIcon,
 };
 
-/** Normalize photo path */
+const CONTACT_KEYS = new Set(["phone", "email", "website", "address"]);
+const SOCIAL_KEYS = new Set(["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"]);
+const CONTACT_LABELS: Record<string, string> = {
+  phone: "Telefon", email: "E-mail", website: "Strona WWW", address: "Adres",
+};
+
 function photoSrc(p: string): string {
   if (!p) return "";
   if (p.startsWith("/api/uploads/")) return p;
@@ -52,152 +49,123 @@ function photoSrc(p: string): string {
   return p;
 }
 
-const CONTACT_LABELS: Record<string, string> = {
-  phone: "Telefon",
-  email: "E-mail",
-  website: "Strona WWW",
-  address: "Adres",
-};
+interface Section {
+  header?: RenderItem;
+  fields: RenderItem[];
+}
 
 export default function VCardTrackedLinks({
-  tagId,
-  contactLinks,
-  socialLinks,
-  linkCardStyle,
-  iconBoxStyleFn,
-  textPrimary,
-  textMuted,
-  isMinimal,
-  primaryColor,
-  websiteLogo,
-  contactDisplayMode = "value",
-  contactHeaderText,
-  socialHeaderText,
-  hiddenFields = [],
+  tagId, items, linkCardStyle, iconBoxStyleFn, textPrimary, textMuted,
+  isMinimal, primaryColor, websiteLogo, contactDisplayMode = "value",
 }: Props) {
-  const showContactHeader = contactHeaderText !== "" && contactHeaderText !== undefined ? contactHeaderText : (contactHeaderText === "" ? null : "Kontakt");
-  const showSocialHeader = socialHeaderText !== "" && socialHeaderText !== undefined ? socialHeaderText : (socialHeaderText === "" ? null : "Social Media");
+  // Group items into sections (header + following fields)
+  const sections: Section[] = [];
+  let current: Section = { fields: [] };
 
-  const visibleContactLinks = contactLinks.filter((l) => !hiddenFields.includes(l.key));
-  const visibleSocialLinks = socialLinks.filter((l) => !hiddenFields.includes(l.key));
+  for (const item of items) {
+    if (item.type === "header") {
+      if (current.header || current.fields.length > 0) {
+        sections.push(current);
+      }
+      current = { header: item, fields: [] };
+    } else {
+      current.fields.push(item);
+    }
+  }
+  if (current.header || current.fields.length > 0) {
+    sections.push(current);
+  }
+
+  if (sections.length === 0) return null;
 
   return (
     <>
-      {/* CONTACT section */}
-      {visibleContactLinks.length > 0 && (
-        <div style={{ marginTop: showContactHeader ? 24 : 16 }}>
-          {!isMinimal && showContactHeader && (
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-              color: textMuted, marginBottom: 10, paddingLeft: 4,
-            }}>
-              {showContactHeader}
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {visibleContactLinks.map((link) => {
-              const Icon = ICON_MAP[link.key];
-              const color = SOCIAL_COLORS[link.key] || primaryColor;
-              const iboxStyle = iconBoxStyleFn[link.key] || {};
-              const showLogo = link.key === "website" && websiteLogo;
-              return (
-                <TrackedLink
-                  key={link.key}
-                  tagId={tagId}
-                  linkUrl={link.url}
-                  linkLabel={link.label}
-                  linkIcon={link.key}
-                  target={link.key === "phone" ? "_self" : "_blank"}
-                  style={linkCardStyle}
-                >
-                  {showLogo ? (
-                    <div style={{ ...iboxStyle, overflow: "hidden", padding: 0 }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={photoSrc(websiteLogo)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                    </div>
-                  ) : (
-                    <div style={iboxStyle}>
+      {sections.map((section, sIdx) => {
+        if (section.fields.length === 0) return null;
+
+        const allSocial = section.fields.every(f => SOCIAL_KEYS.has(f.key));
+
+        return (
+          <div key={section.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 24 : (section.header ? 16 : 8) }}>
+            {/* Section header */}
+            {!isMinimal && section.header && (
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                color: textMuted, marginBottom: 10, paddingLeft: 4,
+              }}>
+                {section.header.text}
+              </div>
+            )}
+
+            {/* Fields */}
+            {allSocial && isMinimal ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+                {section.fields.map(field => {
+                  const Icon = ICON_MAP[field.key];
+                  const color = SOCIAL_COLORS[field.key] || primaryColor;
+                  const iboxStyle = iconBoxStyleFn[field.key] || {};
+                  return (
+                    <TrackedLink
+                      key={field.key} tagId={tagId}
+                      linkUrl={field.url!} linkLabel={field.label!} linkIcon={field.key}
+                      style={iboxStyle}
+                    >
                       {Icon && <Icon size={20} color={color} />}
-                    </div>
-                  )}
-                  <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
-                    {contactDisplayMode === "label" ? (CONTACT_LABELS[link.key] || link.label) : link.label}
-                  </span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </TrackedLink>
-              );
-            })}
+                    </TrackedLink>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {section.fields.map(field => {
+                  const Icon = ICON_MAP[field.key];
+                  const color = SOCIAL_COLORS[field.key] || primaryColor;
+                  const iboxStyle = iconBoxStyleFn[field.key] || {};
+                  const isContact = CONTACT_KEYS.has(field.key);
+                  const showLogo = field.key === "website" && websiteLogo;
+                  const displayLabel = contactDisplayMode === "label" && isContact
+                    ? (CONTACT_LABELS[field.key] || field.label)
+                    : field.label;
+
+                  return (
+                    <TrackedLink
+                      key={field.key} tagId={tagId}
+                      linkUrl={field.url!} linkLabel={field.label!} linkIcon={field.key}
+                      target={field.key === "phone" ? "_self" : "_blank"}
+                      style={linkCardStyle}
+                    >
+                      {showLogo ? (
+                        <div style={{ ...iboxStyle, overflow: "hidden", padding: 0 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={photoSrc(websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                      ) : (
+                        <div style={iboxStyle}>
+                          {Icon && <Icon size={20} color={color} />}
+                        </div>
+                      )}
+                      <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
+                        {displayLabel}
+                      </span>
+                      {isContact ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      )}
+                    </TrackedLink>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* SOCIAL MEDIA section */}
-      {visibleSocialLinks.length > 0 && (
-        <div style={{ marginTop: showSocialHeader ? 24 : 10 }}>
-          {!isMinimal && showSocialHeader && (
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-              color: textMuted, marginBottom: 10, paddingLeft: 4,
-            }}>
-              {showSocialHeader}
-            </div>
-          )}
-
-          {isMinimal ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {visibleSocialLinks.map((link) => {
-                const Icon = ICON_MAP[link.key];
-                const color = SOCIAL_COLORS[link.key] || primaryColor;
-                const iboxStyle = iconBoxStyleFn[link.key] || {};
-                return (
-                  <TrackedLink
-                    key={link.key}
-                    tagId={tagId}
-                    linkUrl={link.url}
-                    linkLabel={link.label}
-                    linkIcon={link.key}
-                    style={iboxStyle}
-                  >
-                    {Icon && <Icon size={20} color={color} />}
-                  </TrackedLink>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {visibleSocialLinks.map((link) => {
-                const Icon = ICON_MAP[link.key];
-                const color = SOCIAL_COLORS[link.key] || primaryColor;
-                const iboxStyle = iconBoxStyleFn[link.key] || {};
-                return (
-                  <TrackedLink
-                    key={link.key}
-                    tagId={tagId}
-                    linkUrl={link.url}
-                    linkLabel={link.label}
-                    linkIcon={link.key}
-                    style={linkCardStyle}
-                  >
-                    <div style={iboxStyle}>
-                      {Icon && <Icon size={20} color={color} />}
-                    </div>
-                    <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1 }}>
-                      {link.label}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </TrackedLink>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      })}
     </>
   );
 }

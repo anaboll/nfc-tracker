@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import type { VCardData, VCardTheme } from "@/types/vcard";
+import type { VCardData, VCardTheme, DisplayItem } from "@/types/vcard";
+import { computeDisplayItems, FIELD_LABELS } from "@/types/vcard";
 import ImageCropper from "@/components/ui/ImageCropper";
 import ThemeEditor from "@/components/vcard/ThemeEditor";
 
@@ -271,168 +272,120 @@ export default function TagFormVCardSection({
             <span>{"\u2699\uFE0F"} Ustawienia wyswietlania</span>
           </button>
           {displayOpen && (
-            <div style={{ padding: "12px 0", display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Section headers */}
-              <div>
-                <div style={styles.subsectionTitle}>Naglowki sekcji</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <label style={{ ...styles.label, minWidth: 80 }}>Kontakt</label>
-                    <input
-                      style={{ ...styles.input, flex: 1 }}
-                      type="text"
-                      value={vcard.contactHeaderText ?? "Kontakt"}
-                      onChange={(e) => setVcard({ ...vcard, contactHeaderText: e.target.value })}
-                      placeholder="Puste = ukryty"
-                      disabled={readOnly}
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <label style={{ ...styles.label, minWidth: 80 }}>Social</label>
-                    <input
-                      style={{ ...styles.input, flex: 1 }}
-                      type="text"
-                      value={vcard.socialHeaderText ?? "Social Media"}
-                      onChange={(e) => setVcard({ ...vcard, socialHeaderText: e.target.value })}
-                      placeholder="Puste = ukryty"
-                      disabled={readOnly}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: 10, color: "var(--txt-muted)", marginTop: 4 }}>
-                  Zostaw puste aby ukryc naglowek sekcji
-                </div>
-              </div>
+            <div style={{ padding: "12px 0" }}>
+              <div style={styles.subsectionTitle}>Kolejnosc i widocznosc</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {(() => {
+                  const items = computeDisplayItems(vcard);
+                  const updateItems = (newItems: DisplayItem[]) => setVcard({ ...vcard, displayItems: newItems });
 
-              {/* Contact fields visibility + order */}
-              <div>
-                <div style={styles.subsectionTitle}>Kontakt — widocznosc i kolejnosc</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {(vcard.contactOrder || ["phone", "email", "website", "address"]).map((key, idx, arr) => {
-                    const labels: Record<string, string> = { phone: "Telefon", email: "Email", website: "Strona WWW", address: "Adres" };
-                    const hidden = vcard.hiddenFields || [];
-                    const isHidden = hidden.includes(key);
-                    return (
-                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
-                        {/* Toggle */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
-                            setVcard({ ...vcard, hiddenFields: newHidden });
-                          }}
-                          style={{
-                            width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
-                            background: isHidden ? "var(--surface)" : "var(--accent)",
-                            position: "relative", transition: "background 0.2s", flexShrink: 0,
-                          }}
-                        >
-                          <div style={{
-                            width: 14, height: 14, borderRadius: "50%", background: "#fff",
-                            position: "absolute", top: 2,
-                            left: isHidden ? 2 : 18,
-                            transition: "left 0.2s",
-                          }} />
-                        </button>
-                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
-                        <button
-                          type="button"
-                          disabled={idx === 0}
-                          onClick={() => {
-                            const newOrder = [...arr];
-                            [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-                            setVcard({ ...vcard, contactOrder: newOrder });
-                          }}
-                          style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          disabled={idx === arr.length - 1}
-                          onClick={() => {
-                            const newOrder = [...arr];
-                            [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-                            setVcard({ ...vcard, contactOrder: newOrder });
-                          }}
-                          style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
-                        >
-                          ▼
-                        </button>
-                      </div>
+                  return items.map((item, idx, arr) => {
+                    const isHidden = item.visible === false;
+                    const isHeader = item.type === "header";
+
+                    // Toggle switch (shared)
+                    const toggleBtn = (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ni = [...arr];
+                          ni[idx] = { ...item, visible: !isHidden };
+                          updateItems(ni);
+                        }}
+                        style={{
+                          width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
+                          background: isHidden ? "var(--surface)" : "var(--accent)",
+                          position: "relative", transition: "background 0.2s", flexShrink: 0,
+                        }}
+                      >
+                        <div style={{
+                          width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                          position: "absolute", top: 2,
+                          left: isHidden ? 2 : 18, transition: "left 0.2s",
+                        }} />
+                      </button>
                     );
-                  })}
-                </div>
-              </div>
 
-              {/* Social fields visibility + order */}
-              <div>
-                <div style={styles.subsectionTitle}>Social Media — widocznosc i kolejnosc</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {(() => {
-                    const allSocialKeys = ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
-                    const filledKeys = allSocialKeys.filter((k) => !!(vcard as unknown as Record<string, string>)[k]);
-                    const order = vcard.socialOrder
-                      ? vcard.socialOrder.filter((k) => filledKeys.includes(k))
-                      : filledKeys;
-                    // Add any filled keys not yet in order
-                    const finalOrder = [...order, ...filledKeys.filter((k) => !order.includes(k))];
-                    return finalOrder.map((key, idx, arr) => {
-                      const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
-                      const hidden = vcard.hiddenFields || [];
-                      const isHidden = hidden.includes(key);
+                    // Move buttons (shared)
+                    const moveUp = (
+                      <button type="button" disabled={idx === 0} onClick={() => {
+                        const ni = [...arr]; [ni[idx - 1], ni[idx]] = [ni[idx], ni[idx - 1]]; updateItems(ni);
+                      }} style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}>
+                        ▲
+                      </button>
+                    );
+                    const moveDown = (
+                      <button type="button" disabled={idx === arr.length - 1} onClick={() => {
+                        const ni = [...arr]; [ni[idx], ni[idx + 1]] = [ni[idx + 1], ni[idx]]; updateItems(ni);
+                      }} style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}>
+                        ▼
+                      </button>
+                    );
+
+                    if (isHeader) {
                       return (
-                        <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
-                              setVcard({ ...vcard, hiddenFields: newHidden });
+                        <div key={item.key} style={{
+                          display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+                          borderRadius: 6, background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)",
+                          opacity: isHidden ? 0.5 : 1,
+                        }}>
+                          {toggleBtn}
+                          <input
+                            type="text"
+                            value={item.text || ""}
+                            onChange={(e) => {
+                              const ni = [...arr]; ni[idx] = { ...item, text: e.target.value }; updateItems(ni);
                             }}
                             style={{
-                              width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
-                              background: isHidden ? "var(--surface)" : "var(--accent)",
-                              position: "relative", transition: "background 0.2s", flexShrink: 0,
+                              flex: 1, fontSize: 12, fontWeight: 700, color: "var(--txt)",
+                              background: "transparent", border: "1px solid transparent", borderRadius: 4,
+                              outline: "none", padding: "2px 6px",
+                              textTransform: "uppercase", letterSpacing: "0.04em",
                             }}
-                          >
-                            <div style={{
-                              width: 14, height: 14, borderRadius: "50%", background: "#fff",
-                              position: "absolute", top: 2,
-                              left: isHidden ? 2 : 18,
-                              transition: "left 0.2s",
-                            }} />
-                          </button>
-                          <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() => {
-                              const newOrder = [...arr];
-                              [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-                              setVcard({ ...vcard, socialOrder: newOrder });
-                            }}
-                            style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === arr.length - 1}
-                            onClick={() => {
-                              const newOrder = [...arr];
-                              [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-                              setVcard({ ...vcard, socialOrder: newOrder });
-                            }}
-                            style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
-                          >
-                            ▼
-                          </button>
+                            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; }}
+                            placeholder="Naglowek..."
+                            disabled={readOnly}
+                          />
+                          {moveUp}{moveDown}
+                          <button type="button" onClick={() => { updateItems(arr.filter((_, i) => i !== idx)); }}
+                            style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 16, padding: "2px 4px", lineHeight: 1 }}
+                            title="Usun naglowek"
+                          >×</button>
                         </div>
                       );
-                    });
-                  })()}
-                </div>
+                    }
+
+                    return (
+                      <div key={item.key} style={{
+                        display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+                        borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1,
+                      }}>
+                        {toggleBtn}
+                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{FIELD_LABELS[item.key] || item.key}</span>
+                        {moveUp}{moveDown}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const items = computeDisplayItems(vcard);
+                  items.push({ type: "header", key: `h-${Date.now()}`, text: "", visible: true });
+                  setVcard({ ...vcard, displayItems: items });
+                }}
+                disabled={readOnly}
+                style={{
+                  marginTop: 8, width: "100%", padding: "8px", borderRadius: 6,
+                  border: "1px dashed var(--border-hover, #444)", background: "transparent",
+                  color: "var(--txt-muted)", fontSize: 11, cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                + Dodaj naglowek
+              </button>
             </div>
           )}
         </div>

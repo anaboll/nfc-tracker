@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import VCardActions from "./VCardActions";
 import VCardTrackedLinks from "./VCardTrackedLinks";
 import type { VCardData, VCardTheme } from "@/types/vcard";
-import { DEFAULT_VCARD_THEME } from "@/types/vcard";
+import { DEFAULT_VCARD_THEME, computeDisplayItems } from "@/types/vcard";
+import type { RenderItem } from "./VCardTrackedLinks";
 import {
   PhoneIcon, EmailIcon, WebsiteIcon, AddressIcon,
   InstagramIcon, FacebookIcon, LinkedInIcon, WhatsAppIcon,
@@ -182,31 +183,34 @@ export default async function VCardPage({
   const fontStack = getFontStack(theme.fontFamily);
   const patternStyle = getPatternOverlay(theme);
 
-  /* -- Build contact links -- */
-  const contactMap: Record<string, { key: string; label: string; url: string }> = {};
-  if (vcard.phone) contactMap.phone = { key: "phone", label: vcard.phone, url: `tel:${vcard.phone}` };
-  if (vcard.email) contactMap.email = { key: "email", label: vcard.email, url: `mailto:${vcard.email}` };
-  if (vcard.website) contactMap.website = { key: "website", label: vcard.website.replace(/^https?:\/\//, ""), url: vcard.website.startsWith("http") ? vcard.website : `https://${vcard.website}` };
-  if (vcard.address) contactMap.address = { key: "address", label: vcard.address, url: `https://maps.google.com/?q=${encodeURIComponent(vcard.address)}` };
+  /* -- Build field data map -- */
+  const fieldData: Record<string, { label: string; url: string }> = {};
+  if (vcard.phone) fieldData.phone = { label: vcard.phone, url: `tel:${vcard.phone}` };
+  if (vcard.email) fieldData.email = { label: vcard.email, url: `mailto:${vcard.email}` };
+  if (vcard.website) fieldData.website = { label: vcard.website.replace(/^https?:\/\//, ""), url: vcard.website.startsWith("http") ? vcard.website : `https://${vcard.website}` };
+  if (vcard.address) fieldData.address = { label: vcard.address, url: `https://maps.google.com/?q=${encodeURIComponent(vcard.address)}` };
+  if (vcard.instagram) fieldData.instagram = { label: "Instagram", url: vcard.instagram.startsWith("http") ? vcard.instagram : `https://instagram.com/${vcard.instagram.replace(/^@/, "")}` };
+  if (vcard.facebook) fieldData.facebook = { label: "Facebook", url: vcard.facebook.startsWith("http") ? vcard.facebook : `https://facebook.com/${vcard.facebook}` };
+  if (vcard.linkedin) fieldData.linkedin = { label: "LinkedIn", url: vcard.linkedin.startsWith("http") ? vcard.linkedin : `https://linkedin.com/in/${vcard.linkedin}` };
+  if (vcard.whatsapp) fieldData.whatsapp = { label: "WhatsApp", url: `https://wa.me/${vcard.whatsapp.replace(/[^0-9+]/g, "")}` };
+  if (vcard.tiktok) fieldData.tiktok = { label: "TikTok", url: vcard.tiktok.startsWith("http") ? vcard.tiktok : `https://tiktok.com/@${vcard.tiktok.replace(/^@/, "")}` };
+  if (vcard.youtube) fieldData.youtube = { label: "YouTube", url: vcard.youtube.startsWith("http") ? vcard.youtube : `https://youtube.com/@${vcard.youtube.replace(/^@/, "")}` };
+  if (vcard.telegram) fieldData.telegram = { label: "Telegram", url: vcard.telegram.startsWith("http") ? vcard.telegram : `https://t.me/${vcard.telegram.replace(/^@/, "")}` };
 
-  const contactOrder = vcard.contactOrder || ["phone", "email", "website", "address"];
-  const contactLinks = contactOrder
-    .filter((k) => contactMap[k])
-    .map((k) => contactMap[k]);
+  /* -- Compute unified render items -- */
+  const displayItems = computeDisplayItems(vcard);
+  const renderItems: RenderItem[] = displayItems
+    .filter(i => i.visible !== false)
+    .map(item => {
+      if (item.type === "header") return { type: "header" as const, key: item.key, text: item.text };
+      const data = fieldData[item.key];
+      if (!data) return null;
+      return { type: "field" as const, key: item.key, url: data.url, label: data.label };
+    })
+    .filter((i): i is RenderItem => i !== null);
 
-  const socialMap: Record<string, { key: string; label: string; url: string }> = {};
-  if (vcard.instagram) socialMap.instagram = { key: "instagram", label: "Instagram", url: vcard.instagram.startsWith("http") ? vcard.instagram : `https://instagram.com/${vcard.instagram.replace(/^@/, "")}` };
-  if (vcard.facebook) socialMap.facebook = { key: "facebook", label: "Facebook", url: vcard.facebook.startsWith("http") ? vcard.facebook : `https://facebook.com/${vcard.facebook}` };
-  if (vcard.linkedin) socialMap.linkedin = { key: "linkedin", label: "LinkedIn", url: vcard.linkedin.startsWith("http") ? vcard.linkedin : `https://linkedin.com/in/${vcard.linkedin}` };
-  if (vcard.whatsapp) socialMap.whatsapp = { key: "whatsapp", label: "WhatsApp", url: `https://wa.me/${vcard.whatsapp.replace(/[^0-9+]/g, "")}` };
-  if (vcard.tiktok) socialMap.tiktok = { key: "tiktok", label: "TikTok", url: vcard.tiktok.startsWith("http") ? vcard.tiktok : `https://tiktok.com/@${vcard.tiktok.replace(/^@/, "")}` };
-  if (vcard.youtube) socialMap.youtube = { key: "youtube", label: "YouTube", url: vcard.youtube.startsWith("http") ? vcard.youtube : `https://youtube.com/@${vcard.youtube.replace(/^@/, "")}` };
-  if (vcard.telegram) socialMap.telegram = { key: "telegram", label: "Telegram", url: vcard.telegram.startsWith("http") ? vcard.telegram : `https://t.me/${vcard.telegram.replace(/^@/, "")}` };
-
-  const socialOrder = vcard.socialOrder || ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
-  const socialLinks = socialOrder
-    .filter((k) => socialMap[k])
-    .map((k) => socialMap[k]);
+  /* All field keys for icon box styles */
+  const allFieldKeys = renderItems.filter(i => i.type === "field");
 
   /* -- Build vCard (.vcf) -- */
   const vcfLines = [
@@ -362,28 +366,22 @@ export default async function VCardPage({
         {/*  CONTACT + SOCIAL MEDIA (tracked clicks)                     */}
         {/* ============================================================ */}
         <VCardTrackedLinks
-          tagId={params.tagId}
-          contactLinks={contactLinks}
-          socialLinks={socialLinks}
+          tagId={tagId}
+          items={renderItems}
           linkCardStyle={linkCardStyle}
           iconBoxStyleFn={
-            [...contactLinks, ...socialLinks].reduce((acc, link) => {
-              const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
-              acc[link.key] = iconBoxStyle(color);
+            allFieldKeys.reduce((acc, item) => {
+              const color = SOCIAL_COLORS[item.key] || theme.primaryColor;
+              acc[item.key] = iconBoxStyle(color);
               return acc;
             }, {} as Record<string, React.CSSProperties>)
           }
           textPrimary={textPrimary}
           textMuted={textMuted}
           isMinimal={isMinimal}
-          iconMap={{}}
-          socialColors={SOCIAL_COLORS}
           primaryColor={theme.primaryColor}
           websiteLogo={vcard.websiteLogo || ""}
           contactDisplayMode={vcard.contactDisplayMode || "value"}
-          contactHeaderText={vcard.contactHeaderText}
-          socialHeaderText={vcard.socialHeaderText}
-          hiddenFields={vcard.hiddenFields || []}
         />
 
         {/* ============================================================ */}

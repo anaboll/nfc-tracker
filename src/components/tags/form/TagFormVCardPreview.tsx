@@ -2,7 +2,7 @@
 
 import React, { useDeferredValue, useEffect } from "react";
 import type { VCardData, VCardTheme } from "@/types/vcard";
-import { DEFAULT_VCARD_THEME } from "@/types/vcard";
+import { DEFAULT_VCARD_THEME, computeDisplayItems } from "@/types/vcard";
 import { SOCIAL_ICONS, SOCIAL_COLORS } from "@/components/vcard/SocialIcons";
 
 interface Props {
@@ -121,38 +121,28 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   const isModern = theme.layoutVariant === "modern";
 
   const CONTACT_LABELS: Record<string, string> = { phone: "Telefon", email: "E-mail", website: "Strona WWW", address: "Adres" };
-
-  const allSocial = [
-    { key: "instagram", label: "Instagram" },
-    { key: "facebook", label: "Facebook" },
-    { key: "linkedin", label: "LinkedIn" },
-    { key: "whatsapp", label: "WhatsApp" },
-    { key: "tiktok", label: "TikTok" },
-    { key: "youtube", label: "YouTube" },
-    { key: "telegram", label: "Telegram" },
-  ];
-
-  const allContact = [
-    { key: "phone", label: "Telefon" },
-    { key: "email", label: "Email" },
-    { key: "website", label: "Strona" },
-    { key: "address", label: "Adres" },
-  ];
-
-  const hiddenFields = deferred.hiddenFields || [];
-  const contactOrder = deferred.contactOrder || ["phone", "email", "website", "address"];
-  const contactItems = contactOrder
-    .map((k) => allContact.find((c) => c.key === k))
-    .filter((c) => c && (deferred as unknown as Record<string, string>)[c.key] && !hiddenFields.includes(c.key)) as { key: string; label: string }[];
-
-  const socialOrder = deferred.socialOrder || ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
-  const socialLinks = socialOrder
-    .map((k) => allSocial.find((s) => s.key === k))
-    .filter((s) => s && (deferred as unknown as Record<string, string>)[s.key] && !hiddenFields.includes(s.key)) as { key: string; label: string }[];
+  const CONTACT_KEYS = new Set(["phone", "email", "website", "address"]);
+  const SOCIAL_KEYS_SET = new Set(["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"]);
 
   const displayMode = deferred.contactDisplayMode || "value";
-  const contactHeader = deferred.contactHeaderText ?? "Kontakt";
-  const socialHeader = deferred.socialHeaderText ?? "Social Media";
+
+  /* Unified display items */
+  const rawItems = computeDisplayItems(deferred);
+  const visibleItems = rawItems.filter(i => i.visible !== false);
+
+  /* Group into sections (header + fields) */
+  type Section = { header?: { key: string; text?: string }; fields: string[] };
+  const sections: Section[] = [];
+  let curSec: Section = { fields: [] };
+  for (const item of visibleItems) {
+    if (item.type === "header") {
+      if (curSec.header || curSec.fields.length > 0) sections.push(curSec);
+      curSec = { header: { key: item.key, text: item.text }, fields: [] };
+    } else {
+      curSec.fields.push(item.key);
+    }
+  }
+  if (curSec.header || curSec.fields.length > 0) sections.push(curSec);
 
   const iconBoxStyle = (color: string): React.CSSProperties => ({
     width: 30,
@@ -293,91 +283,70 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
             </div>
           </div>
 
-          {/* Contact */}
-          {contactItems.length > 0 && (
-            <div style={{ marginTop: contactHeader ? 12 : 8, textAlign: "left" }}>
-              {!isMinimal && contactHeader && (
-                <div style={{
-                  fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-                  color: textMuted, marginBottom: 6, paddingLeft: 2,
-                }}>
-                  {contactHeader}
-                </div>
-              )}
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {contactItems.map((item) => {
-                  const IconComp = SOCIAL_ICONS[item.key];
-                  const color = SOCIAL_COLORS[item.key] || theme.primaryColor;
-                  const value = (deferred as unknown as Record<string, string>)[item.key];
-                  const showLogo = item.key === "website" && deferred.websiteLogo;
-                  return (
-                    <div key={item.key} style={linkCardStyle}>
-                      {showLogo ? (
-                        <div style={{ ...iconBoxStyle(color), overflow: "hidden", padding: 0 }}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={photoSrc(deferred.websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                        </div>
-                      ) : (
-                        <div style={iconBoxStyle(color)}>
+          {/* Unified sections */}
+          {sections.map((sec, sIdx) => {
+            if (sec.fields.length === 0) return null;
+            const allSocial = sec.fields.every(k => SOCIAL_KEYS_SET.has(k));
+            return (
+              <div key={sec.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 12 : (sec.header ? 10 : 6), textAlign: "left" }}>
+                {!isMinimal && sec.header && (
+                  <div style={{
+                    fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                    color: textMuted, marginBottom: 6, paddingLeft: 2,
+                  }}>
+                    {sec.header.text}
+                  </div>
+                )}
+                {allSocial && isMinimal ? (
+                  <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+                    {sec.fields.map((key) => {
+                      const IconComp = SOCIAL_ICONS[key];
+                      const color = SOCIAL_COLORS[key] || theme.primaryColor;
+                      return (
+                        <div key={key} style={iconBoxStyle(color)} title={key}>
                           {IconComp && <IconComp size={13} color={color} />}
                         </div>
-                      )}
-                      <span style={{
-                        fontSize: 11, color: textPrimary, fontWeight: 500,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
-                      }}>
-                        {displayMode === "label" ? (CONTACT_LABELS[item.key] || item.label) : value}
-                      </span>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {sec.fields.map((key) => {
+                      const IconComp = SOCIAL_ICONS[key];
+                      const color = SOCIAL_COLORS[key] || theme.primaryColor;
+                      const value = (deferred as unknown as Record<string, string>)[key];
+                      const isContact = CONTACT_KEYS.has(key);
+                      const showLogo = key === "website" && deferred.websiteLogo;
+                      const SOCIAL_LABELS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
+                      const displayVal = isContact
+                        ? (displayMode === "label" ? (CONTACT_LABELS[key] || value) : value)
+                        : (SOCIAL_LABELS[key] || value);
+                      return (
+                        <div key={key} style={linkCardStyle}>
+                          {showLogo ? (
+                            <div style={{ ...iconBoxStyle(color), overflow: "hidden", padding: 0 }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={photoSrc(deferred.websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                            </div>
+                          ) : (
+                            <div style={iconBoxStyle(color)}>
+                              {IconComp && <IconComp size={13} color={color} />}
+                            </div>
+                          )}
+                          <span style={{
+                            fontSize: 11, color: textPrimary, fontWeight: 500,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                          }}>
+                            {displayVal}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Social */}
-          {socialLinks.length > 0 && (
-            <div style={{ marginTop: socialHeader ? 12 : 6, textAlign: "left" }}>
-              {!isMinimal && socialHeader && (
-                <div style={{
-                  fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
-                  color: textMuted, marginBottom: 6, paddingLeft: 2,
-                }}>
-                  {socialHeader}
-                </div>
-              )}
-              {isMinimal ? (
-                <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
-                  {socialLinks.map((s) => {
-                    const IconComp = SOCIAL_ICONS[s.key];
-                    const color = SOCIAL_COLORS[s.key] || theme.primaryColor;
-                    return (
-                      <div key={s.key} style={iconBoxStyle(color)} title={s.label}>
-                        {IconComp && <IconComp size={13} color={color} />}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {socialLinks.map((s) => {
-                    const IconComp = SOCIAL_ICONS[s.key];
-                    const color = SOCIAL_COLORS[s.key] || theme.primaryColor;
-                    return (
-                      <div key={s.key} style={linkCardStyle}>
-                        <div style={iconBoxStyle(color)}>
-                          {IconComp && <IconComp size={13} color={color} />}
-                        </div>
-                        <span style={{ fontSize: 11, color: textPrimary, fontWeight: 500, flex: 1 }}>
-                          {s.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })}
 
           {/* Note */}
           {deferred.note && (

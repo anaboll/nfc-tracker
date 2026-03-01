@@ -69,6 +69,15 @@ export interface VCardData {
   contactOrder?: string[];                 // ordered list of contact keys, e.g. ["phone","email","website","address"]
   socialOrder?: string[];                  // ordered list of social keys
   hiddenFields?: string[];                 // fields to hide on public page, e.g. ["phone","instagram"]
+  displayItems?: DisplayItem[];            // unified display order (headers + fields)
+}
+
+/* Display item for unified ordering */
+export interface DisplayItem {
+  type: "field" | "header";
+  key: string;        // field key ("phone","instagram",...) or unique header id ("h-contact","h-1",...)
+  text?: string;      // header text (only for type="header")
+  visible?: boolean;  // default true, false = hidden
 }
 
 /* Default theme values */
@@ -100,3 +109,56 @@ export const THEME_VALID_VALUES = {
   avatarShape: ["circle", "rounded-square", "square"] as AvatarShape[],
   socialIconStyle: ["rounded", "circle", "square", "pill"] as SocialIconStyle[],
 } as const;
+
+/* ------------------------------------------------------------------ */
+/*  Compute unified display items (with legacy fallback)               */
+/* ------------------------------------------------------------------ */
+
+const ALL_CONTACT_KEYS = ["phone", "email", "website", "address"];
+const ALL_SOCIAL_KEYS = ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
+const ALL_FIELD_KEYS = [...ALL_CONTACT_KEYS, ...ALL_SOCIAL_KEYS];
+
+export function computeDisplayItems(vcard: VCardData): DisplayItem[] {
+  const v = vcard as unknown as Record<string, string>;
+  const filledKeys = ALL_FIELD_KEYS.filter(k => !!v[k]);
+
+  if (vcard.displayItems && vcard.displayItems.length > 0) {
+    // Use existing displayItems, but sync with current field values
+    const result = vcard.displayItems.filter(
+      i => i.type === "header" || filledKeys.includes(i.key)
+    );
+    const existing = new Set(result.filter(i => i.type === "field").map(i => i.key));
+    for (const k of filledKeys) {
+      if (!existing.has(k)) result.push({ type: "field", key: k, visible: true });
+    }
+    return result;
+  }
+
+  // Legacy fallback — derive from old separate fields
+  const items: DisplayItem[] = [];
+  const hidden = vcard.hiddenFields || [];
+
+  const cOrder = vcard.contactOrder || ALL_CONTACT_KEYS;
+  const filledC = cOrder.filter(k => filledKeys.includes(k));
+  if (filledC.length > 0) {
+    const ct = vcard.contactHeaderText;
+    items.push({ type: "header", key: "h-contact", text: ct || "Kontakt", visible: ct !== "" });
+    for (const k of filledC) items.push({ type: "field", key: k, visible: !hidden.includes(k) });
+  }
+
+  const sOrder = vcard.socialOrder || ALL_SOCIAL_KEYS;
+  const filledS = sOrder.filter(k => filledKeys.includes(k));
+  if (filledS.length > 0) {
+    const st = vcard.socialHeaderText;
+    items.push({ type: "header", key: "h-social", text: st || "Social Media", visible: st !== "" });
+    for (const k of filledS) items.push({ type: "field", key: k, visible: !hidden.includes(k) });
+  }
+
+  return items;
+}
+
+export const FIELD_LABELS: Record<string, string> = {
+  phone: "Telefon", email: "Email", website: "Strona WWW", address: "Adres",
+  instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn",
+  whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram",
+};
