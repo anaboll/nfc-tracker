@@ -120,7 +120,9 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   const isMinimal = theme.layoutVariant === "minimal";
   const isModern = theme.layoutVariant === "modern";
 
-  const socialLinks = [
+  const CONTACT_LABELS: Record<string, string> = { phone: "Telefon", email: "E-mail", website: "Strona WWW", address: "Adres" };
+
+  const allSocial = [
     { key: "instagram", label: "Instagram" },
     { key: "facebook", label: "Facebook" },
     { key: "linkedin", label: "LinkedIn" },
@@ -128,14 +130,26 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
     { key: "tiktok", label: "TikTok" },
     { key: "youtube", label: "YouTube" },
     { key: "telegram", label: "Telegram" },
-  ].filter((s) => (deferred as unknown as Record<string, string>)[s.key]);
+  ];
 
-  const contactItems = [
+  const allContact = [
     { key: "phone", label: "Telefon" },
     { key: "email", label: "Email" },
     { key: "website", label: "Strona" },
     { key: "address", label: "Adres" },
-  ].filter((s) => (deferred as unknown as Record<string, string>)[s.key]);
+  ];
+
+  const contactOrder = deferred.contactOrder || ["phone", "email", "website", "address"];
+  const contactItems = contactOrder
+    .map((k) => allContact.find((c) => c.key === k))
+    .filter((c) => c && (deferred as unknown as Record<string, string>)[c.key]) as { key: string; label: string }[];
+
+  const socialLinks = allSocial
+    .filter((s) => (deferred as unknown as Record<string, string>)[s.key]);
+
+  const displayMode = deferred.contactDisplayMode || "value";
+  const contactHeader = deferred.contactHeaderText ?? "Kontakt";
+  const socialHeader = deferred.socialHeaderText ?? "Social Media";
 
   const iconBoxStyle = (color: string): React.CSSProperties => ({
     width: 30,
@@ -279,12 +293,12 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           {/* Contact */}
           {contactItems.length > 0 && (
             <div style={{ marginTop: 12, textAlign: "left" }}>
-              {!isMinimal && (
+              {!isMinimal && contactHeader && (
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
                   color: textMuted, marginBottom: 6, paddingLeft: 2,
                 }}>
-                  Kontakt
+                  {contactHeader}
                 </div>
               )}
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -309,7 +323,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                         fontSize: 11, color: textPrimary, fontWeight: 500,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
                       }}>
-                        {value}
+                        {displayMode === "label" ? (CONTACT_LABELS[item.key] || item.label) : value}
                       </span>
                     </div>
                   );
@@ -321,12 +335,12 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           {/* Social */}
           {socialLinks.length > 0 && (
             <div style={{ marginTop: 12, textAlign: "left" }}>
-              {!isMinimal && (
+              {!isMinimal && socialHeader && (
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
                   color: textMuted, marginBottom: 6, paddingLeft: 2,
                 }}>
-                  Social Media
+                  {socialHeader}
                 </div>
               )}
               {isMinimal ? (

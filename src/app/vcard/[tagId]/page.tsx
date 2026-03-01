@@ -178,22 +178,30 @@ export default async function VCardPage({
   const patternStyle = getPatternOverlay(theme);
 
   /* -- Build contact links -- */
-  const contactLinks = [
-    vcard.phone && { key: "phone", label: vcard.phone, url: `tel:${vcard.phone}` },
-    vcard.email && { key: "email", label: vcard.email, url: `mailto:${vcard.email}` },
-    vcard.website && { key: "website", label: vcard.website.replace(/^https?:\/\//, ""), url: vcard.website.startsWith("http") ? vcard.website : `https://${vcard.website}` },
-    vcard.address && { key: "address", label: vcard.address, url: `https://maps.google.com/?q=${encodeURIComponent(vcard.address)}` },
-  ].filter(Boolean) as { key: string; label: string; url: string }[];
+  const contactMap: Record<string, { key: string; label: string; url: string }> = {};
+  if (vcard.phone) contactMap.phone = { key: "phone", label: vcard.phone, url: `tel:${vcard.phone}` };
+  if (vcard.email) contactMap.email = { key: "email", label: vcard.email, url: `mailto:${vcard.email}` };
+  if (vcard.website) contactMap.website = { key: "website", label: vcard.website.replace(/^https?:\/\//, ""), url: vcard.website.startsWith("http") ? vcard.website : `https://${vcard.website}` };
+  if (vcard.address) contactMap.address = { key: "address", label: vcard.address, url: `https://maps.google.com/?q=${encodeURIComponent(vcard.address)}` };
 
-  const socialLinks = [
-    vcard.instagram && { key: "instagram", label: "Instagram", url: vcard.instagram.startsWith("http") ? vcard.instagram : `https://instagram.com/${vcard.instagram.replace(/^@/, "")}` },
-    vcard.facebook && { key: "facebook", label: "Facebook", url: vcard.facebook.startsWith("http") ? vcard.facebook : `https://facebook.com/${vcard.facebook}` },
-    vcard.linkedin && { key: "linkedin", label: "LinkedIn", url: vcard.linkedin.startsWith("http") ? vcard.linkedin : `https://linkedin.com/in/${vcard.linkedin}` },
-    vcard.whatsapp && { key: "whatsapp", label: "WhatsApp", url: `https://wa.me/${vcard.whatsapp.replace(/[^0-9+]/g, "")}` },
-    vcard.tiktok && { key: "tiktok", label: "TikTok", url: vcard.tiktok.startsWith("http") ? vcard.tiktok : `https://tiktok.com/@${vcard.tiktok.replace(/^@/, "")}` },
-    vcard.youtube && { key: "youtube", label: "YouTube", url: vcard.youtube.startsWith("http") ? vcard.youtube : `https://youtube.com/@${vcard.youtube.replace(/^@/, "")}` },
-    vcard.telegram && { key: "telegram", label: "Telegram", url: vcard.telegram.startsWith("http") ? vcard.telegram : `https://t.me/${vcard.telegram.replace(/^@/, "")}` },
-  ].filter(Boolean) as { key: string; label: string; url: string }[];
+  const contactOrder = vcard.contactOrder || ["phone", "email", "website", "address"];
+  const contactLinks = contactOrder
+    .filter((k) => contactMap[k])
+    .map((k) => contactMap[k]);
+
+  const socialMap: Record<string, { key: string; label: string; url: string }> = {};
+  if (vcard.instagram) socialMap.instagram = { key: "instagram", label: "Instagram", url: vcard.instagram.startsWith("http") ? vcard.instagram : `https://instagram.com/${vcard.instagram.replace(/^@/, "")}` };
+  if (vcard.facebook) socialMap.facebook = { key: "facebook", label: "Facebook", url: vcard.facebook.startsWith("http") ? vcard.facebook : `https://facebook.com/${vcard.facebook}` };
+  if (vcard.linkedin) socialMap.linkedin = { key: "linkedin", label: "LinkedIn", url: vcard.linkedin.startsWith("http") ? vcard.linkedin : `https://linkedin.com/in/${vcard.linkedin}` };
+  if (vcard.whatsapp) socialMap.whatsapp = { key: "whatsapp", label: "WhatsApp", url: `https://wa.me/${vcard.whatsapp.replace(/[^0-9+]/g, "")}` };
+  if (vcard.tiktok) socialMap.tiktok = { key: "tiktok", label: "TikTok", url: vcard.tiktok.startsWith("http") ? vcard.tiktok : `https://tiktok.com/@${vcard.tiktok.replace(/^@/, "")}` };
+  if (vcard.youtube) socialMap.youtube = { key: "youtube", label: "YouTube", url: vcard.youtube.startsWith("http") ? vcard.youtube : `https://youtube.com/@${vcard.youtube.replace(/^@/, "")}` };
+  if (vcard.telegram) socialMap.telegram = { key: "telegram", label: "Telegram", url: vcard.telegram.startsWith("http") ? vcard.telegram : `https://t.me/${vcard.telegram.replace(/^@/, "")}` };
+
+  const socialOrder = vcard.socialOrder || ["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"];
+  const socialLinks = socialOrder
+    .filter((k) => socialMap[k])
+    .map((k) => socialMap[k]);
 
   /* -- Build vCard (.vcf) -- */
   const vcfLines = [
@@ -367,6 +375,9 @@ export default async function VCardPage({
           socialColors={SOCIAL_COLORS}
           primaryColor={theme.primaryColor}
           websiteLogo={vcard.websiteLogo || ""}
+          contactDisplayMode={vcard.contactDisplayMode || "value"}
+          contactHeaderText={vcard.contactHeaderText}
+          socialHeaderText={vcard.socialHeaderText}
         />
 
         {/* ============================================================ */}

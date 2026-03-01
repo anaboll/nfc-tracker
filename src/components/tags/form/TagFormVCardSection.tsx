@@ -81,6 +81,7 @@ export default function TagFormVCardSection({
 }: Props) {
   const [socialOpen, setSocialOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(true);
+  const [displayOpen, setDisplayOpen] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -248,6 +249,143 @@ export default function TagFormVCardSection({
               theme={vcard.theme || ({} as VCardTheme)}
               onChange={handleThemeChange}
             />
+          )}
+        </div>
+
+        {/* ── DISPLAY SETTINGS ── */}
+        <div style={{ marginBottom: 20 }}>
+          <button
+            onClick={() => setDisplayOpen(!displayOpen)}
+            style={styles.collapseBtn}
+          >
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+              style={{
+                transform: displayOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <span>{"\u2699\uFE0F"} Ustawienia wyswietlania</span>
+          </button>
+          {displayOpen && (
+            <div style={{ padding: "12px 0", display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Contact display mode */}
+              <div>
+                <div style={styles.subsectionTitle}>Etykiety kontaktowe</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setVcard({ ...vcard, contactDisplayMode: "value" })}
+                    style={{
+                      ...styles.collapseBtn,
+                      marginBottom: 0,
+                      flex: 1,
+                      justifyContent: "center",
+                      background: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
+                        ? "var(--accent)" : "var(--surface-2)",
+                      color: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
+                        ? "#fff" : "var(--txt-sec)",
+                      border: (!vcard.contactDisplayMode || vcard.contactDisplayMode === "value")
+                        ? "1px solid var(--accent)" : "1px solid var(--surface-2)",
+                    }}
+                  >
+                    +48 123... (wartosc)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVcard({ ...vcard, contactDisplayMode: "label" })}
+                    style={{
+                      ...styles.collapseBtn,
+                      marginBottom: 0,
+                      flex: 1,
+                      justifyContent: "center",
+                      background: vcard.contactDisplayMode === "label"
+                        ? "var(--accent)" : "var(--surface-2)",
+                      color: vcard.contactDisplayMode === "label"
+                        ? "#fff" : "var(--txt-sec)",
+                      border: vcard.contactDisplayMode === "label"
+                        ? "1px solid var(--accent)" : "1px solid var(--surface-2)",
+                    }}
+                  >
+                    Telefon (etykieta)
+                  </button>
+                </div>
+              </div>
+
+              {/* Section headers */}
+              <div>
+                <div style={styles.subsectionTitle}>Naglowki sekcji</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label style={{ ...styles.label, minWidth: 80 }}>Kontakt</label>
+                    <input
+                      style={{ ...styles.input, flex: 1 }}
+                      type="text"
+                      value={vcard.contactHeaderText ?? "Kontakt"}
+                      onChange={(e) => setVcard({ ...vcard, contactHeaderText: e.target.value })}
+                      placeholder="Puste = ukryty"
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label style={{ ...styles.label, minWidth: 80 }}>Social</label>
+                    <input
+                      style={{ ...styles.input, flex: 1 }}
+                      type="text"
+                      value={vcard.socialHeaderText ?? "Social Media"}
+                      onChange={(e) => setVcard({ ...vcard, socialHeaderText: e.target.value })}
+                      placeholder="Puste = ukryty"
+                      disabled={readOnly}
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--txt-muted)", marginTop: 4 }}>
+                  Zostaw puste aby ukryc naglowek sekcji
+                </div>
+              </div>
+
+              {/* Contact order */}
+              <div>
+                <div style={styles.subsectionTitle}>Kolejnosc kontaktow</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {(vcard.contactOrder || ["phone", "email", "website", "address"]).map((key, idx, arr) => {
+                    const labels: Record<string, string> = { phone: "Telefon", email: "Email", website: "Strona WWW", address: "Adres" };
+                    return (
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)" }}>
+                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => {
+                            const newOrder = [...arr];
+                            [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+                            setVcard({ ...vcard, contactOrder: newOrder });
+                          }}
+                          style={{ background: "none", border: "none", color: idx === 0 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === 0 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === arr.length - 1}
+                          onClick={() => {
+                            const newOrder = [...arr];
+                            [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                            setVcard({ ...vcard, contactOrder: newOrder });
+                          }}
+                          style={{ background: "none", border: "none", color: idx === arr.length - 1 ? "var(--txt-muted)" : "var(--txt-sec)", cursor: idx === arr.length - 1 ? "default" : "pointer", fontSize: 14, padding: "2px 4px" }}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

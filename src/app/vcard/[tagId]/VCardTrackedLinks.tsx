@@ -23,6 +23,10 @@ interface Props {
   socialColors: Record<string, string>;
   primaryColor: string;
   websiteLogo?: string;
+  /* Display settings */
+  contactDisplayMode?: "value" | "label";
+  contactHeaderText?: string;
+  socialHeaderText?: string;
 }
 
 /* Re-import icons client-side (they're tiny SVG components) */
@@ -47,6 +51,13 @@ function photoSrc(p: string): string {
   return p;
 }
 
+const CONTACT_LABELS: Record<string, string> = {
+  phone: "Telefon",
+  email: "E-mail",
+  website: "Strona WWW",
+  address: "Adres",
+};
+
 export default function VCardTrackedLinks({
   tagId,
   contactLinks,
@@ -58,18 +69,23 @@ export default function VCardTrackedLinks({
   isMinimal,
   primaryColor,
   websiteLogo,
+  contactDisplayMode = "value",
+  contactHeaderText,
+  socialHeaderText,
 }: Props) {
+  const showContactHeader = contactHeaderText !== "" && contactHeaderText !== undefined ? contactHeaderText : (contactHeaderText === "" ? null : "Kontakt");
+  const showSocialHeader = socialHeaderText !== "" && socialHeaderText !== undefined ? socialHeaderText : (socialHeaderText === "" ? null : "Social Media");
   return (
     <>
       {/* CONTACT section */}
       {contactLinks.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          {!isMinimal && (
+          {!isMinimal && showContactHeader && (
             <div style={{
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
               color: textMuted, marginBottom: 10, paddingLeft: 4,
             }}>
-              Kontakt
+              {showContactHeader}
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -99,7 +115,7 @@ export default function VCardTrackedLinks({
                     </div>
                   )}
                   <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
-                    {link.label}
+                    {contactDisplayMode === "label" ? (CONTACT_LABELS[link.key] || link.label) : link.label}
                   </span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 18l6-6-6-6" />
@@ -114,12 +130,12 @@ export default function VCardTrackedLinks({
       {/* SOCIAL MEDIA section */}
       {socialLinks.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          {!isMinimal && (
+          {!isMinimal && showSocialHeader && (
             <div style={{
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
               color: textMuted, marginBottom: 10, paddingLeft: 4,
             }}>
-              Social Media
+              {showSocialHeader}
             </div>
           )}
 

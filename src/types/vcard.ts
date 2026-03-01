@@ -61,6 +61,13 @@ export interface VCardData {
   photo?: string;        // path to uploaded photo (/uploads/...)
   websiteLogo?: string;  // path to uploaded website logo (/uploads/...)
   theme?: VCardTheme;
+
+  /* --- Display settings --- */
+  contactDisplayMode?: "value" | "label";  // "value" = show raw data, "label" = friendly label (default: "value")
+  contactHeaderText?: string;              // custom header text, "" = hidden (default: "Kontakt")
+  socialHeaderText?: string;               // custom header text, "" = hidden (default: "Social Media")
+  contactOrder?: string[];                 // ordered list of contact keys, e.g. ["phone","email","website","address"]
+  socialOrder?: string[];                  // ordered list of social keys
 }
 
 /* Default theme values */
