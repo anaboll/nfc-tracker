@@ -285,8 +285,8 @@ export default async function VCardPage({
           {/* Avatar */}
           {vcard.photo ? (
             <div style={{
-              width: isModern ? 140 : 120,
-              height: isModern ? 140 : 120,
+              width: 140,
+              height: 140,
               borderRadius: avatarRadius,
               margin: "0 auto 16px",
               overflow: "hidden",
@@ -299,15 +299,15 @@ export default async function VCardPage({
           ) : (
             <div
               style={{
-                width: isModern ? 140 : 120,
-                height: isModern ? 140 : 120,
+                width: 140,
+                height: 140,
                 borderRadius: avatarRadius,
                 margin: "0 auto 16px",
                 background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.primaryColor}88)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: isModern ? 48 : 42,
+                fontSize: 48,
                 fontWeight: 700,
                 color: "#fff",
                 boxShadow: `0 0 30px ${theme.primaryColor}20`,

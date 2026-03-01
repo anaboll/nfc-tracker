@@ -202,8 +202,8 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
           {/* Avatar */}
           {deferred.photo ? (
             <div style={{
-              width: isModern ? 80 : 64,
-              height: isModern ? 80 : 64,
+              width: 80,
+              height: 80,
               borderRadius: avatarRadius,
               margin: "0 auto 10px",
               overflow: "hidden",
@@ -221,8 +221,8 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
             </div>
           ) : (
             <div style={{
-              width: isModern ? 80 : 64,
-              height: isModern ? 80 : 64,
+              width: 80,
+              height: 80,
               borderRadius: avatarRadius,
               margin: "0 auto 10px",
               background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.primaryColor}88)`,
