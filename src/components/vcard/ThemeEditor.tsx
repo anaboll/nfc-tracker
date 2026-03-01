@@ -119,7 +119,7 @@ export default function ThemeEditor({ theme, onChange }: Props) {
               key={preset.id}
               type="button"
               className="theme-preset-card"
-              onClick={() => onChange({ ...theme, ...preset.theme })}
+              onClick={() => onChange({ ...DEFAULT_VCARD_THEME, ...preset.theme })}
               title={preset.name}
             >
               <div className="theme-preset-preview" style={{ background: bg }}>

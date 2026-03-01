@@ -292,11 +292,19 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                   const IconComp = SOCIAL_ICONS[item.key];
                   const color = SOCIAL_COLORS[item.key] || theme.primaryColor;
                   const value = (deferred as unknown as Record<string, string>)[item.key];
+                  const showLogo = item.key === "website" && deferred.websiteLogo;
                   return (
                     <div key={item.key} style={linkCardStyle}>
-                      <div style={iconBoxStyle(color)}>
-                        {IconComp && <IconComp size={13} color={color} />}
-                      </div>
+                      {showLogo ? (
+                        <div style={{ ...iconBoxStyle(color), overflow: "hidden", padding: 0 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={photoSrc(deferred.websiteLogo!)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                      ) : (
+                        <div style={iconBoxStyle(color)}>
+                          {IconComp && <IconComp size={13} color={color} />}
+                        </div>
+                      )}
                       <span style={{
                         fontSize: 11, color: textPrimary, fontWeight: 500,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,

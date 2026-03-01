@@ -366,6 +366,7 @@ export default async function VCardPage({
           iconMap={{}}
           socialColors={SOCIAL_COLORS}
           primaryColor={theme.primaryColor}
+          websiteLogo={vcard.websiteLogo || ""}
         />
 
         {/* ============================================================ */}

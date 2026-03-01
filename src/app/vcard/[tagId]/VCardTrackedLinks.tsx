@@ -22,6 +22,7 @@ interface Props {
   iconMap: Record<string, string>; // key → serialized SVG color
   socialColors: Record<string, string>;
   primaryColor: string;
+  websiteLogo?: string;
 }
 
 /* Re-import icons client-side (they're tiny SVG components) */
@@ -38,6 +39,14 @@ const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
   whatsapp: WhatsAppIcon, tiktok: TikTokIcon, youtube: YouTubeIcon, telegram: TelegramIcon,
 };
 
+/** Normalize photo path */
+function photoSrc(p: string): string {
+  if (!p) return "";
+  if (p.startsWith("/api/uploads/")) return p;
+  if (p.startsWith("/uploads/")) return `/api${p}`;
+  return p;
+}
+
 export default function VCardTrackedLinks({
   tagId,
   contactLinks,
@@ -48,6 +57,7 @@ export default function VCardTrackedLinks({
   textMuted,
   isMinimal,
   primaryColor,
+  websiteLogo,
 }: Props) {
   return (
     <>
@@ -67,6 +77,7 @@ export default function VCardTrackedLinks({
               const Icon = ICON_MAP[link.key];
               const color = SOCIAL_COLORS[link.key] || primaryColor;
               const iboxStyle = iconBoxStyleFn[link.key] || {};
+              const showLogo = link.key === "website" && websiteLogo;
               return (
                 <TrackedLink
                   key={link.key}
@@ -77,9 +88,16 @@ export default function VCardTrackedLinks({
                   target={link.key === "phone" ? "_self" : "_blank"}
                   style={linkCardStyle}
                 >
-                  <div style={iboxStyle}>
-                    {Icon && <Icon size={20} color={color} />}
-                  </div>
+                  {showLogo ? (
+                    <div style={{ ...iboxStyle, overflow: "hidden", padding: 0 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photoSrc(websiteLogo)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    </div>
+                  ) : (
+                    <div style={iboxStyle}>
+                      {Icon && <Icon size={20} color={color} />}
+                    </div>
+                  )}
                   <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
                     {link.label}
                   </span>

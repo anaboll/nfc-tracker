@@ -59,6 +59,7 @@ export interface VCardData {
   telegram?: string;
   note?: string;
   photo?: string;        // path to uploaded photo (/uploads/...)
+  websiteLogo?: string;  // path to uploaded website logo (/uploads/...)
   theme?: VCardTheme;
 }
 

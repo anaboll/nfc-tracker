@@ -84,7 +84,9 @@ export default function TagFormVCardSection({
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   if (tagType !== "vcard") return null;
 
@@ -134,6 +136,29 @@ export default function TagFormVCardSection({
 
   const handleThemeChange = (t: VCardTheme) => {
     setVcard({ ...vcard, theme: t });
+  };
+
+  /* -- Website logo upload -- */
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (tagId) formData.append("tagId", tagId);
+      const res = await fetch("/api/vcard/photo/admin", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setVcard({ ...vcard, websiteLogo: data.path });
+    } catch {
+      // silently fail
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const initials = [vcard.firstName?.[0], vcard.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
@@ -292,22 +317,86 @@ export default function TagFormVCardSection({
             <div key={sec.title} style={{ marginBottom: 16 }}>
               <div style={styles.subsectionTitle}>{sec.icon} {sec.title}</div>
               <div style={styles.fieldGrid}>
-                {sec.fields.map((f) => (
-                  <div key={f.key} style={styles.field}>
-                    <label style={styles.label}>
-                      {f.label}
-                      {f.required && <span style={{ color: "var(--error)" }}> *</span>}
-                    </label>
-                    <input
-                      style={styles.input}
-                      type={f.type || "text"}
-                      value={(vcard as unknown as Record<string, string>)[f.key] || ""}
-                      onChange={(e) => updateField(f.key, e.target.value)}
-                      placeholder={f.placeholder || ""}
-                      disabled={readOnly}
-                    />
-                  </div>
-                ))}
+                {sec.fields.map((f) => {
+                  /* Special: website field with logo upload */
+                  if (f.key === "website") {
+                    return (
+                      <div key={f.key} style={{ ...styles.field, gridColumn: "1 / -1" }}>
+                        <label style={styles.label}>{f.label}</label>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <input
+                            style={{ ...styles.input, flex: 1 }}
+                            type={f.type || "text"}
+                            value={(vcard as unknown as Record<string, string>)[f.key] || ""}
+                            onChange={(e) => updateField(f.key, e.target.value)}
+                            placeholder={f.placeholder || ""}
+                            disabled={readOnly}
+                          />
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoSelect}
+                            style={{ display: "none" }}
+                            disabled={readOnly}
+                          />
+                          {vcard.websiteLogo ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={photoSrc(vcard.websiteLogo)}
+                                alt="logo"
+                                style={{ width: 36, height: 36, borderRadius: 8, objectFit: "contain", border: "1px solid var(--surface-2)", background: "var(--surface-2)", cursor: "pointer" }}
+                                onClick={() => !readOnly && logoInputRef.current?.click()}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setVcard({ ...vcard, websiteLogo: "" })}
+                                style={{ background: "none", border: "none", color: "var(--error)", fontSize: 14, cursor: "pointer", padding: 4, lineHeight: 1 }}
+                                title="Usun logo"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => !readOnly && logoInputRef.current?.click()}
+                              disabled={readOnly || logoUploading}
+                              style={{
+                                padding: "8px 12px", borderRadius: 8,
+                                border: "1px dashed var(--border-hover)",
+                                background: "var(--surface-2)", color: "var(--txt-muted)",
+                                fontSize: 11, cursor: "pointer", whiteSpace: "nowrap",
+                                opacity: logoUploading ? 0.5 : 1,
+                              }}
+                              title="Wgraj logo strony"
+                            >
+                              {logoUploading ? "..." : "Logo"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={f.key} style={styles.field}>
+                      <label style={styles.label}>
+                        {f.label}
+                        {f.required && <span style={{ color: "var(--error)" }}> *</span>}
+                      </label>
+                      <input
+                        style={styles.input}
+                        type={f.type || "text"}
+                        value={(vcard as unknown as Record<string, string>)[f.key] || ""}
+                        onChange={(e) => updateField(f.key, e.target.value)}
+                        placeholder={f.placeholder || ""}
+                        disabled={readOnly}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
