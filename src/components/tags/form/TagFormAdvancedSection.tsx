@@ -29,7 +29,7 @@ export default function TagFormAdvancedSection({
 
   if (mode !== "edit" || readOnly) return null;
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`;
+  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${tagType === "vcard" ? `/vcard/${tagId}` : `/s/${tagId}`}`;
 
   const copyLink = async () => {
     try {

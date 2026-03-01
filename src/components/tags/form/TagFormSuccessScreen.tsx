@@ -13,7 +13,7 @@ export default function TagFormSuccessScreen({ tagId, tagType, channel }: Props)
   const router = useRouter();
   const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
 
-  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${tagId}`;
+  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${tagType === "vcard" ? `/vcard/${tagId}` : `/s/${tagId}`}`;
 
   const handleDownloadQR = async (format: "png" | "svg" | "pdf") => {
     setDownloadingFormat(format);
