@@ -68,6 +68,7 @@ export interface VCardData {
   socialHeaderText?: string;               // custom header text, "" = hidden (default: "Social Media")
   contactOrder?: string[];                 // ordered list of contact keys, e.g. ["phone","email","website","address"]
   socialOrder?: string[];                  // ordered list of social keys
+  hiddenFields?: string[];                 // fields to hide on public page, e.g. ["phone","instagram"]
 }
 
 /* Default theme values */

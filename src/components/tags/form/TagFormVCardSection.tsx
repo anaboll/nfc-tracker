@@ -347,14 +347,36 @@ export default function TagFormVCardSection({
                 </div>
               </div>
 
-              {/* Contact order */}
+              {/* Contact fields visibility + order */}
               <div>
-                <div style={styles.subsectionTitle}>Kolejnosc kontaktow</div>
+                <div style={styles.subsectionTitle}>Kontakt — widocznosc i kolejnosc</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {(vcard.contactOrder || ["phone", "email", "website", "address"]).map((key, idx, arr) => {
                     const labels: Record<string, string> = { phone: "Telefon", email: "Email", website: "Strona WWW", address: "Adres" };
+                    const hidden = vcard.hiddenFields || [];
+                    const isHidden = hidden.includes(key);
                     return (
-                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)" }}>
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
+                        {/* Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
+                            setVcard({ ...vcard, hiddenFields: newHidden });
+                          }}
+                          style={{
+                            width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
+                            background: isHidden ? "var(--surface)" : "var(--accent)",
+                            position: "relative", transition: "background 0.2s", flexShrink: 0,
+                          }}
+                        >
+                          <div style={{
+                            width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                            position: "absolute", top: 2,
+                            left: isHidden ? 2 : 18,
+                            transition: "left 0.2s",
+                          }} />
+                        </button>
                         <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
                         <button
                           type="button"
@@ -380,6 +402,44 @@ export default function TagFormVCardSection({
                         >
                           ▼
                         </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Social fields visibility */}
+              <div>
+                <div style={styles.subsectionTitle}>Social Media — widocznosc</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {["instagram", "facebook", "linkedin", "whatsapp", "tiktok", "youtube", "telegram"].map((key) => {
+                    const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", whatsapp: "WhatsApp", tiktok: "TikTok", youtube: "YouTube", telegram: "Telegram" };
+                    const hidden = vcard.hiddenFields || [];
+                    const isHidden = hidden.includes(key);
+                    const hasValue = !!(vcard as unknown as Record<string, string>)[key];
+                    if (!hasValue) return null;
+                    return (
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHidden = isHidden ? hidden.filter((h) => h !== key) : [...hidden, key];
+                            setVcard({ ...vcard, hiddenFields: newHidden });
+                          }}
+                          style={{
+                            width: 34, height: 18, borderRadius: 9, border: "none", cursor: "pointer",
+                            background: isHidden ? "var(--surface)" : "var(--accent)",
+                            position: "relative", transition: "background 0.2s", flexShrink: 0,
+                          }}
+                        >
+                          <div style={{
+                            width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                            position: "absolute", top: 2,
+                            left: isHidden ? 2 : 18,
+                            transition: "left 0.2s",
+                          }} />
+                        </button>
+                        <span style={{ fontSize: 12, color: "var(--txt-sec)", flex: 1 }}>{labels[key] || key}</span>
                       </div>
                     );
                   })}

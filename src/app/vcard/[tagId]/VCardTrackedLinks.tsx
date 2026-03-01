@@ -27,6 +27,7 @@ interface Props {
   contactDisplayMode?: "value" | "label";
   contactHeaderText?: string;
   socialHeaderText?: string;
+  hiddenFields?: string[];
 }
 
 /* Re-import icons client-side (they're tiny SVG components) */
@@ -72,14 +73,19 @@ export default function VCardTrackedLinks({
   contactDisplayMode = "value",
   contactHeaderText,
   socialHeaderText,
+  hiddenFields = [],
 }: Props) {
   const showContactHeader = contactHeaderText !== "" && contactHeaderText !== undefined ? contactHeaderText : (contactHeaderText === "" ? null : "Kontakt");
   const showSocialHeader = socialHeaderText !== "" && socialHeaderText !== undefined ? socialHeaderText : (socialHeaderText === "" ? null : "Social Media");
+
+  const visibleContactLinks = contactLinks.filter((l) => !hiddenFields.includes(l.key));
+  const visibleSocialLinks = socialLinks.filter((l) => !hiddenFields.includes(l.key));
+
   return (
     <>
       {/* CONTACT section */}
-      {contactLinks.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+      {visibleContactLinks.length > 0 && (
+        <div style={{ marginTop: showContactHeader ? 24 : 16 }}>
           {!isMinimal && showContactHeader && (
             <div style={{
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
@@ -89,7 +95,7 @@ export default function VCardTrackedLinks({
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {contactLinks.map((link) => {
+            {visibleContactLinks.map((link) => {
               const Icon = ICON_MAP[link.key];
               const color = SOCIAL_COLORS[link.key] || primaryColor;
               const iboxStyle = iconBoxStyleFn[link.key] || {};
@@ -128,8 +134,8 @@ export default function VCardTrackedLinks({
       )}
 
       {/* SOCIAL MEDIA section */}
-      {socialLinks.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+      {visibleSocialLinks.length > 0 && (
+        <div style={{ marginTop: showSocialHeader ? 24 : 16 }}>
           {!isMinimal && showSocialHeader && (
             <div style={{
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
@@ -141,7 +147,7 @@ export default function VCardTrackedLinks({
 
           {isMinimal ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {socialLinks.map((link) => {
+              {visibleSocialLinks.map((link) => {
                 const Icon = ICON_MAP[link.key];
                 const color = SOCIAL_COLORS[link.key] || primaryColor;
                 const iboxStyle = iconBoxStyleFn[link.key] || {};
@@ -161,7 +167,7 @@ export default function VCardTrackedLinks({
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {socialLinks.map((link) => {
+              {visibleSocialLinks.map((link) => {
                 const Icon = ICON_MAP[link.key];
                 const color = SOCIAL_COLORS[link.key] || primaryColor;
                 const iboxStyle = iconBoxStyleFn[link.key] || {};

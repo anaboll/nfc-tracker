@@ -378,6 +378,7 @@ export default async function VCardPage({
           contactDisplayMode={vcard.contactDisplayMode || "value"}
           contactHeaderText={vcard.contactHeaderText}
           socialHeaderText={vcard.socialHeaderText}
+          hiddenFields={vcard.hiddenFields || []}
         />
 
         {/* ============================================================ */}

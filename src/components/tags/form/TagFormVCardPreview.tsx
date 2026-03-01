@@ -139,13 +139,14 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
     { key: "address", label: "Adres" },
   ];
 
+  const hiddenFields = deferred.hiddenFields || [];
   const contactOrder = deferred.contactOrder || ["phone", "email", "website", "address"];
   const contactItems = contactOrder
     .map((k) => allContact.find((c) => c.key === k))
-    .filter((c) => c && (deferred as unknown as Record<string, string>)[c.key]) as { key: string; label: string }[];
+    .filter((c) => c && (deferred as unknown as Record<string, string>)[c.key] && !hiddenFields.includes(c.key)) as { key: string; label: string }[];
 
   const socialLinks = allSocial
-    .filter((s) => (deferred as unknown as Record<string, string>)[s.key]);
+    .filter((s) => (deferred as unknown as Record<string, string>)[s.key] && !hiddenFields.includes(s.key));
 
   const displayMode = deferred.contactDisplayMode || "value";
   const contactHeader = deferred.contactHeaderText ?? "Kontakt";
@@ -292,7 +293,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
 
           {/* Contact */}
           {contactItems.length > 0 && (
-            <div style={{ marginTop: 12, textAlign: "left" }}>
+            <div style={{ marginTop: contactHeader ? 12 : 8, textAlign: "left" }}>
               {!isMinimal && contactHeader && (
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
@@ -334,7 +335,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
 
           {/* Social */}
           {socialLinks.length > 0 && (
-            <div style={{ marginTop: 12, textAlign: "left" }}>
+            <div style={{ marginTop: socialHeader ? 12 : 8, textAlign: "left" }}>
               {!isMinimal && socialHeader && (
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
