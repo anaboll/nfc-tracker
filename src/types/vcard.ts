@@ -78,6 +78,7 @@ export interface DisplayItem {
   key: string;        // field key ("phone","instagram",...) or unique header id ("h-contact","h-1",...) or custom link id ("cl-123")
   text?: string;      // header text (only for type="header")
   label?: string;     // custom display label (for type="field" and "custom-link", overrides default)
+  showLabel?: boolean; // true = show label text, false = show raw value (default: true for social, false for contact)
   url?: string;       // link URL (only for type="custom-link")
   logo?: string;      // logo image path (only for type="custom-link")
   visible?: boolean;  // default true, false = hidden

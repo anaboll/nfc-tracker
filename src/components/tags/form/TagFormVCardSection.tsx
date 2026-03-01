@@ -415,27 +415,50 @@ export default function TagFormVCardSection({
                     }
 
                     /* ---- FIELD ---- */
+                    const useLabel = item.showLabel !== undefined ? item.showLabel : true;
+                    const rawValue = (vcard as unknown as Record<string, string>)[item.key] || "";
+                    const onToggleMode = () => {
+                      const ni = [...arr]; ni[idx] = { ...item, showLabel: !useLabel }; updateItems(ni);
+                    };
                     return (
                       <div key={item.key} style={{
                         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
                         borderRadius: 6, background: "var(--surface-2)", opacity: isHidden ? 0.5 : 1,
                       }}>
                         {toggleBtn(isHidden, onToggle)}
-                        <input
-                          type="text"
-                          value={item.label ?? FIELD_LABELS[item.key] ?? item.key}
-                          onChange={(e) => {
-                            const ni = [...arr]; ni[idx] = { ...item, label: e.target.value }; updateItems(ni);
-                          }}
+                        {useLabel ? (
+                          <input
+                            type="text"
+                            value={item.label ?? FIELD_LABELS[item.key] ?? item.key}
+                            onChange={(e) => {
+                              const ni = [...arr]; ni[idx] = { ...item, label: e.target.value }; updateItems(ni);
+                            }}
+                            style={{
+                              flex: 1, fontSize: 12, fontWeight: 500, color: "var(--txt-sec)",
+                              background: "transparent", border: "1px solid transparent", borderRadius: 4,
+                              outline: "none", padding: "2px 6px",
+                            }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; }}
+                            disabled={readOnly}
+                          />
+                        ) : (
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: "var(--txt-muted)", padding: "2px 6px", fontStyle: "italic" }}>
+                            {rawValue || FIELD_LABELS[item.key]}
+                          </span>
+                        )}
+                        <button type="button" onClick={onToggleMode} title={useLabel ? "Pokazuje etykiete — kliknij aby pokazac wartosc" : "Pokazuje wartosc — kliknij aby pokazac etykiete"}
                           style={{
-                            flex: 1, fontSize: 12, fontWeight: 500, color: "var(--txt-sec)",
-                            background: "transparent", border: "1px solid transparent", borderRadius: 4,
-                            outline: "none", padding: "2px 6px",
+                            fontSize: 9, padding: "2px 6px", borderRadius: 4, cursor: "pointer",
+                            background: useLabel ? "var(--accent)" : "transparent",
+                            color: useLabel ? "#fff" : "var(--txt-muted)",
+                            border: useLabel ? "1px solid var(--accent)" : "1px solid var(--surface-2)",
+                            fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0,
+                            transition: "all 0.15s",
                           }}
-                          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-                          onBlur={(e) => { e.currentTarget.style.borderColor = "transparent"; }}
-                          disabled={readOnly}
-                        />
+                        >
+                          {useLabel ? "Aa" : "123"}
+                        </button>
                         {moveBtn("▲", idx === 0, onMoveUp)}
                         {moveBtn("▼", idx === arr.length - 1, onMoveDown)}
                       </div>

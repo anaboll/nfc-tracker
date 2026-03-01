@@ -216,8 +216,11 @@ export default async function VCardPage({
     } else {
       const data = fieldData[item.key];
       if (data) {
-        // Use custom label from displayItem if set, otherwise use default
-        const displayLabel = item.label || FIELD_LABELS[item.key] || data.label;
+        // showLabel: true (default) → use custom label or FIELD_LABELS; false → show raw value
+        const useLabel = item.showLabel !== undefined ? item.showLabel : true;
+        const displayLabel = useLabel
+          ? (item.label || FIELD_LABELS[item.key] || data.label)
+          : data.label;
         renderItems.push({ type: "field", key: item.key, url: data.url, label: displayLabel });
       }
     }

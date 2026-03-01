@@ -315,8 +315,12 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                       const showLogo = (item.key === "website" && deferred.websiteLogo) || (isCustomLink && item.logo);
                       const logoUrl = isCustomLink ? item.logo : deferred.websiteLogo;
 
-                      // Use custom label, or field default label, or the raw value
-                      const displayVal = item.label || FIELD_LABELS[item.key] || (deferred as unknown as Record<string, string>)[item.key] || item.url || "";
+                      // showLabel toggle: true (default) → show label, false → show raw value
+                      const useLabel = item.showLabel !== undefined ? item.showLabel : true;
+                      const rawVal = (deferred as unknown as Record<string, string>)[item.key] || "";
+                      const displayVal = isCustomLink
+                        ? (item.label || item.url || "")
+                        : (useLabel ? (item.label || FIELD_LABELS[item.key] || rawVal) : (rawVal || FIELD_LABELS[item.key]));
 
                       return (
                         <div key={item.key} style={linkCardStyle}>
