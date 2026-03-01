@@ -205,7 +205,7 @@ const styles: Record<string, React.CSSProperties> = {
   twoCol: {
     display: "flex",
     gap: 24,
-    alignItems: "flex-start",
+    alignItems: "stretch",
   },
   mainCol: {
     flex: "1 1 0%",
@@ -214,6 +214,7 @@ const styles: Record<string, React.CSSProperties> = {
   previewCol: {
     width: 300,
     flexShrink: 0,
+    position: "relative" as const,
   },
   errorBanner: {
     padding: "12px 16px",
