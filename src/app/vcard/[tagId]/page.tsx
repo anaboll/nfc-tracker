@@ -148,8 +148,12 @@ export default async function VCardPage({
 }) {
   const fromDashboard = searchParams.from === "dashboard";
 
+  // Support "tagId::nfcChipId" — strip NFC UID suffix if present
+  const decoded = decodeURIComponent(params.tagId);
+  const tagId = decoded.includes("::") ? decoded.substring(0, decoded.indexOf("::")) : decoded;
+
   const tag = await prisma.tag.findUnique({
-    where: { id: params.tagId, isActive: true },
+    where: { id: tagId, isActive: true },
   });
 
   if (!tag || tag.tagType !== "vcard") {
