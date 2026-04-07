@@ -31,7 +31,7 @@ const AGENCIES = [
   { code: "DSFG", nazwa: "Sfera Nieruchomości",           osoba: "",                                        email: "biuro@sfera.nieruchomosci.pl" },
   { code: "KNSB", nazwa: "Biała Posesja Nieruchomości",   osoba: "Violetta Zdrojewska",                     email: "info@bialaposesja.pl" },
   { code: "PKGR", nazwa: "Dobre Nieruchomości",           osoba: "Grażyna Górniak",                         email: "kontakt@dobrenieruchomosci.eu" },
-  { code: "463S", nazwa: "Metro Nieruchomości Bydgoszcz", osoba: "Anna Krygier",                            email: "" },
+  { code: "463S", nazwa: "Metro Nieruchomości Bydgoszcz", osoba: "Anna Krygier",                            email: "a.krygier@metro.bydgoszcz.pl" },
   { code: "UER4", nazwa: "Bydgoskie Centrum Nieruchomości", osoba: "",                                      email: "biuro@bcn.nieruchomosci.pl" },
   { code: "YE9Y", nazwa: "Simple Biuro Nieruchomości",    osoba: "",                                        email: "bok@grupasimple.pl" },
   { code: "2YHT", nazwa: "Jagła Nieruchomości",           osoba: "",                                        email: "biuro@jagla.pl" },
@@ -57,6 +57,14 @@ const AGENCIES = [
   { code: "RQSP", nazwa: "SWITALA Nieruchomości",         osoba: "Dariusz Świtala",                         email: "kontakt@dariuszswitala.pl" },
   { code: "AYVZ", nazwa: "Centrum Nieruchomości",         osoba: "Honorata Witczak",                        email: "honorata.witczak@centrum.nieruchomosci.pl" },
   { code: "D6VC", nazwa: "Golden Home Nieruchomości",     osoba: "",                                        email: "kontakt@golden-home.nieruchomosci.pl" },
+  // Added in second batch — agencies that originally had no code
+  { code: "H7M2", nazwa: "EFEKT Nieruchomości",            osoba: "",                                        email: "efekt@efekt.bydgoszcz.pl" },
+  { code: "F4X6", nazwa: "Freedom Nieruchomości Bydgoszcz", osoba: "",                                       email: "biuro@freedom.pl" },
+  // Added in second batch — newly researched Bydgoszcz agencies
+  { code: "T8GR", nazwa: "House Team Nieruchomości & Finanse", osoba: "Roksana Musiał-Dominiak / Marcin Głowacki", email: "biuro@house-team.pl" },
+  { code: "J5WK", nazwa: "JAWA Nieruchomości",             osoba: "",                                        email: "biuro@jawanieruchomosci.pl" },
+  { code: "P9TY", nazwa: "PRESTIGE Nieruchomości",         osoba: "Iwona Fryszkowska",                       email: "iwonaf@nieruchomosci-prestige.com" },
+  { code: "E3QN", nazwa: "DOM EXPERT Nieruchomości",       osoba: "Marta Domrzalska",                        email: "martadomrzalska@gmail.com" },
 ];
 
 async function main() {
