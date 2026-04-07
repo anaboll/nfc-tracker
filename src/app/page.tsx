@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import MobileMenu from "@/components/landing/MobileMenu";
 import ContactForm from "@/components/landing/ContactForm";
 import AnimateOnScroll from "@/components/landing/AnimateOnScroll";
+import HashTracker from "@/components/landing/HashTracker";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export const metadata: Metadata = {
@@ -98,6 +99,8 @@ const IconBriefcase = () => (
 export default function HomePage() {
   return (
     <div className="landing-page">
+      {/* Hash-based email campaign tracker */}
+      <HashTracker />
       {/* --------- NAV --------- */}
       <nav className="landing-nav">
         <div className="landing-container nav-inner">

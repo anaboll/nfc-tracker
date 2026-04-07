@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const method = request.method;
 
   // Public POST endpoints (tracking from public pages)
-  const publicPostPaths = ["/api/link-click", "/api/video-event"];
+  const publicPostPaths = ["/api/link-click", "/api/video-event", "/api/track-hash"];
   if (method === "POST" && publicPostPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
