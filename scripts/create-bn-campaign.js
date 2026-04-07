@@ -80,35 +80,66 @@ async function main() {
     console.log(`Campaign exists: ${campaign.name} (${campaign.id})`);
   }
 
-  // 3. Upsert all tags with hardcoded codes (idempotent)
-  let created = 0;
-  let existed = 0;
+  // 3. Upsert hash-tracker tags (idempotent)
+  // Each agency gets TWO tags:
+  //   - id=CODE              -> tracks #jak-to-dziala/CODE (hash tracker on landing page)
+  //   - id=wizytowka-CODE    -> tracks /s/wizytowka/CODE (server redirect to vCard)
+  let createdHash = 0;
+  let createdVcard = 0;
+  let existedHash = 0;
+  let existedVcard = 0;
 
   for (const agency of AGENCIES) {
-    const existing = await prisma.tag.findUnique({ where: { id: agency.code } });
-    if (existing) {
-      existed++;
-      console.log(`  exists: ${agency.code} -> ${agency.nazwa}`);
-      continue;
+    // --- Hash tracker tag ---
+    const existingHash = await prisma.tag.findUnique({ where: { id: agency.code } });
+    if (existingHash) {
+      existedHash++;
+      console.log(`  exists [hash]:    ${agency.code} -> ${agency.nazwa}`);
+    } else {
+      await prisma.tag.create({
+        data: {
+          id: agency.code,
+          name: agency.nazwa,
+          tagType: "url",
+          targetUrl: TARGET_URL,
+          description: `Email kampania (jak to dziala) - ${agency.osoba || agency.email}`,
+          isActive: true,
+          clientId: client.id,
+          campaignId: campaign.id,
+        },
+      });
+      createdHash++;
+      console.log(`  created [hash]:   ${agency.code} -> ${agency.nazwa}`);
     }
 
-    await prisma.tag.create({
-      data: {
-        id: agency.code,
-        name: agency.nazwa,
-        tagType: "url",
-        targetUrl: TARGET_URL,
-        description: `Email kampania - ${agency.osoba || agency.email}`,
-        isActive: true,
-        clientId: client.id,
-        campaignId: campaign.id,
-      },
-    });
-    created++;
-    console.log(`  created: ${agency.code} -> ${agency.nazwa}`);
+    // --- vCard tracker tag ---
+    const vcardId = `wizytowka-${agency.code}`;
+    const existingVcard = await prisma.tag.findUnique({ where: { id: vcardId } });
+    if (existingVcard) {
+      existedVcard++;
+      console.log(`  exists [vcard]:   ${vcardId} -> ${agency.nazwa}`);
+    } else {
+      await prisma.tag.create({
+        data: {
+          id: vcardId,
+          name: `Wizytówka -> ${agency.nazwa}`,
+          tagType: "url",
+          targetUrl: "/vcard/wizytowka",
+          description: `Email kampania (wizytowka) - ${agency.osoba || agency.email}`,
+          isActive: true,
+          clientId: client.id,
+          campaignId: campaign.id,
+        },
+      });
+      createdVcard++;
+      console.log(`  created [vcard]:  ${vcardId} -> ${agency.nazwa}`);
+    }
   }
 
-  console.log(`\nDone. Created: ${created}, Already existed: ${existed}, Total: ${AGENCIES.length}`);
+  console.log(`\nDone.`);
+  console.log(`  Hash tracker tags:  created ${createdHash}, existed ${existedHash}`);
+  console.log(`  vCard tracker tags: created ${createdVcard}, existed ${existedVcard}`);
+  console.log(`  Total expected:     ${AGENCIES.length * 2} (${AGENCIES.length} hash + ${AGENCIES.length} vcard)`);
 }
 
 main()
