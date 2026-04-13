@@ -3,10 +3,11 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import nodemailer from "nodemailer";
 
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.zoho.eu",
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
+  port: smtpPort,
+  secure: smtpPort === 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
