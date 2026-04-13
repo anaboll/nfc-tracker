@@ -35,6 +35,11 @@ services:
       MAX_FILE_SIZE_MB: "500"
       IP_HASH_SECRET: "${IP_HASH_SECRET}"
       IP_HASH_SALT: "${IP_HASH_SALT}"
+      SMTP_HOST: "${SMTP_HOST:-smtp.zoho.eu}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_USER: "${SMTP_USER}"
+      SMTP_PASS: "${SMTP_PASS}"
+      CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
     ports:
       - "0.0.0.0:3001:3000"
     volumes:
