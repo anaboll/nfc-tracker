@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { TagFull, TagLink, ClientInfo, CampaignInfo } from "@/types/tag";
 import type { VCardData } from "@/types/vcard";
+import { generateTagCode } from "@/lib/generate-tag-code";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -156,6 +157,15 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       .then((data) => setCampaigns(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
+
+  /* ---- Auto-generate neutral tag code on new-tag mount ---- */
+  useEffect(() => {
+    if (mode === "create" && tagId === "") {
+      setTagId(generateTagCode());
+    }
+    // Run once on mount — intentionally ignores tagId/setTagId deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   /* ---- Fetch tag for edit mode ---- */
   useEffect(() => {

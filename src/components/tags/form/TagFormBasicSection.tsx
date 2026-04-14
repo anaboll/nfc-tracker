@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { ClientInfo, CampaignInfo } from "@/types/tag";
+import { generateTagCode } from "@/lib/generate-tag-code";
 
 interface Props {
   mode: "create" | "edit";
@@ -42,19 +43,39 @@ export default function TagFormBasicSection({
           </label>
           {mode === "create" ? (
             <>
-              <input
-                style={{ ...styles.input, borderColor: errors.tagId ? "var(--error)" : "var(--surface-2)" }}
-                value={tagId}
-                onChange={(e) => {
-                  setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-"));
-                  clearFieldError("tagId");
-                }}
-                placeholder="np. jan-kowalski"
-                disabled={readOnly}
-              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  style={{ ...styles.input, borderColor: errors.tagId ? "var(--error)" : "var(--surface-2)", flex: 1 }}
+                  value={tagId}
+                  onChange={(e) => {
+                    setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-"));
+                    clearFieldError("tagId");
+                  }}
+                  placeholder="np. a3x7k"
+                  disabled={readOnly}
+                />
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTagId(generateTagCode());
+                      clearFieldError("tagId");
+                    }}
+                    title="Wygeneruj nowy losowy kod"
+                    style={styles.regenBtn}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--surface-2)")}
+                  >
+                    🔄
+                  </button>
+                )}
+              </div>
               {tagId && (
                 <div style={styles.hint}>
                   Link: <span style={{ color: "var(--accent-light)" }}>/s/{tagId}</span>
+                  <span style={{ opacity: 0.6, marginLeft: 8 }}>
+                    (neutralny kod — mozesz zmienic typ akcji bez zmiany linka)
+                  </span>
                 </div>
               )}
               {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
@@ -227,6 +248,17 @@ const styles: Record<string, React.CSSProperties> = {
   hint: {
     fontSize: 11,
     color: "var(--txt-muted)",
+  },
+  regenBtn: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid var(--surface-2)",
+    background: "var(--surface-2)",
+    color: "var(--txt)",
+    fontSize: 16,
+    cursor: "pointer",
+    transition: "border-color 0.2s",
+    lineHeight: 1,
   },
   error: {
     fontSize: 12,
