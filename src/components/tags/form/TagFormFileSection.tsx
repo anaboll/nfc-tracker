@@ -21,6 +21,7 @@ export default function TagFormFileSection({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
 
@@ -29,7 +30,7 @@ export default function TagFormFileSection({
   const hasFile = !!targetUrl && targetUrl.startsWith("/api/uploads/");
   const filename = hasFile ? targetUrl.split("/").pop() || targetUrl : "";
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = ""; // allow re-picking same file later
@@ -45,29 +46,51 @@ export default function TagFormFileSection({
 
     setUploadError(null);
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (tagId) formData.append("tagId", tagId);
-      formData.append("context", "file");
+    setProgress(0);
 
-      const res = await fetch("/api/upload/pdf/admin", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Upload nie powiodl sie (${res.status})`);
+    const formData = new FormData();
+    formData.append("file", file);
+    if (tagId) formData.append("tagId", tagId);
+    formData.append("context", "file");
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload/pdf/admin");
+
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        setProgress(Math.round((ev.loaded / ev.total) * 100));
       }
-      const data = await res.json();
-      setTargetUrl(data.path);
-      setFileSize(data.size || file.size);
-      clearFieldError("targetUrl");
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload nie powiodl sie");
-    } finally {
+    };
+
+    xhr.onload = () => {
       setUploading(false);
-    }
+      setProgress(0);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          setTargetUrl(data.path);
+          setFileSize(data.size || file.size);
+          clearFieldError("targetUrl");
+        } catch {
+          setUploadError("Bledna odpowiedz serwera");
+        }
+      } else {
+        let msg = `Upload nie powiodl sie (${xhr.status})`;
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (data.error) msg = data.error;
+        } catch { /* ignore */ }
+        setUploadError(msg);
+      }
+    };
+
+    xhr.onerror = () => {
+      setUploading(false);
+      setProgress(0);
+      setUploadError("Blad polaczenia");
+    };
+
+    xhr.send(formData);
   };
 
   const formatSize = (bytes: number | null): string => {
@@ -90,32 +113,39 @@ export default function TagFormFileSection({
       />
 
       {!hasFile && (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={readOnly || uploading}
-          style={{
-            ...styles.uploadBtn,
-            opacity: readOnly || uploading ? 0.5 : 1,
-            cursor: readOnly || uploading ? "not-allowed" : "pointer",
-          }}
-        >
-          {uploading ? (
-            <>
-              <span style={styles.spinner} />
-              <span>Wgrywam...</span>
-            </>
-          ) : (
-            <>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              <span>Wgraj PDF</span>
-            </>
+        <>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={readOnly || uploading}
+            style={{
+              ...styles.uploadBtn,
+              opacity: readOnly ? 0.5 : 1,
+              cursor: readOnly || uploading ? "not-allowed" : "pointer",
+            }}
+          >
+            {uploading ? (
+              <>
+                <span style={styles.spinner} />
+                <span>Wgrywam... {progress}%</span>
+              </>
+            ) : (
+              <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Wgraj PDF</span>
+              </>
+            )}
+          </button>
+          {uploading && (
+            <div style={styles.progressTrack}>
+              <div style={{ ...styles.progressFill, width: `${progress}%` }} />
+            </div>
           )}
-        </button>
+        </>
       )}
 
       {hasFile && (
@@ -146,9 +176,14 @@ export default function TagFormFileSection({
               style={styles.replaceBtn}
               title="Wgraj inny plik"
             >
-              {uploading ? <span style={styles.spinner} /> : "Zmien"}
+              {uploading ? `${progress}%` : "Zmien"}
             </button>
           )}
+        </div>
+      )}
+      {hasFile && uploading && (
+        <div style={{ ...styles.progressTrack, marginTop: 8 }}>
+          <div style={{ ...styles.progressFill, width: `${progress}%` }} />
         </div>
       )}
 
@@ -248,5 +283,17 @@ const styles: Record<string, React.CSSProperties> = {
     borderTopColor: "#facc15",
     animation: "spin 0.8s linear infinite",
     display: "inline-block",
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    background: "rgba(250,204,21,0.15)",
+    marginTop: 10,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    background: "#facc15",
+    transition: "width 0.15s ease",
   },
 };

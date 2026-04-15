@@ -88,6 +88,7 @@ export default function TagFormVCardSection({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [pdfUploadingKey, setPdfUploadingKey] = useState<string | null>(null);
+  const [pdfProgress, setPdfProgress] = useState<number>(0);
   const [pdfErrorKey, setPdfErrorKey] = useState<{ key: string; msg: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -173,7 +174,7 @@ export default function TagFormVCardSection({
     pdfInputRef.current?.click();
   };
 
-  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const itemKey = pdfTargetItemKey.current;
     e.target.value = "";
@@ -191,45 +192,65 @@ export default function TagFormVCardSection({
     }
 
     setPdfUploadingKey(itemKey);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (tagId) formData.append("tagId", tagId);
-      formData.append("context", "catalog");
+    setPdfProgress(0);
 
-      const res = await fetch("/api/upload/pdf/admin", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Upload nie powiodl sie (${res.status})`);
+    // Use XHR so we can report upload progress
+    const formData = new FormData();
+    formData.append("file", file);
+    if (tagId) formData.append("tagId", tagId);
+    formData.append("context", "catalog");
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload/pdf/admin");
+
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        setPdfProgress(Math.round((ev.loaded / ev.total) * 100));
       }
-      const data = await res.json();
+    };
 
-      /* Update the matching custom-link in displayItems */
-      const currentItems: DisplayItem[] = vcard.displayItems || [];
-      const nextItems = currentItems.map((it) =>
-        it.key === itemKey
-          ? {
-              ...it,
-              url: data.path,
-              // If label still empty, default to "Katalog produktów"
-              label: it.label && it.label.trim() !== "" ? it.label : "Katalog produktow",
-            }
-          : it
-      );
-      setVcard({ ...vcard, displayItems: nextItems });
-    } catch (err) {
-      setPdfErrorKey({
-        key: itemKey,
-        msg: err instanceof Error ? err.message : "Upload nie powiodl sie",
-      });
-      setTimeout(() => setPdfErrorKey(null), 4000);
-    } finally {
+    xhr.onload = () => {
       setPdfUploadingKey(null);
       pdfTargetItemKey.current = null;
-    }
+      setPdfProgress(0);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          const currentItems: DisplayItem[] = vcard.displayItems || [];
+          const nextItems = currentItems.map((it) =>
+            it.key === itemKey
+              ? {
+                  ...it,
+                  url: data.path,
+                  label: it.label && it.label.trim() !== "" ? it.label : "Katalog produktow",
+                }
+              : it
+          );
+          setVcard({ ...vcard, displayItems: nextItems });
+        } catch {
+          setPdfErrorKey({ key: itemKey, msg: "Bledna odpowiedz serwera" });
+          setTimeout(() => setPdfErrorKey(null), 4000);
+        }
+      } else {
+        let msg = `Upload nie powiodl sie (${xhr.status})`;
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (data.error) msg = data.error;
+        } catch { /* ignore */ }
+        setPdfErrorKey({ key: itemKey, msg });
+        setTimeout(() => setPdfErrorKey(null), 4000);
+      }
+    };
+
+    xhr.onerror = () => {
+      setPdfUploadingKey(null);
+      pdfTargetItemKey.current = null;
+      setPdfProgress(0);
+      setPdfErrorKey({ key: itemKey, msg: "Blad polaczenia" });
+      setTimeout(() => setPdfErrorKey(null), 4000);
+    };
+
+    xhr.send(formData);
   };
 
   const initials = [vcard.firstName?.[0], vcard.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
@@ -491,38 +512,79 @@ export default function TagFormVCardSection({
                             {(() => {
                               const isPdf = !!item.url && item.url.startsWith("/api/uploads/") && item.url.toLowerCase().endsWith(".pdf");
                               const isUploadingThis = pdfUploadingKey === item.key;
+                              const label = isUploadingThis
+                                ? `Wgrywam... ${pdfProgress}%`
+                                : isPdf
+                                  ? "Zmien PDF"
+                                  : "Wgraj PDF";
                               return (
                                 <button
                                   type="button"
                                   onClick={() => !readOnly && !isUploadingThis && triggerPdfPicker(item.key)}
                                   disabled={readOnly || isUploadingThis}
-                                  title={isPdf ? "Zmien PDF" : "Wgraj PDF"}
+                                  title={isPdf ? "Zmien plik PDF" : "Wgraj plik PDF z dysku"}
                                   style={{
-                                    padding: "4px 8px",
+                                    padding: "6px 10px",
                                     fontSize: 11,
                                     fontWeight: 600,
-                                    borderRadius: 4,
-                                    border: isPdf
-                                      ? "1px solid rgba(250,204,21,0.5)"
-                                      : "1px solid var(--surface-2)",
+                                    borderRadius: 6,
+                                    border: "1px solid rgba(250,204,21,0.5)",
                                     background: isPdf
-                                      ? "rgba(250,204,21,0.12)"
-                                      : "var(--surface-2)",
-                                    color: isPdf ? "#facc15" : "var(--txt-sec)",
+                                      ? "rgba(250,204,21,0.18)"
+                                      : "rgba(250,204,21,0.08)",
+                                    color: "#facc15",
                                     cursor: readOnly || isUploadingThis ? "not-allowed" : "pointer",
                                     whiteSpace: "nowrap",
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: 4,
+                                    gap: 5,
+                                    minWidth: isUploadingThis ? 110 : "auto",
                                   }}
                                 >
-                                  {isUploadingThis ? "…" : (isPdf ? "📄 PDF" : "📄")}
+                                  <span style={{ fontSize: 13, lineHeight: 1 }}>📄</span>
+                                  <span>{label}</span>
                                 </button>
                               );
                             })()}
                           </div>
+                          {/* Progress bar while uploading this item */}
+                          {pdfUploadingKey === item.key && (
+                            <div style={{
+                              paddingLeft: 40, paddingRight: 4, marginTop: 6,
+                            }}>
+                              <div style={{
+                                height: 4, borderRadius: 2,
+                                background: "rgba(250,204,21,0.15)",
+                                overflow: "hidden",
+                              }}>
+                                <div style={{
+                                  width: `${pdfProgress}%`,
+                                  height: "100%",
+                                  background: "#facc15",
+                                  transition: "width 0.15s ease",
+                                }} />
+                              </div>
+                            </div>
+                          )}
+                          {/* Uploaded file hint */}
+                          {item.url && item.url.startsWith("/api/uploads/") && item.url.toLowerCase().endsWith(".pdf") && pdfUploadingKey !== item.key && (
+                            <div style={{
+                              paddingLeft: 40, fontSize: 10, color: "var(--txt-muted)",
+                              display: "flex", alignItems: "center", gap: 6, marginTop: 2,
+                            }}>
+                              <span>📄 {item.url.split("/").pop()}</span>
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "#facc15", textDecoration: "underline" }}
+                              >
+                                podglad
+                              </a>
+                            </div>
+                          )}
                           {pdfErrorKey && pdfErrorKey.key === item.key && (
-                            <div style={{ fontSize: 11, color: "var(--error)", paddingLeft: 40 }}>
+                            <div style={{ fontSize: 11, color: "var(--error)", paddingLeft: 40, marginTop: 4 }}>
                               {pdfErrorKey.msg}
                             </div>
                           )}
