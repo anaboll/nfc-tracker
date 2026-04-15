@@ -18,7 +18,8 @@ RUN npm run build
 
 # Runner
 FROM base AS runner
-RUN apk add --no-cache openssl
+# qpdf: linearizes uploaded PDFs (web-optimized byte order for progressive rendering)
+RUN apk add --no-cache openssl qpdf
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

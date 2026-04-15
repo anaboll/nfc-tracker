@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, rename, stat, unlink } from "fs/promises";
+import { spawn } from "child_process";
 import path from "path";
 
 /* ------------------------------------------------------------------ */
@@ -17,11 +18,65 @@ import path from "path";
 /* ------------------------------------------------------------------ */
 
 export const runtime = "nodejs";
-// Allow up to 60s for large PDF uploads over slower connections
+// Allow up to 60s for large PDF uploads over slower connections + linearization
 export const maxDuration = 60;
 
 const MAX_SIZE_MB = 100;
 const ALLOWED_TYPES = ["application/pdf"];
+
+/**
+ * Linearize a PDF in-place using qpdf. Linearization reorders internal
+ * structure so the first page (and cross-reference table) sit near the
+ * start of the byte stream — combined with HTTP Range requests this
+ * enables progressive rendering in browser PDF viewers.
+ *
+ * Fails gracefully: if qpdf is missing or the input PDF cannot be
+ * linearized (rare — e.g. corrupt cross-ref tables), logs a warning
+ * and leaves the original file untouched. The upload still succeeds.
+ */
+async function linearizePdf(filepath: string): Promise<{ linearized: boolean; warning?: string }> {
+  const tmpPath = `${filepath}.lin.tmp`;
+  return new Promise((resolve) => {
+    const proc = spawn("qpdf", ["--linearize", filepath, tmpPath], {
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+
+    let stderr = "";
+    proc.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    proc.on("error", (err) => {
+      // Binary missing or spawn failed
+      resolve({ linearized: false, warning: `qpdf spawn error: ${err.message}` });
+    });
+
+    proc.on("close", async (code) => {
+      // qpdf: exit 0 = clean, 3 = warnings (still produces valid linearized output)
+      if (code === 0 || code === 3) {
+        try {
+          const tmpStats = await stat(tmpPath);
+          if (tmpStats.size > 0) {
+            await rename(tmpPath, filepath);
+            resolve({
+              linearized: true,
+              warning: code === 3 ? `qpdf warnings: ${stderr.slice(0, 200)}` : undefined,
+            });
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
+      // Cleanup tmp file (best-effort)
+      try { await unlink(tmpPath); } catch { /* ignore */ }
+      resolve({
+        linearized: false,
+        warning: `qpdf exit ${code}: ${stderr.slice(0, 200)}`,
+      });
+    });
+  });
+}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -68,13 +123,29 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     await writeFile(filepath, Buffer.from(bytes));
 
+    // Linearize for progressive browser rendering (web-optimized PDF).
+    // Best-effort — if qpdf fails, the original (non-linearized) file
+    // still serves correctly via /api/uploads, just renders slightly slower.
+    const linResult = await linearizePdf(filepath);
+    if (linResult.warning) {
+      console.warn("PDF linearize:", linResult.warning);
+    }
+
+    // Size may shrink/grow slightly after linearization
+    let finalSize = file.size;
+    try {
+      const s = await stat(filepath);
+      finalSize = s.size;
+    } catch { /* keep uploaded size */ }
+
     const urlPath = `/api/uploads/${filename}`;
 
     return NextResponse.json({
       ok: true,
       path: urlPath,
-      size: file.size,
+      size: finalSize,
       filename,
+      linearized: linResult.linearized,
     });
   } catch (error) {
     console.error("PDF upload error:", error);
