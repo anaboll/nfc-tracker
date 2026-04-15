@@ -313,10 +313,14 @@ export default async function VCardPage({
       renderItems.push({ type: "header", key: item.key, text: item.text });
     } else if (item.type === "custom-link") {
       if (item.url) {
+        // Allow absolute http(s) URLs, site-relative paths ("/api/uploads/...pdf"),
+        // tel:/mailto: protocols as-is. Only bare domains get auto-prefixed.
+        const u = item.url;
+        const isAlreadyAbsolute = /^(https?:\/\/|\/|mailto:|tel:)/i.test(u);
         renderItems.push({
           type: "custom-link", key: item.key,
-          url: item.url.startsWith("http") ? item.url : `https://${item.url}`,
-          label: item.label || item.url,
+          url: isAlreadyAbsolute ? u : `https://${u}`,
+          label: item.label || u,
           logo: item.logo,
         });
       }
