@@ -74,6 +74,20 @@ const TYPES = [
     ),
     color: "#fb923c",
   },
+  {
+    value: "file",
+    label: "Plik (PDF)",
+    desc: "Przekierowanie do wgranego pliku",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="9" y1="15" x2="15" y2="15" />
+        <line x1="9" y1="18" x2="13" y2="18" />
+      </svg>
+    ),
+    color: "#facc15",
+  },
 ];
 
 export default function TagFormTypeSelector({ value, onChange, disabled }: Props) {

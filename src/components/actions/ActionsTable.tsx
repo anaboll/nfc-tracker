@@ -515,6 +515,21 @@ export function ActionsTable({
                       </div>
                     );
                   })()}
+                  {tag.tagType === "file" && tag.targetUrl && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--txt-muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        marginTop: 3,
+                      }}
+                      title={tag.targetUrl}
+                    >
+                      📄 {tag.targetUrl.split("/").pop()}
+                    </div>
+                  )}
                 </td>
 
                 {/* Akcje */}

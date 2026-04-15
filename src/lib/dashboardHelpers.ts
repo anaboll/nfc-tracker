@@ -69,6 +69,7 @@ export const getTagTypeLabel = (type: string): string => {
     case "multilink": return "Multi-link";
     case "vcard": return "Wizytówka";
     case "google-review": return "Recenzja Google";
+    case "file": return "Plik";
     default: return "URL";
   }
 };
@@ -80,6 +81,7 @@ export const getTagTypeColor = (type: string): { bg: string; color: string } => 
     case "multilink": return { bg: "rgba(59,130,246,0.15)", color: "#60a5fa" };
     case "vcard": return { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" };
     case "google-review": return { bg: "rgba(234,67,53,0.15)", color: "#ea4335" };
+    case "file": return { bg: "rgba(250,204,21,0.15)", color: "#facc15" };
     default: return { bg: "rgba(124,58,237,0.15)", color: "#7dd3fc" };
   }
 };

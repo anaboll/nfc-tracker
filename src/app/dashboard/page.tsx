@@ -753,6 +753,10 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
       setTagCreateError("Docelowy URL jest wymagany");
       return;
     }
+    if (newTagType === "file" && !newTagUrl) {
+      setTagCreateError("Wgraj plik PDF (uzyj strony /dashboard/tags/new)");
+      return;
+    }
     if (newTagType === "vcard" && !newVCard.firstName && !newVCard.lastName) {
       setTagCreateError("Imie lub nazwisko jest wymagane");
       return;
@@ -771,7 +775,7 @@ function DashboardAdmin({ session }: { session: NonNullable<ReturnType<typeof us
         clientId: newTagClient,
         campaignId: newTagCampaign,
       };
-      if (newTagType === "url" || newTagType === "google-review") {
+      if (newTagType === "url" || newTagType === "google-review" || newTagType === "file") {
         body.targetUrl = newTagUrl;
       } else if (newTagType === "multilink") {
         body.targetUrl = "#multilink";

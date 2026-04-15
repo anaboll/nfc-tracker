@@ -240,6 +240,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       e.targetUrl = "URL jest wymagany";
     }
 
+    if (tagType === "file" && !targetUrl.trim()) {
+      e.targetUrl = "Wgraj plik PDF";
+    }
+
     if (tagType === "vcard") {
       if (!vcard.firstName?.trim() && !vcard.lastName?.trim()) {
         e.vcard = "Imie lub nazwisko jest wymagane";
@@ -274,7 +278,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
           campaignId,
         };
 
-        if (tagType === "url" || tagType === "google-review") {
+        if (tagType === "url" || tagType === "google-review" || tagType === "file") {
           body.targetUrl = targetUrl.trim();
         } else if (tagType === "video") {
           body.targetUrl = `/watch/${tagId.trim()}`;
@@ -312,7 +316,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
           campaignId: campaignId || null,
         };
 
-        if (tagType === "url" || tagType === "google-review") {
+        if (tagType === "url" || tagType === "google-review" || tagType === "file") {
           body.targetUrl = targetUrl.trim();
         } else if (tagType === "video") {
           body.targetUrl = `/watch/${tagId}`;

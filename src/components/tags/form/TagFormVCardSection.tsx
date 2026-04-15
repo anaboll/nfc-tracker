@@ -87,8 +87,12 @@ export default function TagFormVCardSection({
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [pdfUploadingKey, setPdfUploadingKey] = useState<string | null>(null);
+  const [pdfErrorKey, setPdfErrorKey] = useState<{ key: string; msg: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const pdfTargetItemKey = useRef<string | null>(null);
 
   if (tagType !== "vcard") return null;
 
@@ -163,6 +167,71 @@ export default function TagFormVCardSection({
     }
   };
 
+  /* -- Custom-link PDF upload -- */
+  const triggerPdfPicker = (itemKey: string) => {
+    pdfTargetItemKey.current = itemKey;
+    pdfInputRef.current?.click();
+  };
+
+  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const itemKey = pdfTargetItemKey.current;
+    e.target.value = "";
+    if (!file || !itemKey) return;
+
+    if (file.type !== "application/pdf") {
+      setPdfErrorKey({ key: itemKey, msg: "Dozwolony format: PDF" });
+      setTimeout(() => setPdfErrorKey(null), 4000);
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setPdfErrorKey({ key: itemKey, msg: "Maksymalny rozmiar: 100MB" });
+      setTimeout(() => setPdfErrorKey(null), 4000);
+      return;
+    }
+
+    setPdfUploadingKey(itemKey);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (tagId) formData.append("tagId", tagId);
+      formData.append("context", "catalog");
+
+      const res = await fetch("/api/upload/pdf/admin", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Upload nie powiodl sie (${res.status})`);
+      }
+      const data = await res.json();
+
+      /* Update the matching custom-link in displayItems */
+      const currentItems: DisplayItem[] = vcard.displayItems || [];
+      const nextItems = currentItems.map((it) =>
+        it.key === itemKey
+          ? {
+              ...it,
+              url: data.path,
+              // If label still empty, default to "Katalog produktów"
+              label: it.label && it.label.trim() !== "" ? it.label : "Katalog produktow",
+            }
+          : it
+      );
+      setVcard({ ...vcard, displayItems: nextItems });
+    } catch (err) {
+      setPdfErrorKey({
+        key: itemKey,
+        msg: err instanceof Error ? err.message : "Upload nie powiodl sie",
+      });
+      setTimeout(() => setPdfErrorKey(null), 4000);
+    } finally {
+      setPdfUploadingKey(null);
+      pdfTargetItemKey.current = null;
+    }
+  };
+
   const initials = [vcard.firstName?.[0], vcard.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
 
   return (
@@ -173,6 +242,16 @@ export default function TagFormVCardSection({
         {errors.vcard && <div style={{ ...styles.error, marginBottom: 12 }}>{errors.vcard}</div>}
 
         {/* ── PHOTO UPLOAD ── */}
+        {/* Hidden PDF input (shared by all custom-link rows) */}
+        <input
+          ref={pdfInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          onChange={handlePdfSelect}
+          style={{ display: "none" }}
+          disabled={readOnly}
+        />
+
         <div style={styles.photoSection}>
           <input
             ref={fileInputRef}
@@ -406,10 +485,47 @@ export default function TagFormVCardSection({
                               }}
                               onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
                               onBlur={(e) => { e.currentTarget.style.borderColor = "var(--surface-2)"; }}
-                              placeholder="https://..."
+                              placeholder="https://... lub wgraj PDF"
                               disabled={readOnly}
                             />
+                            {(() => {
+                              const isPdf = !!item.url && item.url.startsWith("/api/uploads/") && item.url.toLowerCase().endsWith(".pdf");
+                              const isUploadingThis = pdfUploadingKey === item.key;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => !readOnly && !isUploadingThis && triggerPdfPicker(item.key)}
+                                  disabled={readOnly || isUploadingThis}
+                                  title={isPdf ? "Zmien PDF" : "Wgraj PDF"}
+                                  style={{
+                                    padding: "4px 8px",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    borderRadius: 4,
+                                    border: isPdf
+                                      ? "1px solid rgba(250,204,21,0.5)"
+                                      : "1px solid var(--surface-2)",
+                                    background: isPdf
+                                      ? "rgba(250,204,21,0.12)"
+                                      : "var(--surface-2)",
+                                    color: isPdf ? "#facc15" : "var(--txt-sec)",
+                                    cursor: readOnly || isUploadingThis ? "not-allowed" : "pointer",
+                                    whiteSpace: "nowrap",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {isUploadingThis ? "…" : (isPdf ? "📄 PDF" : "📄")}
+                                </button>
+                              );
+                            })()}
                           </div>
+                          {pdfErrorKey && pdfErrorKey.key === item.key && (
+                            <div style={{ fontSize: 11, color: "var(--error)", paddingLeft: 40 }}>
+                              {pdfErrorKey.msg}
+                            </div>
+                          )}
                         </div>
                       );
                     }

@@ -5,6 +5,7 @@ import TagFormHeader from "./TagFormHeader";
 import TagFormTypeSelector from "./TagFormTypeSelector";
 import TagFormBasicSection from "./TagFormBasicSection";
 import TagFormUrlSection from "./TagFormUrlSection";
+import TagFormFileSection from "./TagFormFileSection";
 import TagFormMultilinkSection from "./TagFormMultilinkSection";
 import TagFormVCardSection from "./TagFormVCardSection";
 import TagFormVCardPreview from "./TagFormVCardPreview";
@@ -126,6 +127,16 @@ export default function TagFormLayout({ form }: Props) {
 
             <TagFormUrlSection
               tagType={form.tagType}
+              targetUrl={form.targetUrl}
+              setTargetUrl={form.setTargetUrl}
+              readOnly={form.readOnly}
+              errors={form.errors}
+              clearFieldError={form.clearFieldError}
+            />
+
+            <TagFormFileSection
+              tagType={form.tagType}
+              tagId={form.tagId}
               targetUrl={form.targetUrl}
               setTargetUrl={form.setTargetUrl}
               readOnly={form.readOnly}

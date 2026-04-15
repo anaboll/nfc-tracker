@@ -52,7 +52,7 @@ export interface TagFull {
   _count: { scans: number };
 }
 
-export const TAG_TYPES = ["url", "video", "multilink", "vcard", "google-review"] as const;
+export const TAG_TYPES = ["url", "video", "multilink", "vcard", "google-review", "file"] as const;
 export type TagType = (typeof TAG_TYPES)[number];
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -61,6 +61,7 @@ export const TYPE_LABELS: Record<string, string> = {
   multilink: "Multi-link",
   vcard: "Wizytówka",
   "google-review": "Recenzja Google",
+  file: "Plik",
 };
 
 export const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -69,4 +70,5 @@ export const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   multilink:       { bg: "rgba(0,200,160,0.12)",  color: "#2ee8c0" },
   vcard:           { bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
   "google-review": { bg: "rgba(251,146,60,0.12)",  color: "#fb923c" },
+  file:            { bg: "rgba(250,204,21,0.12)",  color: "#facc15" },
 };
