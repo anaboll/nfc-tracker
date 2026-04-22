@@ -39,6 +39,12 @@ export interface VCardTheme {
 
   /* --- Social Icons --- */
   socialIconStyle?: SocialIconStyle; // default: 'rounded'
+
+  /* --- Contact rows customization (default values preserve current layout) --- */
+  rowPadding?: number;              // 6-20px vertical padding, default: 14
+  rowIconSize?: number;             // 32-56px icon box dimension, default: 44
+  rowFontSize?: number;             // 12-18px label text size, default: 14
+  rowFontFamily?: FontFamily;       // override font for rows only; undefined = inherit theme.fontFamily
 }
 
 export interface VCardData {
@@ -101,6 +107,10 @@ export const DEFAULT_VCARD_THEME: Required<VCardTheme> = {
   avatarBorderWidth: 3,
   avatarBorderColor: "",       // empty = auto from primaryColor
   socialIconStyle: "rounded",
+  rowPadding: 14,
+  rowIconSize: 44,
+  rowFontSize: 14,
+  rowFontFamily: "geist",      // sentinel — effective code should fall back to fontFamily when undefined
 };
 
 /* Allowed theme property values for validation */

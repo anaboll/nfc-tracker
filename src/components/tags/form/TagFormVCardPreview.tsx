@@ -149,9 +149,16 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   }
   if (curSec.header || curSec.fields.length > 0) sections.push(curSec);
 
+  /* Row customization (preview renders at the same scale as the real phone) */
+  const rowPadding = theme.rowPadding ?? 14;
+  const rowIconSize = theme.rowIconSize ?? 44;
+  const rowFontSize = theme.rowFontSize ?? 14;
+  const rowFontStack = getFontStack(theme.rowFontFamily || theme.fontFamily);
+  const rowIconInner = Math.round(rowIconSize * 0.45);
+
   const iconBoxStyle = (color: string): React.CSSProperties => ({
-    width: 30,
-    height: 30,
+    width: rowIconSize,
+    height: rowIconSize,
     borderRadius: iconRadius,
     background: `${color}15`,
     border: `1px solid ${color}30`,
@@ -164,9 +171,11 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   const linkCardStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    padding: "8px 10px",
+    gap: 14,
+    padding: `${rowPadding}px 16px`,
     borderRadius: linkRadius,
+    fontFamily: rowFontStack,
+    fontSize: rowFontSize,
     background: cardBg,
     border: `1px solid ${cardBorder}`,
     backdropFilter: "blur(8px)",
@@ -315,7 +324,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                       const color = SOCIAL_COLORS[item.key] || theme.primaryColor;
                       return (
                         <div key={item.key} style={iconBoxStyle(color)} title={item.key}>
-                          {IconComp && <IconComp size={13} color={color} />}
+                          {IconComp && <IconComp size={rowIconInner} color={color} />}
                         </div>
                       );
                     })}
@@ -351,12 +360,12 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                                   <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
                                 </svg>
                               ) : (
-                                IconComp && <IconComp size={13} color={color} />
+                                IconComp && <IconComp size={rowIconInner} color={color} />
                               )}
                             </div>
                           )}
                           <span style={{
-                            fontSize: 11, color: textPrimary, fontWeight: 500,
+                            fontSize: rowFontSize, color: textPrimary, fontWeight: 500,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
                           }}>
                             {displayVal}

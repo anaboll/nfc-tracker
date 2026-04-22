@@ -231,7 +231,8 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
   previewCol: {
-    width: 300,
+    /* 402px = iPhone 16 Pro logical viewport — preview renders 1:1 with how it'll look on phone */
+    width: 402,
     flexShrink: 0,
     position: "relative" as const,
   },

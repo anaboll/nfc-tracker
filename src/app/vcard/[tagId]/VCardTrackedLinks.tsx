@@ -29,6 +29,9 @@ interface Props {
   isMinimal: boolean;
   primaryColor: string;
   websiteLogo?: string;
+  /* Row customization (all optional for backward compat) */
+  rowFontSize?: number;    // default 14
+  rowIconInner?: number;   // size of SVG icon inside the icon box, default 20
 }
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
@@ -77,7 +80,7 @@ interface Section {
 }
 
 export default function VCardTrackedLinks({
-  tagId, items, linkCardStyle, iconBoxStyleFn, defaultIconBoxStyle, textPrimary, textMuted,
+  tagId, items, linkCardStyle, iconBoxStyleFn, defaultIconBoxStyle, textPrimary, textMuted, rowFontSize = 14, rowIconInner = 20,
   isMinimal, primaryColor, websiteLogo,
 }: Props) {
   // Group items into sections (header + following fields/custom-links)
@@ -132,7 +135,7 @@ export default function VCardTrackedLinks({
                       linkUrl={field.url!} linkLabel={field.label!} linkIcon={field.key}
                       style={iboxStyle}
                     >
-                      {Icon && <Icon size={20} color={color} />}
+                      {Icon && <Icon size={rowIconInner} color={color} />}
                     </TrackedLink>
                   );
                 })}
@@ -162,10 +165,10 @@ export default function VCardTrackedLinks({
                         </div>
                       ) : (
                         <div style={iboxStyle}>
-                          {Icon && <Icon size={20} color={color} />}
+                          {Icon && <Icon size={rowIconInner} color={color} />}
                         </div>
                       )}
-                      <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
+                      <span style={{ color: textPrimary, fontSize: rowFontSize, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
                         {field.label}
                       </span>
                       {isContact ? (

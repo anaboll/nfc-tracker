@@ -365,23 +365,31 @@ export default async function VCardPage({
     whatsapp: WhatsAppIcon, tiktok: TikTokIcon, youtube: YouTubeIcon, telegram: TelegramIcon,
   };
 
+  /* -- Row customization (fallback to defaults when theme fields are missing) -- */
+  const rowPadding = theme.rowPadding ?? 14;
+  const rowIconSize = theme.rowIconSize ?? 44;
+  const rowFontSize = theme.rowFontSize ?? 14;
+  const rowFontStack = getFontStack(theme.rowFontFamily || theme.fontFamily);
+
   /* -- Link card styles -- */
   const linkCardStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    padding: "14px 16px",
+    padding: `${rowPadding}px 16px`,
     borderRadius: linkRadius,
     background: cardBg,
     border: `1px solid ${cardBorder}`,
     textDecoration: "none",
     transition: "all 0.2s",
     backdropFilter: "blur(8px)",
+    fontFamily: rowFontStack,
+    fontSize: rowFontSize,
   };
 
   const iconBoxStyle = (color: string): React.CSSProperties => ({
-    width: 44,
-    height: 44,
+    width: rowIconSize,
+    height: rowIconSize,
     borderRadius: iconRadius,
     background: `${color}15`,
     border: `1px solid ${color}30`,
@@ -515,6 +523,8 @@ export default async function VCardPage({
           isMinimal={isMinimal}
           primaryColor={theme.primaryColor}
           websiteLogo={vcard.websiteLogo || ""}
+          rowFontSize={rowFontSize}
+          rowIconInner={Math.round(rowIconSize * 0.45)}
         />
 
         {/* ============================================================ */}

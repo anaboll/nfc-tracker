@@ -256,6 +256,54 @@ export default function ThemeEditor({ theme, onChange }: Props) {
             onChange={(v) => update({ socialIconStyle: v })}
             renderLabel={(v) => SOCIAL_ICON_LABELS[v]}
           />
+
+          {/* Contact rows customization */}
+          <SectionTitle>Belki kontaktowe</SectionTitle>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Wysokosc belek - padding ({t.rowPadding}px)</span>
+            <input
+              type="range"
+              min={6}
+              max={20}
+              step={1}
+              value={t.rowPadding}
+              onChange={(e) => update({ rowPadding: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Rozmiar ikon ({t.rowIconSize}px)</span>
+            <input
+              type="range"
+              min={32}
+              max={56}
+              step={2}
+              value={t.rowIconSize}
+              onChange={(e) => update({ rowIconSize: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Wielkosc tekstu ({t.rowFontSize}px)</span>
+            <input
+              type="range"
+              min={12}
+              max={18}
+              step={1}
+              value={t.rowFontSize}
+              onChange={(e) => update({ rowFontSize: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <div style={{ marginTop: 8, fontSize: 11, color: "#94a3b8" }}>
+            Czcionka belek (mozna inna niz glowna)
+          </div>
+          <OptionGrid
+            value={t.rowFontFamily || t.fontFamily}
+            options={["geist", "inter", "serif", "poppins", "montserrat", "playfair", "raleway", "dm-sans"] as FontFamily[]}
+            onChange={(v) => update({ rowFontFamily: v })}
+            renderLabel={(v) => FONT_LABELS[v]}
+          />
         </div>
       )}
     </div>
