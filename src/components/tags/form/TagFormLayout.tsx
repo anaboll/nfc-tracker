@@ -83,6 +83,7 @@ export default function TagFormLayout({ form }: Props) {
         tagName={form.name || form.tagId || undefined}
         onSave={handleSave}
         saving={form.submitting}
+        justSaved={form.justSaved}
         readOnly={form.readOnly}
         isDirty={form.isDirty}
         clientId={form.clientId}

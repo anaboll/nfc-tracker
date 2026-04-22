@@ -8,6 +8,7 @@ interface Props {
   tagName?: string;
   onSave: () => void;
   saving: boolean;
+  justSaved?: boolean;   // true for ~2s after successful save
   readOnly: boolean;
   isDirty: boolean;
   clientId?: string;
@@ -15,7 +16,7 @@ interface Props {
 }
 
 export default function TagFormHeader({
-  mode, tagName, onSave, saving, readOnly, isDirty, clientId, campaignId,
+  mode, tagName, onSave, saving, justSaved, readOnly, isDirty, clientId, campaignId,
 }: Props) {
   const router = useRouter();
 
@@ -55,14 +56,21 @@ export default function TagFormHeader({
         {!readOnly && (
           <button
             onClick={onSave}
-            disabled={saving || (!isDirty && mode === "edit")}
+            disabled={saving || justSaved || (!isDirty && mode === "edit")}
             style={{
               ...styles.saveBtn,
-              opacity: saving || (!isDirty && mode === "edit") ? 0.5 : 1,
-              cursor: saving ? "wait" : "pointer",
+              ...(justSaved ? styles.saveBtnSaved : {}),
+              opacity: saving ? 0.6 : justSaved ? 1 : (!isDirty && mode === "edit") ? 0.5 : 1,
+              cursor: saving ? "wait" : justSaved ? "default" : "pointer",
             }}
           >
-            {saving ? "Zapisywanie..." : mode === "create" ? "Utworz akcje" : "Zapisz zmiany"}
+            {saving
+              ? "Zapisywanie..."
+              : justSaved
+                ? "\u2713 Zapisano"
+                : mode === "create"
+                  ? "Utworz akcje"
+                  : "Zapisz zmiany"}
           </button>
         )}
       </div>
@@ -151,6 +159,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",
-    transition: "all 0.15s",
+    transition: "all 0.2s",
+  },
+  saveBtnSaved: {
+    background: "var(--success)",
+    color: "#fff",
   },
 };

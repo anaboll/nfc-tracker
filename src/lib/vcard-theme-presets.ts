@@ -142,4 +142,23 @@ export const THEME_PRESETS: ThemePreset[] = [
       socialIconStyle: "square",
     },
   },
+  {
+    id: "laboversum",
+    name: "Laboversum",
+    theme: {
+      /* Brand colors: navy blue gradient + red/crimson accent (matches laboversum.pl) */
+      primaryColor: "#dc2626",       // red accent (phone button, heart icon on their site)
+      bgMode: "gradient",
+      bgGradientFrom: "#0c1f3d",     // navy top
+      bgGradientTo: "#1e3a6b",       // lighter navy bottom
+      buttonStyle: "rounded",
+      buttonVariant: "filled",
+      fontFamily: "inter",
+      layoutVariant: "classic",
+      avatarShape: "circle",
+      avatarBorderWidth: 3,
+      avatarBorderColor: "#ffffff",  // white border around logo/avatar
+      socialIconStyle: "circle",
+    },
+  },
 ];

@@ -55,6 +55,7 @@ export interface UseTagFormReturn {
   /* Submission */
   submitting: boolean;
   submitError: string;
+  justSaved: boolean;   // true for ~2s after successful save (for UI feedback)
   submit: () => Promise<{ success: boolean; createdId?: string }>;
 
   /* Edit-mode extras */
@@ -120,6 +121,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
   /* ---- Submission ---- */
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [justSaved, setJustSaved] = useState(false);
 
   /* ---- Edit extras ---- */
   const [resetting, setResetting] = useState(false);
@@ -341,6 +343,13 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
           throw new Error(data.error || `Blad ${res.status}`);
         }
 
+        /* Refresh snapshot so isDirty becomes false, then flash "Zapisano" feedback */
+        setInitialSnapshot(JSON.stringify({
+          tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard,
+        }));
+        setJustSaved(true);
+        setTimeout(() => setJustSaved(false), 2000);
+
         return { success: true };
       }
     } catch (err) {
@@ -425,7 +434,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     vcard, setVcard,
     clients, campaigns, campaignsForClient,
     errors, setFieldError, clearFieldError, validate,
-    submitting, submitError, submit,
+    submitting, submitError, justSaved, submit,
     resetStats, deleteTag, resetting,
     mode, readOnly, isAdmin, loading, isDirty,
     editTokenUrl, editTokenLoading, generateEditToken, revokeEditToken,
