@@ -148,9 +148,10 @@ export const THEME_PRESETS: ThemePreset[] = [
     theme: {
       /* Brand color: #171930 (authentic Laboversum navy — per their phone button) */
       primaryColor: "#ffffff",       // white button on dark navy background (inverse, high contrast)
-      bgMode: "gradient",
-      bgGradientFrom: "#171930",     // pure brand navy
-      bgGradientTo: "#2a2d4a",       // subtle lighter navy at bottom
+      bgMode: "solid",               // SOLID #171930 everywhere — no gradient so the color stays exactly as on laboversum.pl
+      bgSolidColor: "#171930",
+      bgGradientFrom: "#171930",     // fallbacks (unused when bgMode=solid)
+      bgGradientTo: "#171930",
       buttonStyle: "rounded",
       buttonVariant: "filled",
       fontFamily: "inter",
