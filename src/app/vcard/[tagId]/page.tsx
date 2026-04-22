@@ -462,6 +462,7 @@ export default async function VCardPage({
             </div>
           )}
 
+          {/* Main heading: full name if available, otherwise company as big headline */}
           <h1 style={{
             fontSize: isModern ? 30 : 26,
             fontWeight: 700,
@@ -469,13 +470,17 @@ export default async function VCardPage({
             marginBottom: 4,
             letterSpacing: "-0.01em",
           }}>
-            {fullName}
+            {fullName || vcard.company || ""}
           </h1>
           {vcard.jobTitle && (
             <p style={{ fontSize: 14, color: textSecondary, marginBottom: 2 }}>{vcard.jobTitle}</p>
           )}
-          {vcard.company && (
+          {/* Company only shown as accent subtitle when a person name is present above */}
+          {fullName && vcard.company && (
             <p style={{ fontSize: 14, fontWeight: 600, color: theme.primaryColor }}>{vcard.company}</p>
+          )}
+          {vcard.slogan && (
+            <p style={{ fontSize: 13, color: textSecondary, marginTop: 4, fontStyle: "italic" }}>{vcard.slogan}</p>
           )}
         </div>
 

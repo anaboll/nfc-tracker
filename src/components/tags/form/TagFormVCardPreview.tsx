@@ -114,8 +114,15 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
   const fontStack = getFontStack(theme.fontFamily);
   const patternStyle = getPatternOverlay(theme);
 
-  const fullName = [deferred.firstName, deferred.lastName].filter(Boolean).join(" ") || "Imie Nazwisko";
-  const initials = [deferred.firstName?.[0], deferred.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
+  const rawFullName = [deferred.firstName, deferred.lastName].filter(Boolean).join(" ");
+  const hasPersonName = rawFullName.length > 0;
+  /* Show company as big headline when no person name; placeholder only if both are empty */
+  const mainHeading = hasPersonName
+    ? rawFullName
+    : (deferred.company || "Imie Nazwisko");
+  const initials = hasPersonName
+    ? [deferred.firstName?.[0], deferred.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+    : (deferred.company?.[0]?.toUpperCase() || "?");
 
   const isMinimal = theme.layoutVariant === "minimal";
   const isModern = theme.layoutVariant === "modern";
@@ -252,14 +259,20 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
             letterSpacing: "-0.01em",
             transition: "all 0.3s ease",
           }}>
-            {fullName}
+            {mainHeading}
           </div>
           {deferred.jobTitle && (
             <div style={{ fontSize: 11, color: textSecondary }}>{deferred.jobTitle}</div>
           )}
-          {deferred.company && (
+          {/* Company shown as accent subtitle only when a person name is used as heading */}
+          {hasPersonName && deferred.company && (
             <div style={{ fontSize: 11, fontWeight: 600, color: theme.primaryColor, marginTop: 1 }}>
               {deferred.company}
+            </div>
+          )}
+          {deferred.slogan && (
+            <div style={{ fontSize: 10, color: textSecondary, marginTop: 2, fontStyle: "italic" }}>
+              {deferred.slogan}
             </div>
           )}
 

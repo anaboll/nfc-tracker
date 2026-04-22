@@ -245,8 +245,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     }
 
     if (tagType === "vcard") {
-      if (!vcard.firstName?.trim() && !vcard.lastName?.trim()) {
-        e.vcard = "Imie lub nazwisko jest wymagane";
+      const hasPersonName = !!(vcard.firstName?.trim() || vcard.lastName?.trim());
+      const hasCompany = !!vcard.company?.trim();
+      if (!hasPersonName && !hasCompany) {
+        e.vcard = "Podaj imie/nazwisko albo nazwe firmy";
       }
     }
 

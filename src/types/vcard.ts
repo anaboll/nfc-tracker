@@ -45,6 +45,7 @@ export interface VCardData {
   firstName: string;
   lastName: string;
   company?: string;
+  slogan?: string;       // optional tagline shown below the main name/company (e.g. "Pobieranie krwi w domu lub pracy")
   jobTitle?: string;
   phone?: string;
   email?: string;

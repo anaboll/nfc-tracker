@@ -35,12 +35,13 @@ function photoSrc(photo: string): string {
 
 const SECTIONS: { title: string; icon: string; collapsed?: boolean; fields: FieldDef[] }[] = [
   {
-    title: "Dane osobowe",
+    title: "Dane osobowe / firmowe",
     icon: "\uD83D\uDC64",
     fields: [
-      { key: "firstName", label: "Imie", required: true },
-      { key: "lastName", label: "Nazwisko", required: true },
-      { key: "company", label: "Firma" },
+      { key: "firstName", label: "Imie (opcjonalne jesli podasz firme)" },
+      { key: "lastName", label: "Nazwisko (opcjonalne jesli podasz firme)" },
+      { key: "company", label: "Firma (uzyta jako duzy naglowek gdy brak imienia)" },
+      { key: "slogan", label: "Slogan / podtytul", placeholder: "np. Pobieranie krwi w domu lub pracy" },
       { key: "jobTitle", label: "Stanowisko" },
     ],
   },
