@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonStyle, ButtonVariant } from "@/types/vcard";
+import { getContrastTextColor } from "@/lib/color-contrast";
 
 interface Props {
   vcfBase64: string;
@@ -77,7 +78,7 @@ export default function VCardActions({
       : {
           background: primaryColor,
           border: "none",
-          color: "#fff",
+          color: getContrastTextColor(primaryColor),
           boxShadow: `0 4px 20px ${primaryColor}40`,
         };
 

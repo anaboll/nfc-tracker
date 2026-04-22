@@ -4,6 +4,7 @@ import React, { useDeferredValue, useEffect } from "react";
 import type { VCardData, VCardTheme, DisplayItem } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME, FIELD_LABELS, computeDisplayItems } from "@/types/vcard";
 import { SOCIAL_ICONS, SOCIAL_COLORS } from "@/components/vcard/SocialIcons";
+import { getContrastTextColor } from "@/lib/color-contrast";
 
 interface Props {
   tagType: string;
@@ -284,7 +285,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
               background: theme.buttonVariant === "filled" ? theme.primaryColor :
                          theme.buttonVariant === "outline" ? "transparent" : "transparent",
               border: theme.buttonVariant === "outline" ? `1.5px solid ${theme.primaryColor}` : "1.5px solid transparent",
-              color: theme.buttonVariant === "filled" ? "#fff" : theme.primaryColor,
+              color: theme.buttonVariant === "filled" ? getContrastTextColor(theme.primaryColor) : theme.primaryColor,
               fontSize: 11,
               fontWeight: 700,
               transition: "all 0.3s ease",

@@ -9,6 +9,7 @@ import {
   TikTokIcon, YouTubeIcon, TelegramIcon,
   SOCIAL_COLORS,
 } from "@/components/vcard/SocialIcons";
+import { getContrastTextColor } from "@/lib/color-contrast";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -181,7 +182,7 @@ function SaveContactButton({
       ? { background: "transparent", border: `2px solid ${primaryColor}`, color: primaryColor, boxShadow: "none" }
       : buttonVariant === "ghost"
       ? { background: `${primaryColor}15`, border: "1px solid transparent", color: primaryColor, boxShadow: "none" }
-      : { background: primaryColor, border: "none", color: "#fff", boxShadow: `0 4px 20px ${primaryColor}40` };
+      : { background: primaryColor, border: "none", color: getContrastTextColor(primaryColor), boxShadow: `0 4px 20px ${primaryColor}40` };
 
   void textColor; // available for future use
 

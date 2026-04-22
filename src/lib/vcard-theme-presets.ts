@@ -143,22 +143,41 @@ export const THEME_PRESETS: ThemePreset[] = [
     },
   },
   {
-    id: "laboversum",
-    name: "Laboversum",
+    id: "laboversum-dark",
+    name: "Laboversum Ciemny",
     theme: {
-      /* Brand colors: navy blue gradient + red/crimson accent (matches laboversum.pl) */
-      primaryColor: "#dc2626",       // red accent (phone button, heart icon on their site)
+      /* Brand color: #171930 (authentic Laboversum navy — per their phone button) */
+      primaryColor: "#ffffff",       // white button on dark navy background (inverse, high contrast)
       bgMode: "gradient",
-      bgGradientFrom: "#0c1f3d",     // navy top
-      bgGradientTo: "#1e3a6b",       // lighter navy bottom
+      bgGradientFrom: "#171930",     // pure brand navy
+      bgGradientTo: "#2a2d4a",       // subtle lighter navy at bottom
       buttonStyle: "rounded",
       buttonVariant: "filled",
       fontFamily: "inter",
       layoutVariant: "classic",
       avatarShape: "circle",
       avatarBorderWidth: 3,
-      avatarBorderColor: "#ffffff",  // white border around logo/avatar
-      socialIconStyle: "circle",
+      avatarBorderColor: "#ffffff",
+      socialIconStyle: "rounded",
+    },
+  },
+  {
+    id: "laboversum-light",
+    name: "Laboversum Jasny",
+    theme: {
+      primaryColor: "#171930",       // navy button on white background
+      bgMode: "solid",
+      bgSolidColor: "#ffffff",
+      bgGradientFrom: "#ffffff",     // fallback
+      bgGradientTo: "#f8fafc",
+      buttonStyle: "rounded",
+      buttonVariant: "filled",
+      fontFamily: "inter",
+      layoutVariant: "classic",
+      avatarShape: "circle",
+      avatarBorderWidth: 3,
+      avatarBorderColor: "#171930",
+      socialIconStyle: "rounded",
     },
   },
 ];
