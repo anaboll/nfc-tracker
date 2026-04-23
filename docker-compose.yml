@@ -81,7 +81,7 @@ services:
       CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
       REPLICA_ID: "app1"     # identifies which replica serves a request in /api/health
     ports:
-      - "0.0.0.0:3001:3000"
+      - "127.0.0.1:3001:3000"
 
   app2:
     <<: *app-common
@@ -102,7 +102,7 @@ services:
       CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
       REPLICA_ID: "app2"
     ports:
-      - "0.0.0.0:3002:3000"
+      - "127.0.0.1:3002:3000"
 
   migrate:
     build:
