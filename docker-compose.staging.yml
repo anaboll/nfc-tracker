@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# Staging override dla lokalnego dev-Dockera.
+#
+# Używanie:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml \
+#     --env-file .env.staging up -d
+#
+# Jedyne różnice vs prod:
+#   - porty app1/app2 bindowane do 0.0.0.0 (LAN accessible z telefonu)
+#     zamiast 127.0.0.1 (tylko loopback, jak na prodzie dla nginxa)
+#   - postgres NIE eksponuje portu 5432 na hosta (bezpieczniej, tylko
+#     wewnątrz sieci docker nfc-tracker_default)
+#
+# Wszystko inne (services, env vars, volumes, healthcheck) dziedziczone
+# z docker-compose.yml.
+# ---------------------------------------------------------------------------
+
+services:
+  app1:
+    # !override = ignoruj porty z bazowego compose (zamiast concatenować).
+    # Bez tego mielibyśmy bind na 127.0.0.1:3001 I 0.0.0.0:3001 = konflikt.
+    ports: !override
+      - "0.0.0.0:3001:3000"
+
+  app2:
+    ports: !override
+      - "0.0.0.0:3002:3000"

@@ -3,6 +3,9 @@ node_modules/
 .env
 .env.zoho
 .env.local
+.env.staging
+/tmp/prod-snapshot.dump
+/tmp/prod-uploads/
 public/uploads/*
 !public/uploads/.gitkeep
 backups/
