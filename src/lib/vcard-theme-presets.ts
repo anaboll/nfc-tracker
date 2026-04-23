@@ -181,4 +181,29 @@ export const THEME_PRESETS: ThemePreset[] = [
       socialIconStyle: "rounded",
     },
   },
+  {
+    /* Nasalski Premium Estate — warm graphite + warm gold.
+     * Inspiracja: centralny ciemny hero section ich strony (zespół w ciemnych
+     * garniturach na graffitowym tle) + musztardowo-złote badge'e "TYLKO U NAS".
+     * Vibe: modern premium, ekskluzywne biuro nieruchomości.
+     * Użyte do breloków dla 9 doradców Nasalskiego (kampania kwiecień 2026). */
+    id: "nasalski-grafit",
+    name: "Nasalski Grafit",
+    theme: {
+      primaryColor: "#e0b968",       // warm gold button fill
+      bgMode: "solid",
+      bgSolidColor: "#2a2420",       // warm graphite (prawie czarny, ciepły)
+      bgGradientFrom: "#2a2420",     // fallback
+      bgGradientTo: "#2a2420",
+      bgPattern: "none",
+      buttonStyle: "rounded",
+      buttonVariant: "filled",
+      fontFamily: "inter",
+      layoutVariant: "classic",
+      avatarShape: "circle",
+      avatarBorderWidth: 3,
+      avatarBorderColor: "#e0b968",
+      socialIconStyle: "rounded",
+    },
+  },
 ];
