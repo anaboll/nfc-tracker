@@ -47,4 +47,11 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Healthcheck — probes /api/health every 5s. start-period of 30s gives Node.js
+# enough time to boot (import deps, init Prisma) before health failures count.
+# nginx upstream uses this status to route traffic only to healthy replicas
+# during rolling deploys.
+HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
+
 CMD ["node", "server.js"]

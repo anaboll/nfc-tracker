@@ -1,5 +1,44 @@
 version: "3.9"
 
+# ---------------------------------------------------------------------------
+# Two-replica rolling deploy setup.
+# app1 listens on host port 3001, app2 on 3002. System nginx (on the VPS,
+# not containerized) uses an upstream block `twojenfc_app` that round-robins
+# between 127.0.0.1:3001 + 127.0.0.1:3002 with automatic retry on failure.
+# Deploy is rolled one replica at a time via scripts/rolling-deploy.sh so
+# at least one replica is always serving requests.
+# ---------------------------------------------------------------------------
+
+# YAML anchor for the shared app service definition — both replicas are
+# identical except for their name + host port. Keeps env vars, image build,
+# volumes, depends_on in ONE place so changes can't drift between replicas.
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: nfc-tracker-app           # both replicas share the same built image
+  restart: unless-stopped
+  stop_grace_period: 30s           # give in-flight requests time to finish when stopping
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment:
+    DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD}@postgres:5432/nfc_tracker"
+    NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+    NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3001}"
+    NODE_ENV: production
+    UPLOAD_DIR: /app/public/uploads
+    MAX_FILE_SIZE_MB: "500"
+    IP_HASH_SECRET: "${IP_HASH_SECRET}"
+    IP_HASH_SALT: "${IP_HASH_SALT}"
+    SMTP_HOST: "${SMTP_HOST:-smtp.zoho.eu}"
+    SMTP_PORT: "${SMTP_PORT:-465}"
+    SMTP_USER: "${SMTP_USER}"
+    SMTP_PASS: "${SMTP_PASS}"
+    CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+  volumes:
+    - uploads_data:/app/public/uploads
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,33 +56,17 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: nfc_app
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD}@postgres:5432/nfc_tracker"
-      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
-      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3001}"
-      NODE_ENV: production
-      UPLOAD_DIR: /app/public/uploads
-      MAX_FILE_SIZE_MB: "500"
-      IP_HASH_SECRET: "${IP_HASH_SECRET}"
-      IP_HASH_SALT: "${IP_HASH_SALT}"
-      SMTP_HOST: "${SMTP_HOST:-smtp.zoho.eu}"
-      SMTP_PORT: "${SMTP_PORT:-465}"
-      SMTP_USER: "${SMTP_USER}"
-      SMTP_PASS: "${SMTP_PASS}"
-      CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+  app1:
+    <<: *app-common
+    container_name: nfc_app_1
     ports:
       - "0.0.0.0:3001:3000"
-    volumes:
-      - uploads_data:/app/public/uploads
+
+  app2:
+    <<: *app-common
+    container_name: nfc_app_2
+    ports:
+      - "0.0.0.0:3002:3000"
 
   migrate:
     build:
@@ -65,11 +88,14 @@ services:
     container_name: nfc_nginx
     restart: unless-stopped
     depends_on:
-      - app
+      - app1
+      - app2
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    profiles:
+      - docker-nginx   # disabled by default — prod uses system nginx on the VPS
 
 volumes:
   postgres_data:
