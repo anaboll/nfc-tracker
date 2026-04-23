@@ -17,6 +17,11 @@
 
 set -euo pipefail
 
+# Wyłącz MSYS path mangling na Git Bash (inaczej /app/public/uploads staje się
+# C:/Program Files/Git/app/public/uploads w argumentach do docker exec/cp).
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/hetzner_nfc}"
 PROD="${PROD_HOST:-root@46.225.127.112}"
 SNAPSHOT_FILE="/tmp/prod-snapshot.dump"
@@ -88,11 +93,12 @@ if [ "$SKIP_UPLOADS" = false ]; then
   UPLOADS_SIZE=$(du -sh "$UPLOADS_LOCAL" 2>/dev/null | awk '{print $1}' || echo "?")
   ok "Uploads pobrane do $UPLOADS_LOCAL ($UPLOADS_SIZE)"
 
-  log "docker cp uploads → nfc_app_1 (kontenery app1+app2 dzielą named volume uploads_data)..."
+  log "tar streaming uploads → nfc_app_1 (kontenery app1+app2 dzielą named volume uploads_data)..."
   # Najpierw wyczyść stare uploads w kontenerze (1:1 sync)
   docker exec nfc_app_1 sh -c 'rm -rf /app/public/uploads/* /app/public/uploads/.[!.]* 2>/dev/null || true'
-  # Kopiuj zawartość (kropka na końcu = "zawartość", nie sam katalog)
-  docker cp "$UPLOADS_LOCAL/." nfc_app_1:/app/public/uploads/
+  # Stream tar → docker exec tar xf: omija `docker cp` które na Git Bash potrafi
+  # mangować ścieżki (gubi końcowy `/.` i pakuje do podkatalogu).
+  tar cf - -C "$UPLOADS_LOCAL" . | docker exec -i nfc_app_1 tar xf - -C /app/public/uploads/
   # Właściciel — nextjs w kontenerze ma uid 1001
   docker exec --user root nfc_app_1 chown -R 1001:1001 /app/public/uploads/ 2>/dev/null || true
   ok "Uploads wgrane do kontenera (widoczne też z app2 przez wspólny volume)"
