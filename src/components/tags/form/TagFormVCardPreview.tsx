@@ -286,8 +286,8 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
             </div>
           )}
 
-          {/* Save contact button */}
-          <div style={{ marginTop: 12 }}>
+          {/* Save contact button — preview uses 0.5 scale of user's slider value */}
+          <div style={{ marginTop: Math.round(theme.headerBottomGap * 0.5) }}>
             <div style={{
               padding: "6px 0",
               borderRadius: linkRadius,
@@ -308,7 +308,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
             if (sec.fields.length === 0) return null;
             const allSocial = sec.fields.every(f => f.type === "field" && SOCIAL_KEYS_SET.has(f.key));
             return (
-              <div key={sec.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 12 : (sec.header ? 10 : 6), textAlign: "left" }}>
+              <div key={sec.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? Math.round(theme.buttonRowGap * 0.5) : (sec.header ? 10 : Math.round(theme.rowGap * 0.5)), textAlign: "left" }}>
                 {!isMinimal && sec.header && (
                   <div style={{
                     fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
@@ -330,7 +330,7 @@ export default function TagFormVCardPreview({ tagType, vcard, tagId }: Props) {
                     })}
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: Math.round(theme.rowGap * 0.5) }}>
                     {sec.fields.map((item) => {
                       const isCustomLink = item.type === "custom-link";
                       const IconComp = isCustomLink ? null : SOCIAL_ICONS[item.key];

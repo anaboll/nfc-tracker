@@ -275,7 +275,7 @@ export default function VCardRenderer({
 
       <div style={{ width: "100%", maxWidth: 440, position: "relative", zIndex: 1 }}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: isModern ? 32 : 24 }}>
+        <div style={{ textAlign: "center", marginBottom: theme.headerBottomGap }}>
           {vcard.photo ? (
             <div style={{
               width: isModern ? 140 : 120, height: isModern ? 140 : 120,
@@ -325,13 +325,13 @@ export default function VCardRenderer({
 
         {/* Contact */}
         {contactLinks.length > 0 && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: theme.buttonRowGap }}>
             {!isMinimal && (
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: textMuted, marginBottom: 10, paddingLeft: 4 }}>
                 Kontakt
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: theme.rowGap }}>
               {contactLinks.map((link) => {
                 const Icon = ICON_MAP[link.key];
                 const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
@@ -349,7 +349,7 @@ export default function VCardRenderer({
 
         {/* Social */}
         {socialLinks.length > 0 && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: contactLinks.length > 0 ? 16 : theme.buttonRowGap }}>
             {!isMinimal && (
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: textMuted, marginBottom: 10, paddingLeft: 4 }}>
                 Social Media
@@ -368,7 +368,7 @@ export default function VCardRenderer({
                 })}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: theme.rowGap }}>
                 {socialLinks.map((link) => {
                   const Icon = ICON_MAP[link.key];
                   const color = SOCIAL_COLORS[link.key] || theme.primaryColor;

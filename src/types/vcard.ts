@@ -45,6 +45,11 @@ export interface VCardTheme {
   rowIconSize?: number;             // 32-56px icon box dimension, default: 44
   rowFontSize?: number;             // 12-18px label text size, default: 14
   rowFontFamily?: FontFamily;       // override font for rows only; undefined = inherit theme.fontFamily
+
+  /* --- Vertical spacing (configurable to fit rows on one screen) --- */
+  headerBottomGap?: number;         // 0-60px space between name/company block and "Zapisz kontakt" button, default: 24
+  buttonRowGap?: number;            // 0-60px space between "Zapisz kontakt" button and the first contact row, default: 24
+  rowGap?: number;                  // 0-30px space between consecutive contact/social rows, default: 8
 }
 
 export interface VCardData {
@@ -111,6 +116,9 @@ export const DEFAULT_VCARD_THEME: Required<VCardTheme> = {
   rowIconSize: 44,
   rowFontSize: 14,
   rowFontFamily: "geist",      // sentinel — effective code should fall back to fontFamily when undefined
+  headerBottomGap: 24,         // space between name/company and Save Contact button (current default)
+  buttonRowGap: 24,            // space between Save Contact button and first contact row (current default)
+  rowGap: 8,                   // space between consecutive rows (current default)
 };
 
 /* Allowed theme property values for validation */

@@ -32,6 +32,8 @@ interface Props {
   /* Row customization (all optional for backward compat) */
   rowFontSize?: number;    // default 14
   rowIconInner?: number;   // size of SVG icon inside the icon box, default 20
+  buttonRowGap?: number;   // space between "Zapisz kontakt" and first row, default 24
+  rowGap?: number;         // space between consecutive rows, default 8
 }
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
@@ -81,6 +83,7 @@ interface Section {
 
 export default function VCardTrackedLinks({
   tagId, items, linkCardStyle, iconBoxStyleFn, defaultIconBoxStyle, textPrimary, textMuted, rowFontSize = 14, rowIconInner = 20,
+  buttonRowGap = 24, rowGap = 8,
   isMinimal, primaryColor, websiteLogo,
 }: Props) {
   // Group items into sections (header + following fields/custom-links)
@@ -111,7 +114,7 @@ export default function VCardTrackedLinks({
         const allSocial = section.fields.every(f => f.type === "field" && SOCIAL_KEYS.has(f.key));
 
         return (
-          <div key={section.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? 24 : (section.header ? 16 : 8) }}>
+          <div key={section.header?.key || `s-${sIdx}`} style={{ marginTop: sIdx === 0 ? buttonRowGap : (section.header ? 16 : rowGap) }}>
             {/* Section header */}
             {!isMinimal && section.header && (
               <div style={{
@@ -141,7 +144,7 @@ export default function VCardTrackedLinks({
                 })}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: rowGap }}>
                 {section.fields.map(field => {
                   const isCustomLink = field.type === "custom-link";
                   const Icon = isCustomLink ? LinkIcon : ICON_MAP[field.key];

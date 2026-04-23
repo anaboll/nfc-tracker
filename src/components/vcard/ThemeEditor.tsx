@@ -304,6 +304,45 @@ export default function ThemeEditor({ theme, onChange }: Props) {
             onChange={(v) => update({ rowFontFamily: v })}
             renderLabel={(v) => FONT_LABELS[v]}
           />
+
+          {/* Odstepy pionowe — pozwalają zmieścić wszystkie belki na jednym ekranie */}
+          <SectionTitle>Odstepy pionowe</SectionTitle>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Odstep: imie/firma → &quot;Zapisz kontakt&quot; ({t.headerBottomGap}px)</span>
+            <input
+              type="range"
+              min={0}
+              max={60}
+              step={1}
+              value={t.headerBottomGap}
+              onChange={(e) => update({ headerBottomGap: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Odstep: &quot;Zapisz kontakt&quot; → pierwsza belka ({t.buttonRowGap}px)</span>
+            <input
+              type="range"
+              min={0}
+              max={60}
+              step={1}
+              value={t.buttonRowGap}
+              onChange={(e) => update({ buttonRowGap: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Odstep miedzy belkami ({t.rowGap}px)</span>
+            <input
+              type="range"
+              min={0}
+              max={30}
+              step={1}
+              value={t.rowGap}
+              onChange={(e) => update({ rowGap: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
         </div>
       )}
     </div>

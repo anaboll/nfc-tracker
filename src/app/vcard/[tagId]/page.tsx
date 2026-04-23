@@ -434,7 +434,7 @@ export default async function VCardPage({
         {/* ============================================================ */}
         {/*  HEADER — photo/initials + name + title                      */}
         {/* ============================================================ */}
-        <div className="text-center" style={{ marginBottom: isModern ? 32 : 24 }}>
+        <div className="text-center" style={{ marginBottom: theme.headerBottomGap }}>
           {/* Avatar */}
           {vcard.photo ? (
             <div style={{
@@ -525,6 +525,8 @@ export default async function VCardPage({
           websiteLogo={vcard.websiteLogo || ""}
           rowFontSize={rowFontSize}
           rowIconInner={Math.round(rowIconSize * 0.45)}
+          buttonRowGap={theme.buttonRowGap}
+          rowGap={theme.rowGap}
         />
 
         {/* ============================================================ */}
