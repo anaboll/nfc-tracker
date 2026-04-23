@@ -91,8 +91,19 @@ if [ "$SKIP_GIT" = false ]; then
   git pull --ff-only
 fi
 
+# Capture current git state for baking into the image via Docker ARGs.
+# /api/health + /dashboard/status surface these so you can see exactly which
+# commit each replica is serving — critical during/after a rolling deploy.
+export BUILD_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+export BUILD_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+export BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+log "Build metadata: branch=$BUILD_BRANCH commit=${BUILD_COMMIT:0:7} time=$BUILD_TIME"
+
 log "Building shared app image..."
-docker compose build app1   # app1 and app2 share the same image (x-app-common)
+# docker compose reads BUILD_* from env and passes them as --build-arg (see
+# x-app-common.build.args in docker-compose.yml). app1 and app2 share the
+# same image (x-app-common), so we build once using app1 as the proxy.
+docker compose build app1
 
 # Roll app1 first, then app2. Order doesn't matter functionally — nginx round-
 # robins between them — but doing it sequentially guarantees at least one

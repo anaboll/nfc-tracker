@@ -16,6 +16,12 @@ x-app-common: &app-common
   build:
     context: .
     dockerfile: Dockerfile
+    # Build metadata is passed in by rolling-deploy.sh via --build-arg so
+    # /api/health + /dashboard/status can report exact branch/commit serving.
+    args:
+      BUILD_COMMIT: "${BUILD_COMMIT:-unknown}"
+      BUILD_BRANCH: "${BUILD_BRANCH:-unknown}"
+      BUILD_TIME:   "${BUILD_TIME:-unknown}"
   image: nfc-tracker-app           # both replicas share the same built image
   restart: unless-stopped
   stop_grace_period: 30s           # give in-flight requests time to finish when stopping
@@ -59,12 +65,42 @@ services:
   app1:
     <<: *app-common
     container_name: nfc_app_1
+    environment:
+      DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD}@postgres:5432/nfc_tracker"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3001}"
+      NODE_ENV: production
+      UPLOAD_DIR: /app/public/uploads
+      MAX_FILE_SIZE_MB: "500"
+      IP_HASH_SECRET: "${IP_HASH_SECRET}"
+      IP_HASH_SALT: "${IP_HASH_SALT}"
+      SMTP_HOST: "${SMTP_HOST:-smtp.zoho.eu}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_USER: "${SMTP_USER}"
+      SMTP_PASS: "${SMTP_PASS}"
+      CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+      REPLICA_ID: "app1"     # identifies which replica serves a request in /api/health
     ports:
       - "0.0.0.0:3001:3000"
 
   app2:
     <<: *app-common
     container_name: nfc_app_2
+    environment:
+      DATABASE_URL: "postgresql://nfc_user:${DB_PASSWORD}@postgres:5432/nfc_tracker"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3001}"
+      NODE_ENV: production
+      UPLOAD_DIR: /app/public/uploads
+      MAX_FILE_SIZE_MB: "500"
+      IP_HASH_SECRET: "${IP_HASH_SECRET}"
+      IP_HASH_SALT: "${IP_HASH_SALT}"
+      SMTP_HOST: "${SMTP_HOST:-smtp.zoho.eu}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_USER: "${SMTP_USER}"
+      SMTP_PASS: "${SMTP_PASS}"
+      CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+      REPLICA_ID: "app2"
     ports:
       - "0.0.0.0:3002:3000"
 

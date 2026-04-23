@@ -170,6 +170,35 @@ export default function DashboardHeader({ isAdmin, refreshing, onRefresh, onOpen
             </button>
           )}
 
+          {isAdmin && (
+            <Link
+              href="/dashboard/status"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--txt-sec)",
+                borderRadius: 8,
+                padding: "8px",
+                cursor: "pointer",
+                transition: "color 0.2s",
+                display: "flex",
+                alignItems: "center",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--txt-sec)"; }}
+              title="Status serwera"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="8" rx="1.5" />
+                <rect x="2" y="13" width="20" height="8" rx="1.5" />
+                <circle cx="6" cy="7" r="0.5" fill="currentColor" />
+                <circle cx="6" cy="17" r="0.5" fill="currentColor" />
+                <line x1="10" y1="7" x2="18" y2="7" />
+                <line x1="10" y1="17" x2="18" y2="17" />
+              </svg>
+            </Link>
+          )}
+
           <Link
             href="/dashboard/settings"
             style={{

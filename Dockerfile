@@ -47,6 +47,16 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Build metadata — passed in by rolling-deploy.sh via --build-arg so the
+# running container can report exactly which branch/commit it's serving.
+# Used by /api/health + /api/server-status + /dashboard/status.
+ARG BUILD_COMMIT=unknown
+ARG BUILD_BRANCH=unknown
+ARG BUILD_TIME=unknown
+ENV BUILD_COMMIT=$BUILD_COMMIT
+ENV BUILD_BRANCH=$BUILD_BRANCH
+ENV BUILD_TIME=$BUILD_TIME
+
 # Healthcheck — probes /api/health every 5s. start-period of 30s gives Node.js
 # enough time to boot (import deps, init Prisma) before health failures count.
 # nginx upstream uses this status to route traffic only to healthy replicas
