@@ -264,7 +264,10 @@ export default function VCardRenderer({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "32px 16px",
+        paddingTop: theme.avatarTopGap,   // ABSOLUTE top padding (0 = top edge, 32 = default)
+        paddingBottom: 32,
+        paddingLeft: 16,
+        paddingRight: 16,
         background: getBackground(theme),
         fontFamily: fontStack,
         position: "relative",
@@ -279,7 +282,7 @@ export default function VCardRenderer({
           {vcard.photo ? (
             <div style={{
               width: isModern ? 140 : 120, height: isModern ? 140 : 120,
-              borderRadius: avatarRadius, margin: "0 auto 16px",
+              borderRadius: avatarRadius, margin: `0 auto ${theme.avatarNameGap}px`,
               overflow: "hidden",
               border: `${theme.avatarBorderWidth}px solid ${theme.avatarBorderColor}`,
               boxShadow: `0 0 30px ${theme.primaryColor}20`,
@@ -295,7 +298,7 @@ export default function VCardRenderer({
           ) : (
             <div style={{
               width: isModern ? 140 : 120, height: isModern ? 140 : 120,
-              borderRadius: avatarRadius, margin: "0 auto 16px",
+              borderRadius: avatarRadius, margin: `0 auto ${theme.avatarNameGap}px`,
               background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.primaryColor}88)`,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: isModern ? 48 : 42, fontWeight: 700, color: "#fff",

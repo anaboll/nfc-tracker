@@ -13,10 +13,11 @@ interface Props {
   isDirty: boolean;
   clientId?: string;
   campaignId?: string;
+  onReset?: () => void;  // cofa niezapisane zmiany do ostatniego save/load (bez wychodzenia z edytora)
 }
 
 export default function TagFormHeader({
-  mode, tagName, onSave, saving, justSaved, readOnly, isDirty, clientId, campaignId,
+  mode, tagName, onSave, saving, justSaved, readOnly, isDirty, clientId, campaignId, onReset,
 }: Props) {
   const router = useRouter();
 
@@ -50,6 +51,25 @@ export default function TagFormHeader({
 
       {/* Actions */}
       <div style={styles.actions}>
+        {/* Przywroc — cofa niezapisane zmiany bez wychodzenia z edytora.
+            Pokazuje sie tylko w edycji, kiedy user cos zmienil (isDirty). */}
+        {!readOnly && mode === "edit" && isDirty && onReset && (
+          <button
+            onClick={() => {
+              if (confirm("Cofnac wszystkie niezapisane zmiany do ostatniego zapisu?")) {
+                onReset();
+              }
+            }}
+            style={styles.resetBtn}
+            title="Cofnij niezapisane zmiany do ostatniego zapisu"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "middle" }}>
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+            Przywroc
+          </button>
+        )}
         <button onClick={goBack} style={styles.cancelBtn}>
           {readOnly ? "Zamknij" : "Anuluj"}
         </button>
@@ -164,5 +184,18 @@ const styles: Record<string, React.CSSProperties> = {
   saveBtnSaved: {
     background: "var(--success)",
     color: "#fff",
+  },
+  resetBtn: {
+    padding: "8px 14px",
+    borderRadius: 8,
+    border: "1px solid var(--warning, #f59e0b)",
+    background: "transparent",
+    color: "var(--warning, #f59e0b)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    display: "flex",
+    alignItems: "center",
   },
 };

@@ -88,6 +88,7 @@ export default function TagFormLayout({ form }: Props) {
         isDirty={form.isDirty}
         clientId={form.clientId}
         campaignId={form.campaignId}
+        onReset={form.resetToSnapshot}
       />
 
       <div style={styles.container}>

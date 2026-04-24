@@ -308,6 +308,30 @@ export default function ThemeEditor({ theme, onChange }: Props) {
           {/* Odstepy pionowe — pozwalają zmieścić wszystkie belki na jednym ekranie */}
           <SectionTitle>Odstepy pionowe</SectionTitle>
           <label className="theme-color-field">
+            <span className="theme-color-label">Pozycja loga w pionie ({t.avatarTopGap}px od gory; default 32)</span>
+            <input
+              type="range"
+              min={0}
+              max={64}
+              step={1}
+              value={t.avatarTopGap}
+              onChange={(e) => update({ avatarTopGap: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
+            <span className="theme-color-label">Odstep: logo → imie/firma ({t.avatarNameGap}px)</span>
+            <input
+              type="range"
+              min={0}
+              max={40}
+              step={1}
+              value={t.avatarNameGap}
+              onChange={(e) => update({ avatarNameGap: Number(e.target.value) })}
+              className="theme-range-input"
+            />
+          </label>
+          <label className="theme-color-field">
             <span className="theme-color-label">Odstep: imie/firma → &quot;Zapisz kontakt&quot; ({t.headerBottomGap}px)</span>
             <input
               type="range"

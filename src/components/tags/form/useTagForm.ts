@@ -69,6 +69,7 @@ export interface UseTagFormReturn {
   isAdmin: boolean;
   loading: boolean;
   isDirty: boolean;
+  resetToSnapshot: () => void;   // cofa wszystkie niezapisane zmiany do ostatniego save/load
 
   /* Edit token (vCard) */
   editTokenUrl: string | null;
@@ -187,19 +188,39 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         setClientIdRaw(tag.clientId || "");
         setCampaignId(tag.campaignId || "");
 
+        let snapLinks: TagLink[];
+        let snapVcard: VCardData;
         if (tag.tagType === "vcard" && tag.links) {
-          setVcard(tag.links as unknown as VCardData);
-          setLinks([{ ...emptyLink }]);
+          snapVcard = tag.links as unknown as VCardData;
+          snapLinks = [{ ...emptyLink }];
+          setVcard(snapVcard);
+          setLinks(snapLinks);
         } else if (tag.links && Array.isArray(tag.links)) {
-          setLinks(tag.links as TagLink[]);
-          setVcard({ ...emptyVCard });
+          snapLinks = tag.links as TagLink[];
+          snapVcard = { ...emptyVCard };
+          setLinks(snapLinks);
+          setVcard(snapVcard);
         } else {
-          setLinks([{ ...emptyLink }]);
-          setVcard({ ...emptyVCard });
+          snapLinks = [{ ...emptyLink }];
+          snapVcard = { ...emptyVCard };
+          setLinks(snapLinks);
+          setVcard(snapVcard);
         }
 
-        /* Snapshot for dirty tracking */
-        setInitialSnapshot(JSON.stringify(tag));
+        /* Snapshot for dirty tracking + "Przywróć" button.
+         * Normalized shape — matches what save() writes on success, so
+         * resetToSnapshot() round-trips cleanly. */
+        setInitialSnapshot(JSON.stringify({
+          tagId: tag.id,
+          name: tag.name,
+          tagType: tag.tagType,
+          targetUrl: tag.targetUrl,
+          description: tag.description || "",
+          clientId: tag.clientId || "",
+          campaignId: tag.campaignId || "",
+          links: snapLinks,
+          vcard: snapVcard,
+        }));
       })
       .catch(() => setSubmitError("Nie udalo sie zaladowac tagu"))
       .finally(() => setLoading(false));
@@ -216,6 +237,30 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       setIsDirty(current !== initialSnapshot);
     }
   }, [mode, tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard, initialSnapshot]);
+
+  /* ---- Przywroc do ostatnio zapisanego stanu (bez pobierania z serwera) ----
+   * Używane przez przycisk "Przywróć" w headerze formularza, gdy user nabałaganił
+   * w motywie / polach i chce cofnąć WSZYSTKIE niezapisane zmiany, nie wychodząc
+   * z edytora (Anuluj wyrzucal na listę — bolesne przy długich wizytówkach). */
+  const resetToSnapshot = useCallback(() => {
+    if (!initialSnapshot) return;
+    try {
+      const s = JSON.parse(initialSnapshot);
+      setTagId(s.tagId || "");
+      setName(s.name || "");
+      setTagType(s.tagType || "url");
+      setTargetUrl(s.targetUrl || "");
+      setDescription(s.description || "");
+      setClientIdRaw(s.clientId || "");
+      setCampaignId(s.campaignId || "");
+      setLinks(Array.isArray(s.links) ? s.links : [{ ...emptyLink }]);
+      setVcard(s.vcard || { ...emptyVCard });
+      setErrors({});
+      setSubmitError("");
+    } catch {
+      /* stary snapshot moze byc w innym ksztalcie (pre-refactor) — nic nie robimy */
+    }
+  }, [initialSnapshot]);
 
   /* ---- Validation ---- */
   const setFieldError = useCallback((field: string, msg: string) => {
@@ -436,7 +481,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     errors, setFieldError, clearFieldError, validate,
     submitting, submitError, justSaved, submit,
     resetStats, deleteTag, resetting,
-    mode, readOnly, isAdmin, loading, isDirty,
+    mode, readOnly, isAdmin, loading, isDirty, resetToSnapshot,
     editTokenUrl, editTokenLoading, generateEditToken, revokeEditToken,
     created, createdTagId,
   };

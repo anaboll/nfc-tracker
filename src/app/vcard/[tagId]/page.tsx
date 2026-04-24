@@ -412,11 +412,13 @@ export default async function VCardPage({
         <link rel="stylesheet" href={googleFontsUrl} />
       )}
       <main
-        className="min-h-screen flex flex-col items-center px-4 py-8"
+        className="min-h-screen flex flex-col items-center px-4"
         style={{
           background: getBackground(theme),
           fontFamily: fontStack,
           position: "relative",
+          paddingTop: theme.avatarTopGap,   // 0 = logo przy gornej krawedzi, 32 = default, 64 = w dol
+          paddingBottom: 32,                 // zachowujemy dotychczasowe py-8 od dolu
         }}
       >
       {/* Pattern overlay */}
@@ -441,7 +443,7 @@ export default async function VCardPage({
               width: 140,
               height: 140,
               borderRadius: avatarRadius,
-              margin: "0 auto 16px",
+              margin: `0 auto ${theme.avatarNameGap}px`,
               overflow: "hidden",
               border: `${theme.avatarBorderWidth}px solid ${theme.avatarBorderColor}`,
               boxShadow: `0 0 30px ${theme.primaryColor}20`,
@@ -455,7 +457,7 @@ export default async function VCardPage({
                 width: 140,
                 height: 140,
                 borderRadius: avatarRadius,
-                margin: "0 auto 16px",
+                margin: `0 auto ${theme.avatarNameGap}px`,
                 background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.primaryColor}88)`,
                 display: "flex",
                 alignItems: "center",

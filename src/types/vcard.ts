@@ -47,6 +47,8 @@ export interface VCardTheme {
   rowFontFamily?: FontFamily;       // override font for rows only; undefined = inherit theme.fontFamily
 
   /* --- Vertical spacing (configurable to fit rows on one screen) --- */
+  avatarTopGap?: number;            // 0-64px ABSOLUTE top padding of the card (0 = avatar glued to top edge, 32 = current default, 64 = pushed way down)
+  avatarNameGap?: number;           // 0-40px space between avatar/logo and the name heading, default: 16
   headerBottomGap?: number;         // 0-60px space between name/company block and "Zapisz kontakt" button, default: 24
   buttonRowGap?: number;            // 0-60px space between "Zapisz kontakt" button and the first contact row, default: 24
   rowGap?: number;                  // 0-30px space between consecutive contact/social rows, default: 8
@@ -116,6 +118,8 @@ export const DEFAULT_VCARD_THEME: Required<VCardTheme> = {
   rowIconSize: 44,
   rowFontSize: 14,
   rowFontFamily: "geist",      // sentinel — effective code should fall back to fontFamily when undefined
+  avatarTopGap: 32,            // absolute top padding of the card; 32 matches the old hardcoded py-8 (current default)
+  avatarNameGap: 16,           // space between avatar and name heading (current default)
   headerBottomGap: 24,         // space between name/company and Save Contact button (current default)
   buttonRowGap: 24,            // space between Save Contact button and first contact row (current default)
   rowGap: 8,                   // space between consecutive rows (current default)
