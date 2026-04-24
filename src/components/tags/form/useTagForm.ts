@@ -71,6 +71,13 @@ export interface UseTagFormReturn {
   isDirty: boolean;
   resetToSnapshot: () => void;   // cofa wszystkie niezapisane zmiany do ostatniego save/load
 
+  /* URL/slug edycja w trybie edit — domyslnie zamknieta (lock),
+   * user musi zaznaczyc checkbox warningu + kliknac "Zmien URL" */
+  originalTagId: string;
+  idUnlocked: boolean;
+  unlockIdEditing: () => void;
+  lockIdEditing: () => void;
+
   /* Edit token (vCard) */
   editTokenUrl: string | null;
   editTokenLoading: boolean;
@@ -129,6 +136,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
   const [loading, setLoading] = useState(mode === "edit");
   const [isDirty, setIsDirty] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState("");
+  /* Oryginalne ID z bazy — niezmienne w trakcie edycji, uzywane jako klucz      * do PUT /api/tags. Dopiero na backendzie patrzymy na tagId z formularza jako  * `newId` i robimy rename jesli rozny. */
+  const [originalTagId, setOriginalTagId] = useState("");
+  /* Czy pole URL zostalo odblokowane w trybie edit (lock + warning confirmed).  * Jesli false, UI pokazuje tagId jako read-only. */
+  const [idUnlocked, setIdUnlocked] = useState(false);
 
   /* ---- Edit token ---- */
   const [editTokenUrl, setEditTokenUrl] = useState<string | null>(null);
@@ -181,6 +192,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       })
       .then((tag: TagFull) => {
         setTagId(tag.id);
+        setOriginalTagId(tag.id);  // oryginalne ID do later rename check
         setName(tag.name);
         setTagType(tag.tagType);
         setTargetUrl(tag.targetUrl);
@@ -257,10 +269,18 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       setVcard(s.vcard || { ...emptyVCard });
       setErrors({});
       setSubmitError("");
+      setIdUnlocked(false);  // przy cofnieciu zmian zamknij tez lock URL
     } catch {
       /* stary snapshot moze byc w innym ksztalcie (pre-refactor) — nic nie robimy */
     }
   }, [initialSnapshot]);
+
+  const unlockIdEditing = useCallback(() => setIdUnlocked(true), []);
+  const lockIdEditing = useCallback(() => {
+    setIdUnlocked(false);
+    // przy zamkniecie locka bez zapisu, restore original tagId
+    if (originalTagId) setTagId(originalTagId);
+  }, [originalTagId]);
 
   /* ---- Validation ---- */
   const setFieldError = useCallback((field: string, msg: string) => {
@@ -355,15 +375,19 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         setCreatedTagId(result.id || tagId.trim());
         return { success: true, createdId: result.id || tagId.trim() };
       } else {
-        /* Edit mode */
+        /* Edit mode. PUT uzywa originalTagId jako klucza (zeby backend znal
+         * stary rekord), oraz newId jesli user zmienil URL (rename). */
         const body: Record<string, unknown> = {
-          id: tagId,
+          id: originalTagId || tagId,
           name: name.trim(),
           description: description.trim() || null,
           tagType,
           clientId: clientId || null,
           campaignId: campaignId || null,
         };
+        if (tagId !== originalTagId && originalTagId) {
+          body.newId = tagId.trim();
+        }
 
         if (tagType === "url" || tagType === "google-review" || tagType === "file") {
           body.targetUrl = targetUrl.trim();
@@ -388,6 +412,11 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
           throw new Error(data.error || `Blad ${res.status}`);
         }
 
+        /* Po renamie tagId == nowy URL; oryginalne przesuwamy zeby potem
+         * isDirty dla tagId uprawniezsie wracalo na false, a kolejny save
+         * robil normalny update (bez newId jesli znow zostawiono). */
+        setOriginalTagId(tagId);
+        setIdUnlocked(false);  // zamyka lock UI po udanym zapisie
         /* Refresh snapshot so isDirty becomes false, then flash "Zapisano" feedback */
         setInitialSnapshot(JSON.stringify({
           tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard,
@@ -482,6 +511,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     submitting, submitError, justSaved, submit,
     resetStats, deleteTag, resetting,
     mode, readOnly, isAdmin, loading, isDirty, resetToSnapshot,
+    originalTagId, idUnlocked, unlockIdEditing, lockIdEditing,
     editTokenUrl, editTokenLoading, generateEditToken, revokeEditToken,
     created, createdTagId,
   };

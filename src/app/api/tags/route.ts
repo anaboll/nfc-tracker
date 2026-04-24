@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { safeDeleteVideoFile } from "@/lib/video-utils";
 import { getUserAccess } from "@/lib/user-access";
+import { isValidSlug } from "@/lib/slugify";
 
 // GET all tags
 export async function GET() {
@@ -113,13 +114,46 @@ export async function PUT(request: NextRequest) {
   if (!access?.isAdmin) return NextResponse.json({ error: "Brak uprawnień" }, { status: 403 });
 
   const body = await request.json();
-  const { id, name, targetUrl, description, isActive, videoFile, tagType, links, clientId, campaignId } = body;
+  const { id, newId, name, targetUrl, description, isActive, videoFile, tagType, links, clientId, campaignId } = body;
 
   if (!id) return NextResponse.json({ error: "id wymagane" }, { status: 400 });
 
+  /* ------------------------------------------------------------------ */
+  /*  Obsluga zmiany URL/slug (newId) — opcjonalna                       */
+  /*                                                                     */
+  /*  Gdy user na froncie odblokowal pole URL + potwierdzil warning,    */
+  /*  przesyla `newId` rozne od `id`. Renameujemy primary key + CASCADE  */
+  /*  na FK (Scan/LinkClick/VideoEvent) ma juz `ON UPDATE CASCADE` wiec  */
+  /*  historia skanow zostaje zachowana. Jedynym ryzykiem sa fizyczne    */
+  /*  NFC tagi/QR kody ktore admin rozdal z poprzednim slug-iem —       */
+  /*  te stracie i trzeba zeby klient tego byl swiadomy (frontend        */
+  /*  wymusza checkbox przed wyslaniem).                                */
+  /* ------------------------------------------------------------------ */
+  let effectiveId = id;   // pod ta kolumna beda wszystkie dalsze update'y
+  if (typeof newId === "string" && newId.trim() && newId !== id) {
+    const desired = newId.trim();
+    if (!isValidSlug(desired)) {
+      return NextResponse.json(
+        { error: "Nieprawidlowy URL. Dozwolone: male litery, cyfry, kropka, mysnik (min. 2 znaki)." },
+        { status: 400 }
+      );
+    }
+    const existing = await prisma.tag.findUnique({ where: { id: desired }, select: { id: true } });
+    if (existing) {
+      return NextResponse.json(
+        { error: `URL "${desired}" jest juz zajety przez inna akcje.` },
+        { status: 409 }
+      );
+    }
+    /* Rename primary key. Prisma wykonuje UPDATE na kolumnie id, CASCADE
+     * robi reszte. Oddzielny update zeby nie miesac z main update'em     * ponizej — w razie blednego rename'u, main update sie nie wykona.    */
+    await prisma.tag.update({ where: { id }, data: { id: desired } });
+    effectiveId = desired;
+  }
+
   // B2: if campaignId is being set, verify it belongs to the resolved client
   if (campaignId !== undefined && campaignId !== null) {
-    const existingTag = await prisma.tag.findUnique({ where: { id } });
+    const existingTag = await prisma.tag.findUnique({ where: { id: effectiveId } });
     if (!existingTag) return NextResponse.json({ error: "Tag nie istnieje" }, { status: 404 });
 
     const resolvedClientId = clientId !== undefined ? (clientId || null) : existingTag.clientId;
@@ -140,12 +174,12 @@ export async function PUT(request: NextRequest) {
   // path before the update so we can delete it from disk afterward.
   let oldVideoFile: string | null = null;
   if (videoFile === null) {
-    const current = await prisma.tag.findUnique({ where: { id }, select: { videoFile: true } });
+    const current = await prisma.tag.findUnique({ where: { id: effectiveId }, select: { videoFile: true } });
     oldVideoFile = current?.videoFile ?? null;
   }
 
   const tag = await prisma.tag.update({
-    where: { id },
+    where: { id: effectiveId },
     data: {
       ...(name !== undefined && { name }),
       ...(targetUrl !== undefined && { targetUrl }),

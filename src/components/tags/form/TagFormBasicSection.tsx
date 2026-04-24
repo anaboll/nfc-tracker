@@ -1,8 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { ClientInfo, CampaignInfo } from "@/types/tag";
+import type { VCardData } from "@/types/vcard";
 import { generateTagCode } from "@/lib/generate-tag-code";
+import { slugify, slugifyPersonName } from "@/lib/slugify";
+
+type UrlStyle = "random" | "name" | "company";
 
 interface Props {
   mode: "create" | "edit";
@@ -23,6 +27,13 @@ interface Props {
   campaignsForClient: CampaignInfo[];
   errors: Record<string, string>;
   clearFieldError: (f: string) => void;
+  /* Context dla auto-slugify: imie/nazwisko + firma z vCarda (jesli tagType=vcard) */
+  vcard?: VCardData;
+  /* URL/slug lock w trybie edit — domyslnie zamkniety */
+  idUnlocked?: boolean;
+  unlockIdEditing?: () => void;
+  lockIdEditing?: () => void;
+  originalTagId?: string;
 }
 
 export default function TagFormBasicSection({
@@ -30,7 +41,32 @@ export default function TagFormBasicSection({
   description, setDescription, channel, setChannel,
   clientId, setClientId, campaignId, setCampaignId,
   clients, campaignsForClient, errors, clearFieldError,
+  vcard, idUnlocked, unlockIdEditing, lockIdEditing, originalTagId,
 }: Props) {
+  /* Jaki styl URL uzytkownik wybral w trybie create/rename. 'custom' nie jest radio —
+   * aktywuje sie gdy user recznie edytuje pole po kliknieciu ktorejkolwiek opcji. */
+  const [urlStyle, setUrlStyle] = useState<UrlStyle>("random");
+  /* Dla edit mode — czy user zaznaczyl checkbox "rozumiem ryzyko" */
+  const [renameConfirmed, setRenameConfirmed] = useState(false);
+
+  /* Auto-generate helper: odpala sie kiedy user klika radio albo zmienia imie/firme */
+  const applyStyle = (style: UrlStyle) => {
+    setUrlStyle(style);
+    clearFieldError("tagId");
+    if (style === "random") {
+      setTagId(generateTagCode());
+    } else if (style === "name" && vcard) {
+      const s = slugifyPersonName(vcard.firstName || "", vcard.lastName || "");
+      setTagId(s || generateTagCode());   // fallback do random jesli brak imienia
+    } else if (style === "company" && vcard) {
+      const s = slugify(vcard.company || "");
+      setTagId(s || generateTagCode());
+    }
+  };
+
+  /* W trybie edit, czy user zmienil tagId (i jest nowy wzg. originala) */
+  const isRenamed = mode === "edit" && originalTagId && tagId !== originalTagId;
+
   return (
     <div style={styles.section}>
       <h3 style={styles.sectionTitle}>Podstawowe informacje</h3>
@@ -43,25 +79,47 @@ export default function TagFormBasicSection({
           </label>
           {mode === "create" ? (
             <>
+              {/* 3 radio dla stylu URL — auto-generuja slug, ale pole nizej zawsze edytowalne */}
+              <div style={styles.radioGroup}>
+                {([
+                  { val: "random" as UrlStyle, label: "Losowy", ex: "np. a7k3m" },
+                  { val: "name" as UrlStyle, label: "Imie.Nazwisko", ex: "np. jan.kowalski" },
+                  { val: "company" as UrlStyle, label: "Nazwa firmy", ex: "np. laboversum" },
+                ]).map((opt) => (
+                  <label key={opt.val} style={{
+                    ...styles.radioOpt,
+                    borderColor: urlStyle === opt.val ? "var(--accent)" : "var(--surface-2)",
+                    background: urlStyle === opt.val ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
+                  }}>
+                    <input
+                      type="radio"
+                      name="urlStyle"
+                      checked={urlStyle === opt.val}
+                      onChange={() => applyStyle(opt.val)}
+                      style={{ marginRight: 6 }}
+                      disabled={readOnly}
+                    />
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{opt.label}</span>
+                    <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 6 }}>{opt.ex}</span>
+                  </label>
+                ))}
+              </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   style={{ ...styles.input, borderColor: errors.tagId ? "var(--error)" : "var(--surface-2)", flex: 1 }}
                   value={tagId}
                   onChange={(e) => {
-                    setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9\-_.+]/g, "-"));
+                    setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9.\-]/g, ""));
                     clearFieldError("tagId");
                   }}
-                  placeholder="np. a3x7k"
+                  placeholder="np. a3x7k albo jan.kowalski"
                   disabled={readOnly}
                 />
                 {!readOnly && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setTagId(generateTagCode());
-                      clearFieldError("tagId");
-                    }}
-                    title="Wygeneruj nowy losowy kod"
+                    onClick={() => applyStyle(urlStyle)}
+                    title="Wygeneruj ponownie wedlug wybranego stylu"
                     style={styles.regenBtn}
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--surface-2)")}
@@ -72,16 +130,106 @@ export default function TagFormBasicSection({
               </div>
               {tagId && (
                 <div style={styles.hint}>
-                  Link: <span style={{ color: "var(--accent-light)" }}>/s/{tagId}</span>
+                  Link: <span style={{ color: "var(--accent-light)" }}>/vcard/{tagId}</span>
                   <span style={{ opacity: 0.6, marginLeft: 8 }}>
-                    (neutralny kod — mozesz zmienic typ akcji bez zmiany linka)
+                    (dozwolone: litery, cyfry, kropka, mysnik)
                   </span>
                 </div>
               )}
               {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
             </>
           ) : (
-            <div style={styles.lockedValue}>{tagId}</div>
+            /* EDIT MODE — lock + warning + checkbox */
+            <>
+              {!idUnlocked ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ ...styles.lockedValue, flex: 1 }}>🔒 {tagId}</div>
+                  {!readOnly && unlockIdEditing && (
+                    <button
+                      type="button"
+                      onClick={() => { unlockIdEditing(); setRenameConfirmed(false); }}
+                      style={styles.unlockBtn}
+                      title="Zmien URL (z warningiem)"
+                    >
+                      Zmien URL
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div style={styles.warningBox}>
+                    <strong>⚠ UWAGA:</strong> zmiana URL spowoduje ze NFC tagi i QR kody
+                    rozdane z poprzednim linkiem PRZESTANA DZIALAC. Historia skanow
+                    zostanie zachowana (auto-migracja w DB).
+                  </div>
+                  <label style={styles.confirmLabel}>
+                    <input
+                      type="checkbox"
+                      checked={renameConfirmed}
+                      onChange={(e) => setRenameConfirmed(e.target.checked)}
+                      style={{ marginRight: 8 }}
+                    />
+                    Rozumiem i chce zmienic URL
+                  </label>
+                  {/* Radio z 3 opcjami + edytowalne pole (te same co w CREATE) */}
+                  <div style={{ ...styles.radioGroup, opacity: renameConfirmed ? 1 : 0.5 }}>
+                    {([
+                      { val: "random" as UrlStyle, label: "Losowy" },
+                      { val: "name" as UrlStyle, label: "Imie.Nazwisko" },
+                      { val: "company" as UrlStyle, label: "Nazwa firmy" },
+                    ]).map((opt) => (
+                      <label key={opt.val} style={{
+                        ...styles.radioOpt,
+                        borderColor: urlStyle === opt.val ? "var(--accent)" : "var(--surface-2)",
+                        background: urlStyle === opt.val ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
+                        pointerEvents: renameConfirmed ? "auto" : "none",
+                      }}>
+                        <input
+                          type="radio"
+                          name="urlStyleEdit"
+                          checked={urlStyle === opt.val}
+                          onChange={() => applyStyle(opt.val)}
+                          style={{ marginRight: 6 }}
+                          disabled={!renameConfirmed}
+                        />
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      style={{
+                        ...styles.input,
+                        borderColor: errors.tagId ? "var(--error)" : "var(--surface-2)",
+                        flex: 1,
+                        opacity: renameConfirmed ? 1 : 0.5,
+                      }}
+                      value={tagId}
+                      onChange={(e) => {
+                        setTagId(e.target.value.toLowerCase().replace(/[^a-z0-9.\-]/g, ""));
+                        clearFieldError("tagId");
+                      }}
+                      placeholder="nowy.slug"
+                      disabled={!renameConfirmed}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setRenameConfirmed(false); if (lockIdEditing) lockIdEditing(); }}
+                      style={styles.cancelRenameBtn}
+                      title="Anuluj zmiane URL"
+                    >
+                      Anuluj
+                    </button>
+                  </div>
+                  {isRenamed && renameConfirmed && (
+                    <div style={{ ...styles.hint, color: "var(--warning, #f59e0b)", fontWeight: 600 }}>
+                      Nowy URL: /vcard/{tagId} &nbsp;·&nbsp; stary: /vcard/{originalTagId} (przestanie dzialac)
+                    </div>
+                  )}
+                  {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
+                </>
+              )}
+            </>
           )}
         </div>
 
@@ -278,5 +426,60 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     cursor: "pointer",
     transition: "all 0.15s",
+  },
+  radioGroup: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+    marginBottom: 6,
+  },
+  radioOpt: {
+    display: "flex",
+    alignItems: "center",
+    padding: "8px 10px",
+    borderRadius: 6,
+    border: "1px solid var(--surface-2)",
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  warningBox: {
+    padding: "10px 12px",
+    borderRadius: 6,
+    background: "rgba(245, 158, 11, 0.12)",
+    border: "1px solid rgba(245, 158, 11, 0.4)",
+    color: "var(--warning, #f59e0b)",
+    fontSize: 12,
+    lineHeight: 1.5,
+    marginBottom: 8,
+  },
+  confirmLabel: {
+    display: "flex",
+    alignItems: "center",
+    fontSize: 12,
+    color: "var(--txt)",
+    marginBottom: 8,
+    cursor: "pointer",
+    userSelect: "none" as const,
+  },
+  unlockBtn: {
+    padding: "8px 14px",
+    borderRadius: 8,
+    border: "1px solid var(--warning, #f59e0b)",
+    background: "transparent",
+    color: "var(--warning, #f59e0b)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
+  },
+  cancelRenameBtn: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid var(--surface-2)",
+    background: "transparent",
+    color: "var(--txt-sec)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
   },
 };

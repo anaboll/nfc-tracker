@@ -119,6 +119,11 @@ export default function TagFormLayout({ form }: Props) {
               campaignsForClient={form.campaignsForClient}
               errors={form.errors}
               clearFieldError={form.clearFieldError}
+              vcard={form.vcard}
+              idUnlocked={form.idUnlocked}
+              unlockIdEditing={form.unlockIdEditing}
+              lockIdEditing={form.lockIdEditing}
+              originalTagId={form.originalTagId}
             />
 
             <TagFormTypeSelector
