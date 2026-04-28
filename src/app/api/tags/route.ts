@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { safeDeleteVideoFile } from "@/lib/video-utils";
 import { getUserAccess } from "@/lib/user-access";
 import { isValidSlug } from "@/lib/slugify";
+import { generateCertificateSerial } from "@/lib/generate-serial";
 
 // GET all tags
 export async function GET() {
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
   if (type === "video") finalUrl = `/watch/${cleanId}`;
   if (type === "multilink") finalUrl = `/link/${cleanId}`;
   if (type === "vcard") finalUrl = `/vcard/${cleanId}`;
+  if (type === "certificate") finalUrl = `/cert/${cleanId}`;
   if ((type === "url" || type === "google-review") && !finalUrl) {
     return NextResponse.json({ error: "targetUrl wymagane dla tego typu" }, { status: 400 });
   }
@@ -90,6 +92,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tag o tym ID juz istnieje" }, { status: 409 });
   }
 
+  /* Dla typu certificate — przed zapisem wypelnij serialNumber (auto-gen
+   * serverowo, format YYYY-NNNNNN). Jesli user przyslal juz swoj (np. przy
+   * imporcie), zostawiamy. */
+  let linksToStore = (type === "multilink" || type === "vcard" || type === "certificate") && links ? links : undefined;
+  if (type === "certificate" && linksToStore && typeof linksToStore === "object") {
+    const certData = linksToStore as Record<string, unknown>;
+    if (!certData.serialNumber || typeof certData.serialNumber !== "string" || !certData.serialNumber.trim()) {
+      certData.serialNumber = await generateCertificateSerial();
+    }
+    if (!certData.issueDate || typeof certData.issueDate !== "string") {
+      certData.issueDate = new Date().toISOString().slice(0, 10);
+    }
+    linksToStore = certData;
+  }
+
   const tag = await prisma.tag.create({
     data: {
       id: cleanId,
@@ -97,7 +114,7 @@ export async function POST(request: NextRequest) {
       tagType: type,
       targetUrl: finalUrl,
       description: description || null,
-      links: (type === "multilink" || type === "vcard") && links ? links : undefined,
+      links: linksToStore,
       clientId,
       ...(campaignId ? { campaignId } : {}),
     },
