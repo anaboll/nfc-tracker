@@ -6,6 +6,9 @@ interface Props {
   value: string;
   onChange: (type: string) => void;
   disabled?: boolean;
+  /* Tryb edit + locked: pokazujemy guzik "Zmien typ" zamiast pelnej blokady. */
+  showUnlockButton?: boolean;
+  onUnlock?: () => void;
 }
 
 const TYPES = [
@@ -88,12 +91,37 @@ const TYPES = [
     ),
     color: "#facc15",
   },
+  {
+    value: "certificate",
+    label: "Certyfikat",
+    desc: "Autentycznosc dziela sztuki",
+    icon: (
+      /* Rozetka z wstazka — klasyczny symbol odznaczenia / certyfikatu */
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="6" />
+        <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+      </svg>
+    ),
+    color: "#c9a961",
+  },
 ];
 
-export default function TagFormTypeSelector({ value, onChange, disabled }: Props) {
+export default function TagFormTypeSelector({ value, onChange, disabled, showUnlockButton, onUnlock }: Props) {
   return (
     <div style={styles.section}>
-      <h3 style={styles.sectionTitle}>Typ akcji</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <h3 style={{ ...styles.sectionTitle, marginBottom: 0 }}>Typ akcji</h3>
+        {showUnlockButton && onUnlock && (
+          <button
+            type="button"
+            onClick={onUnlock}
+            style={styles.unlockBtn}
+            title="Zmien typ akcji (link NFC/QR pozostaje ten sam)"
+          >
+            🔓 Zmien typ
+          </button>
+        )}
+      </div>
       <div style={styles.grid}>
         {TYPES.map((t) => {
           const selected = value === t.value;
@@ -165,5 +193,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#555c6e",
     marginTop: 2,
     lineHeight: 1.3,
+  },
+  unlockBtn: {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1px solid var(--warning, #f59e0b)",
+    background: "transparent",
+    color: "var(--warning, #f59e0b)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap" as const,
   },
 };

@@ -27,6 +27,8 @@ interface Props {
   campaignsForClient: CampaignInfo[];
   errors: Record<string, string>;
   clearFieldError: (f: string) => void;
+  /* tagType — dla poprawnego prefiksu w hincie Link: /<prefix>/<slug> */
+  tagType: string;
   /* Context dla auto-slugify: imie/nazwisko + firma z vCarda (jesli tagType=vcard) */
   vcard?: VCardData;
   /* URL/slug lock w trybie edit — domyslnie zamkniety */
@@ -36,13 +38,28 @@ interface Props {
   originalTagId?: string;
 }
 
+/* Zwraca sciezke prefixu URL dla danego tagType, np. "vcard" dla vCard,
+ * "cert" dla certyfikatu. Uzywane w hintcie formularza + na success screen.
+ * Dla typow ktore nie maja dedykowanej strony (url/google-review/file) zwraca "s"
+ * (bo i tak ida przez /s/<slug> → redirect na zewnetrzny URL). */
+function getUrlPrefix(tagType: string): string {
+  switch (tagType) {
+    case "vcard": return "vcard";
+    case "certificate": return "cert";
+    case "multilink": return "link";
+    case "video": return "watch";
+    default: return "s";
+  }
+}
+
 export default function TagFormBasicSection({
   mode, readOnly, tagId, setTagId, name, setName,
   description, setDescription, channel, setChannel,
   clientId, setClientId, campaignId, setCampaignId,
   clients, campaignsForClient, errors, clearFieldError,
-  vcard, idUnlocked, unlockIdEditing, lockIdEditing, originalTagId,
+  tagType, vcard, idUnlocked, unlockIdEditing, lockIdEditing, originalTagId,
 }: Props) {
+  const urlPrefix = getUrlPrefix(tagType);
   /* Jaki styl URL uzytkownik wybral w trybie create/rename. 'custom' nie jest radio —
    * aktywuje sie gdy user recznie edytuje pole po kliknieciu ktorejkolwiek opcji. */
   const [urlStyle, setUrlStyle] = useState<UrlStyle>("random");
@@ -129,12 +146,22 @@ export default function TagFormBasicSection({
                 )}
               </div>
               {tagId && (
-                <div style={styles.hint}>
-                  Link: <span style={{ color: "var(--accent-light)" }}>/vcard/{tagId}</span>
-                  <span style={{ opacity: 0.6, marginLeft: 8 }}>
-                    (dozwolone: litery, cyfry, kropka, mysnik)
-                  </span>
-                </div>
+                <>
+                  <div style={styles.hint}>
+                    Link NFC/QR: <span style={{ color: "var(--accent-light)" }}>/s/{tagId}</span>
+                    <span style={{ opacity: 0.6, marginLeft: 8 }}>
+                      (uniwersalny — dziala dla kazdego typu akcji, nie zmieni sie przy zmianie typu)
+                    </span>
+                  </div>
+                  {urlPrefix !== "s" && (
+                    <div style={{ ...styles.hint, opacity: 0.6 }}>
+                      Strona akcji: <span style={{ color: "var(--accent-light)" }}>/{urlPrefix}/{tagId}</span>
+                      <span style={{ marginLeft: 8 }}>
+                        (gdzie /s/ przekierowuje — zmieni sie przy zmianie typu)
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
               {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}
             </>
@@ -223,7 +250,7 @@ export default function TagFormBasicSection({
                   </div>
                   {isRenamed && renameConfirmed && (
                     <div style={{ ...styles.hint, color: "var(--warning, #f59e0b)", fontWeight: 600 }}>
-                      Nowy URL: /vcard/{tagId} &nbsp;·&nbsp; stary: /vcard/{originalTagId} (przestanie dzialac)
+                      Nowy NFC/QR link: /s/{tagId} &nbsp;·&nbsp; stary: /s/{originalTagId} (przestanie dzialac)
                     </div>
                   )}
                   {errors.tagId && <div style={styles.error}>{errors.tagId}</div>}

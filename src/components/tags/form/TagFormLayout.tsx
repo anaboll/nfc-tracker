@@ -9,6 +9,7 @@ import TagFormFileSection from "./TagFormFileSection";
 import TagFormMultilinkSection from "./TagFormMultilinkSection";
 import TagFormVCardSection from "./TagFormVCardSection";
 import TagFormVCardPreview from "./TagFormVCardPreview";
+import TagFormCertificateSection from "./TagFormCertificateSection";
 import TagFormAdvancedSection from "./TagFormAdvancedSection";
 import TagFormSuccessScreen from "./TagFormSuccessScreen";
 import type { UseTagFormReturn } from "./useTagForm";
@@ -119,6 +120,7 @@ export default function TagFormLayout({ form }: Props) {
               campaignsForClient={form.campaignsForClient}
               errors={form.errors}
               clearFieldError={form.clearFieldError}
+              tagType={form.tagType}
               vcard={form.vcard}
               idUnlocked={form.idUnlocked}
               unlockIdEditing={form.unlockIdEditing}
@@ -129,7 +131,9 @@ export default function TagFormLayout({ form }: Props) {
             <TagFormTypeSelector
               value={form.tagType}
               onChange={form.setTagType}
-              disabled={form.mode === "edit" || form.readOnly}
+              disabled={(form.mode === "edit" && !form.tagTypeUnlocked) || form.readOnly}
+              showUnlockButton={form.mode === "edit" && !form.readOnly && !form.tagTypeUnlocked}
+              onUnlock={form.unlockTagTypeEditing}
             />
 
             <TagFormUrlSection
@@ -164,6 +168,17 @@ export default function TagFormLayout({ form }: Props) {
               tagType={form.tagType}
               vcard={form.vcard}
               setVcard={form.setVcard}
+              readOnly={form.readOnly}
+              errors={form.errors}
+              clearFieldError={form.clearFieldError}
+              tagId={form.tagId}
+              mode={form.mode}
+            />
+
+            <TagFormCertificateSection
+              tagType={form.tagType}
+              certificate={form.certificate}
+              setCertificate={form.setCertificate}
               readOnly={form.readOnly}
               errors={form.errors}
               clearFieldError={form.clearFieldError}

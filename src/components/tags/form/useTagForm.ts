@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { TagFull, TagLink, ClientInfo, CampaignInfo } from "@/types/tag";
 import type { VCardData } from "@/types/vcard";
+import type { CertificateData } from "@/types/certificate";
+import { DEFAULT_CERTIFICATE } from "@/types/certificate";
 import { generateTagCode } from "@/lib/generate-tag-code";
 
 /* ------------------------------------------------------------------ */
@@ -40,6 +42,8 @@ export interface UseTagFormReturn {
   setLinks: (v: TagLink[]) => void;
   vcard: VCardData;
   setVcard: (v: VCardData) => void;
+  certificate: CertificateData;
+  setCertificate: (v: CertificateData) => void;
 
   /* Dropdown data */
   clients: ClientInfo[];
@@ -77,6 +81,13 @@ export interface UseTagFormReturn {
   idUnlocked: boolean;
   unlockIdEditing: () => void;
   lockIdEditing: () => void;
+
+  /* Typ akcji edycja w trybie edit — domyslnie zablokowany, user musi swiadomie
+   * kliknac "Zmien typ" (confirm dialog). Po zmianie typu link /s/<slug> dziala
+   * dalej, tylko zmienia sie cel przekierowania. */
+  tagTypeUnlocked: boolean;
+  unlockTagTypeEditing: () => void;
+  lockTagTypeEditing: () => void;
 
   /* Edit token (vCard) */
   editTokenUrl: string | null;
@@ -118,6 +129,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
   const [campaignId, setCampaignId] = useState(preselectedCampaignId || "");
   const [links, setLinks] = useState<TagLink[]>([{ ...emptyLink }]);
   const [vcard, setVcard] = useState<VCardData>({ ...emptyVCard });
+  const [certificate, setCertificate] = useState<CertificateData>({ ...DEFAULT_CERTIFICATE });
 
   /* ---- Dropdown data ---- */
   const [clients, setClients] = useState<ClientInfo[]>([]);
@@ -140,6 +152,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
   const [originalTagId, setOriginalTagId] = useState("");
   /* Czy pole URL zostalo odblokowane w trybie edit (lock + warning confirmed).  * Jesli false, UI pokazuje tagId jako read-only. */
   const [idUnlocked, setIdUnlocked] = useState(false);
+  /* Czy typ akcji zostal odblokowany do edycji w trybie edit. Domyslnie zablokowany
+   * zeby user przypadkiem nie zmienil typu (co potencjalnie utraci dane wizytowki/
+   * certyfikatu jesli formaty links nie sa zgodne). User unlocka swiadomie. */
+  const [tagTypeUnlocked, setTagTypeUnlocked] = useState(false);
 
   /* ---- Edit token ---- */
   const [editTokenUrl, setEditTokenUrl] = useState<string | null>(null);
@@ -202,11 +218,19 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
 
         let snapLinks: TagLink[];
         let snapVcard: VCardData;
+        let snapCert: CertificateData = { ...DEFAULT_CERTIFICATE };
         if (tag.tagType === "vcard" && tag.links) {
           snapVcard = tag.links as unknown as VCardData;
           snapLinks = [{ ...emptyLink }];
           setVcard(snapVcard);
           setLinks(snapLinks);
+        } else if (tag.tagType === "certificate" && tag.links) {
+          snapCert = tag.links as unknown as CertificateData;
+          snapLinks = [{ ...emptyLink }];
+          snapVcard = { ...emptyVCard };
+          setCertificate(snapCert);
+          setLinks(snapLinks);
+          setVcard(snapVcard);
         } else if (tag.links && Array.isArray(tag.links)) {
           snapLinks = tag.links as TagLink[];
           snapVcard = { ...emptyVCard };
@@ -232,6 +256,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
           campaignId: tag.campaignId || "",
           links: snapLinks,
           vcard: snapVcard,
+          certificate: snapCert,
         }));
       })
       .catch(() => setSubmitError("Nie udalo sie zaladowac tagu"))
@@ -245,10 +270,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         tagId !== "" || name !== "" || targetUrl !== "" || description !== ""
       );
     } else if (initialSnapshot) {
-      const current = JSON.stringify({ tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard });
+      const current = JSON.stringify({ tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard, certificate });
       setIsDirty(current !== initialSnapshot);
     }
-  }, [mode, tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard, initialSnapshot]);
+  }, [mode, tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard, certificate, initialSnapshot]);
 
   /* ---- Przywroc do ostatnio zapisanego stanu (bez pobierania z serwera) ----
    * Używane przez przycisk "Przywróć" w headerze formularza, gdy user nabałaganił
@@ -267,6 +292,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       setCampaignId(s.campaignId || "");
       setLinks(Array.isArray(s.links) ? s.links : [{ ...emptyLink }]);
       setVcard(s.vcard || { ...emptyVCard });
+      setCertificate(s.certificate || { ...DEFAULT_CERTIFICATE });
       setErrors({});
       setSubmitError("");
       setIdUnlocked(false);  // przy cofnieciu zmian zamknij tez lock URL
@@ -281,6 +307,21 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     // przy zamkniecie locka bez zapisu, restore original tagId
     if (originalTagId) setTagId(originalTagId);
   }, [originalTagId]);
+
+  const unlockTagTypeEditing = useCallback(() => {
+    /* Confirm bo zmiana typu moze stracic dane (np. vcard -> certificate
+     * = vcardData jest zignorowany na backend, zostaje pusty certificate). */
+    if (typeof window !== "undefined") {
+      const ok = window.confirm(
+        "Zmiana typu akcji moze spowodowac utrate danych (np. dane wizytowki nie pasuja do certyfikatu).\n\n" +
+        "Link NFC/QR /s/" + tagId + " zostanie zachowany — przekieruje sie na strone nowego typu.\n\n" +
+        "Kontynuowac?"
+      );
+      if (!ok) return;
+    }
+    setTagTypeUnlocked(true);
+  }, [tagId]);
+  const lockTagTypeEditing = useCallback(() => setTagTypeUnlocked(false), []);
 
   /* ---- Validation ---- */
   const setFieldError = useCallback((field: string, msg: string) => {
@@ -357,6 +398,9 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         } else if (tagType === "vcard") {
           body.targetUrl = `/vcard/${tagId.trim()}`;
           body.links = vcard;
+        } else if (tagType === "certificate") {
+          body.targetUrl = `/cert/${tagId.trim()}`;
+          body.links = certificate;   // serialNumber wypelni sie serverowo
         }
 
         const res = await fetch("/api/tags", {
@@ -399,6 +443,9 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         } else if (tagType === "vcard") {
           body.targetUrl = `/vcard/${tagId}`;
           body.links = vcard;
+        } else if (tagType === "certificate") {
+          body.targetUrl = `/cert/${tagId}`;
+          body.links = certificate;
         }
 
         const res = await fetch("/api/tags", {
@@ -419,7 +466,7 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
         setIdUnlocked(false);  // zamyka lock UI po udanym zapisie
         /* Refresh snapshot so isDirty becomes false, then flash "Zapisano" feedback */
         setInitialSnapshot(JSON.stringify({
-          tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard,
+          tagId, name, tagType, targetUrl, description, clientId, campaignId, links, vcard, certificate,
         }));
         setJustSaved(true);
         setTimeout(() => setJustSaved(false), 2000);
@@ -506,12 +553,14 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
     campaignId, setCampaignId,
     links, setLinks,
     vcard, setVcard,
+    certificate, setCertificate,
     clients, campaigns, campaignsForClient,
     errors, setFieldError, clearFieldError, validate,
     submitting, submitError, justSaved, submit,
     resetStats, deleteTag, resetting,
     mode, readOnly, isAdmin, loading, isDirty, resetToSnapshot,
     originalTagId, idUnlocked, unlockIdEditing, lockIdEditing,
+    tagTypeUnlocked, unlockTagTypeEditing, lockTagTypeEditing,
     editTokenUrl, editTokenLoading, generateEditToken, revokeEditToken,
     created, createdTagId,
   };
