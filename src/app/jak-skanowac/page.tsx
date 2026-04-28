@@ -39,8 +39,8 @@ export default function JakSkanowacPage() {
             <div>
               <div style={styles.itemHead}>Wizytówka jest w pełni edytowalna</div>
               <div style={styles.itemBody}>
-                Możesz zmienić kolejność belek, treść, kolory, zdjęcia, dodać/usunąć linki. Napisz co potrzebujesz na{" "}
-                <a href="mailto:kontakt@twojenfc.pl" style={styles.link}>kontakt@twojenfc.pl</a> — odpowiemy w ten sam dzień.
+                Można zmienić kolejność belek, treść, kolory, zdjęcia, dodać/usunąć linki. Napisz co potrzebujesz na{" "}
+                <a href="mailto:kontakt@twojenfc.pl" style={styles.link}>kontakt@twojenfc.pl</a>.
               </div>
             </div>
           </li>
