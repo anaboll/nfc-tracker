@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { VCardData, VCardTheme, ButtonStyle, ButtonVariant } from "@/types/vcard";
 import { DEFAULT_VCARD_THEME } from "@/types/vcard";
 import {
@@ -9,6 +9,7 @@ import {
   TikTokIcon, YouTubeIcon, TelegramIcon,
   SOCIAL_COLORS,
 } from "@/components/vcard/SocialIcons";
+import EmailActionSheet from "@/components/vcard/EmailActionSheet";
 import { getContrastTextColor } from "@/lib/color-contrast";
 
 /* ------------------------------------------------------------------ */
@@ -219,6 +220,9 @@ export default function VCardRenderer({
   className,
   style: extraStyle,
 }: VCardRendererProps) {
+  /* Email action sheet state — ta sama logika co w VCardTrackedLinks. */
+  const [emailSheetAddr, setEmailSheetAddr] = useState<string | null>(null);
+
   const theme = resolveTheme(themeOverride || vcard.theme);
   const light = isLightBg(theme);
   const fullName = [vcard.firstName, vcard.lastName].filter(Boolean).join(" ");
@@ -338,11 +342,31 @@ export default function VCardRenderer({
               {contactLinks.map((link) => {
                 const Icon = ICON_MAP[link.key];
                 const color = SOCIAL_COLORS[link.key] || theme.primaryColor;
+                const rowInner = (
+                  <>
+                    <div style={iconBoxStyle(color)}>{Icon && <Icon size={20} color={color} />}</div>
+                    <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all", textAlign: "left" }}>{link.label}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                  </>
+                );
+
+                /* Email: button + action sheet (zamiast mailto:) */
+                if (link.key === "email") {
+                  return (
+                    <button
+                      key={link.key}
+                      type="button"
+                      onClick={() => setEmailSheetAddr(link.url.replace(/^mailto:/i, ""))}
+                      style={{ ...linkCardStyle, cursor: "pointer", font: "inherit", color: "inherit", width: "100%", textAlign: "left" }}
+                    >
+                      {rowInner}
+                    </button>
+                  );
+                }
+
                 return (
                   <a key={link.key} href={link.url} target={link.key === "phone" ? "_self" : "_blank"} rel="noopener noreferrer" style={linkCardStyle}>
-                    <div style={iconBoxStyle(color)}>{Icon && <Icon size={20} color={color} />}</div>
-                    <span style={{ color: textPrimary, fontSize: 14, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>{link.label}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                    {rowInner}
                   </a>
                 );
               })}
@@ -416,6 +440,19 @@ export default function VCardRenderer({
           </p>
         </div>
       </div>
+
+      {/* Email action sheet — modal nad calym renderem (z-index 9998) */}
+      {emailSheetAddr && (
+        <EmailActionSheet
+          email={emailSheetAddr}
+          isOpen={!!emailSheetAddr}
+          onClose={() => setEmailSheetAddr(null)}
+          primaryColor={theme.primaryColor}
+          bgColor={theme.bgMode === "solid" ? theme.bgSolidColor : theme.bgGradientFrom}
+          textColor={textPrimary}
+          isDarkBg={!light}
+        />
+      )}
     </div>
   );
 }

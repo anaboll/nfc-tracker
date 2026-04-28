@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import TrackedLink from "@/components/shared/TrackedLink";
+import EmailActionSheet from "@/components/vcard/EmailActionSheet";
+import { fireLinkClick } from "@/lib/track-link-click";
 import {
   PhoneIcon, EmailIcon, WebsiteIcon, AddressIcon,
   InstagramIcon, FacebookIcon, LinkedInIcon, WhatsAppIcon,
@@ -28,6 +30,9 @@ interface Props {
   textMuted: string;
   isMinimal: boolean;
   primaryColor: string;
+  /* Tlo vCarda (solid color albo from-color gradientu) — uzywane przez
+   * EmailActionSheet zeby modal mial spojny kolor z wizytowka. */
+  bgColor?: string;
   websiteLogo?: string;
   /* Row customization (all optional for backward compat) */
   rowFontSize?: number;    // default 14
@@ -84,8 +89,18 @@ interface Section {
 export default function VCardTrackedLinks({
   tagId, items, linkCardStyle, iconBoxStyleFn, defaultIconBoxStyle, textPrimary, textMuted, rowFontSize = 14, rowIconInner = 20,
   buttonRowGap = 24, rowGap = 8,
-  isMinimal, primaryColor, websiteLogo,
+  isMinimal, primaryColor, bgColor, websiteLogo,
 }: Props) {
+  /* Email belka: nie renderujemy mailto: jako <a>, bo iPhone bez ustawionego
+   * default mail-app rzuca systemowy blad. Zamiast tego button -> action sheet
+   * (Wyslij / Skopiuj). emailSheetAddr=null oznacza modal zamkniety. */
+  const [emailSheetAddr, setEmailSheetAddr] = useState<string | null>(null);
+
+  /* Wykrywamy czy tlo vCarda jest jasne czy ciemne — modal dopasowuje sie wizualnie.
+   * Heurystyka: textPrimary "#1e293b" lub ciemny -> jasne tlo. Dla naszych palet:
+   * dark navy/grafit -> textPrimary=#fff (jasny tekst, ciemne tlo). */
+  const isDarkBg = !textPrimary.startsWith("#1") && !textPrimary.startsWith("#0");
+
   // Group items into sections (header + following fields/custom-links)
   const sections: Section[] = [];
   let current: Section = { fields: [] };
@@ -108,6 +123,19 @@ export default function VCardTrackedLinks({
 
   return (
     <>
+      {/* Modal akcji email — globalnie dla calego komponentu (jeden, niezaleznie od ilu pol email) */}
+      {emailSheetAddr && (
+        <EmailActionSheet
+          email={emailSheetAddr}
+          isOpen={!!emailSheetAddr}
+          onClose={() => setEmailSheetAddr(null)}
+          primaryColor={primaryColor}
+          bgColor={bgColor}
+          textColor={textPrimary}
+          isDarkBg={isDarkBg}
+        />
+      )}
+
       {sections.map((section, sIdx) => {
         if (section.fields.length === 0) return null;
 
@@ -154,13 +182,10 @@ export default function VCardTrackedLinks({
                   const showLogo = (field.key === "website" && websiteLogo) || (isCustomLink && field.logo);
                   const logoUrl = isCustomLink ? field.logo : websiteLogo;
 
-                  return (
-                    <TrackedLink
-                      key={field.key} tagId={tagId}
-                      linkUrl={field.url!} linkLabel={field.label!} linkIcon={field.key}
-                      target={field.key === "phone" ? "_self" : "_blank"}
-                      style={linkCardStyle}
-                    >
+                  /* Wewnetrzna zawartosc belki — identyczna dla button (email)
+                   * i TrackedLink (reszta). Wydzielona dla DRY. */
+                  const rowContent = (
+                    <>
                       {showLogo && logoUrl ? (
                         <div style={{ ...iboxStyle, overflow: "hidden", padding: 0 }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -171,7 +196,7 @@ export default function VCardTrackedLinks({
                           {Icon && <Icon size={rowIconInner} color={color} />}
                         </div>
                       )}
-                      <span style={{ color: textPrimary, fontSize: rowFontSize, fontWeight: 500, flex: 1, wordBreak: "break-all" }}>
+                      <span style={{ color: textPrimary, fontSize: rowFontSize, fontWeight: 500, flex: 1, wordBreak: "break-all", textAlign: "left" }}>
                         {field.label}
                       </span>
                       {isContact ? (
@@ -179,6 +204,45 @@ export default function VCardTrackedLinks({
                       ) : (
                         <ExternalLinkIcon color={textMuted} />
                       )}
+                    </>
+                  );
+
+                  /* Email: button + action sheet (zamiast mailto: ktore na iPhone
+                   * bez mail-app rzuca systemowy blad). Tracking firowany inline
+                   * przy kliknieciu — tak jak TrackedLink ale przed otwarciem modal. */
+                  if (field.key === "email" && field.url) {
+                    const emailAddr = field.url.replace(/^mailto:/i, "");
+                    return (
+                      <button
+                        key={field.key}
+                        type="button"
+                        onClick={() => {
+                          fireLinkClick({ tagId, linkUrl: field.url!, linkLabel: field.label!, linkIcon: field.key });
+                          setEmailSheetAddr(emailAddr);
+                        }}
+                        style={{
+                          ...linkCardStyle,
+                          cursor: "pointer",
+                          font: "inherit",
+                          color: "inherit",
+                          width: "100%",
+                          textAlign: "left",
+                        }}
+                      >
+                        {rowContent}
+                      </button>
+                    );
+                  }
+
+                  /* Pozostale pola (telefon, IG, FB, website, custom) — bez zmian */
+                  return (
+                    <TrackedLink
+                      key={field.key} tagId={tagId}
+                      linkUrl={field.url!} linkLabel={field.label!} linkIcon={field.key}
+                      target={field.key === "phone" ? "_self" : "_blank"}
+                      style={linkCardStyle}
+                    >
+                      {rowContent}
                     </TrackedLink>
                   );
                 })}

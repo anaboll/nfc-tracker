@@ -524,6 +524,7 @@ export default async function VCardPage({
           textMuted={textMuted}
           isMinimal={isMinimal}
           primaryColor={theme.primaryColor}
+          bgColor={theme.bgMode === "solid" ? theme.bgSolidColor : theme.bgGradientFrom}
           websiteLogo={vcard.websiteLogo || ""}
           rowFontSize={rowFontSize}
           rowIconInner={Math.round(rowIconSize * 0.45)}
