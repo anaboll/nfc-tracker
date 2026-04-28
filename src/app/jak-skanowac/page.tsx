@@ -1,18 +1,19 @@
 /* ------------------------------------------------------------------ */
-/*  /jak-skanowac — krótka publiczna instrukcja NFC dla użytkowników   */
+/*  /jak-skanowac — cheat-sheet dla AGENTA Nasalskiego.                */
 /*                                                                     */
-/*  Cel: użytkownik dostaje brelok NFC (od agenta Nasalskiego itp),    */
-/*  po raz pierwszy widzi NFC tag, nie wie jak skanować. Tag           */
-/*  "instrukcja" w panelu redirektuje na tę stronę przez /s/instrukcja.*/
+/*  Use case: agent stoi z klientem na pokazie nieruchomosci, na       */
+/*  koniec wyciaga brelok NFC i chce szybko przekazac swoja wizytowke. */
+/*  Strona jest jego sciaga: co powiedziec, gdzie przylozyc, co zrobic */
+/*  gdy nie dziala, jakimi slowami zamknac sprzedaz po skanie.         */
 /*                                                                     */
-/*  Założenia: mobile-first, jeden viewport bez scrolla na średnim     */
-/*  telefonie, premium design (kolory/font dopasowane do TwojeNFC).    */
-/*  Brak JS interakcji — pełnia server-side render, lekkie.            */
+/*  Tag "instrukcja" w panelu redirektuje tu przez /s/instrukcja → QR  */
+/*  na breloku (drugi raz QR jest kierowany na /s/<slug>?source=qr ze  */
+/*  vcardem agenta — to jest osobno, dla klienta).                     */
 /* ------------------------------------------------------------------ */
 
 export const metadata = {
-  title: "Jak skanować brelok NFC — TwojeNFC.pl",
-  description: "Krótka instrukcja: przyłóż brelok do telefonu i wizytówka otworzy się sama.",
+  title: "Jak przekazać kontakt klientowi przez NFC — instrukcja dla agenta",
+  description: "Cheat-sheet: co powiedzieć klientowi, gdzie przyłożyć brelok, co zrobić gdy nie działa.",
 };
 
 export default function JakSkanowacPage() {
@@ -21,75 +22,135 @@ export default function JakSkanowacPage() {
       <article style={styles.card}>
         {/* Header */}
         <header style={styles.header}>
-          <div style={styles.eyebrow}>JAK TO DZIAŁA</div>
-          <h1 style={styles.title}>Skanuj brelok telefonem</h1>
+          <div style={styles.eyebrow}>INSTRUKCJA DLA AGENTA</div>
+          <h1 style={styles.title}>Jak przekazać kontakt klientowi</h1>
           <p style={styles.subtitle}>
-            Włącz NFC i przyłóż brelok do telefonu — wizytówka otworzy się sama.
+            Wyciągasz brelok, klient przykłada telefon, masz go w książce adresowej.
+            Średnio <strong>10-15 sekund</strong>.
           </p>
         </header>
+
+        {/* Skrot 30-sec */}
+        <section style={styles.tldr}>
+          <div style={styles.tldrTitle}>📌 W skrócie</div>
+          <ol style={styles.tldrList}>
+            <li>Wyciągnij brelok, trzymaj w ręce</li>
+            <li>Powiedz klientowi: <em>„Mogę dać Ci moją wizytówkę bezdotykowo?"</em></li>
+            <li>Klient odblokowuje telefon (ekran zapalony) i przykłada</li>
+            <li>Wizytówka pojawia się natychmiast → klika <strong>„Zapisz kontakt"</strong></li>
+          </ol>
+        </section>
 
         {/* iPhone */}
         <section style={styles.section}>
           <div style={styles.sectionHead}>
             <span style={styles.icon}>🍎</span>
-            <span style={styles.sectionTitle}>iPhone</span>
+            <span style={styles.sectionTitle}>Klient z iPhonem</span>
           </div>
           <p style={styles.sectionText}>
-            Dotknij brelokiem <strong>górnej części</strong> telefonu — tam gdzie aparat.
-            Działa identycznie jak Apple Pay.
+            <em>„Przyłóż brelok górnej części telefonu — tam gdzie aparat. Jak przy Apple Pay."</em>
           </p>
-          <p style={styles.sectionHint}>iPhone 7 i nowszy.</p>
+          <ul style={styles.bullets}>
+            <li>Telefon musi być <strong>odblokowany</strong> i mieć włączony ekran</li>
+            <li>Działa od iPhone 7 (2016+)</li>
+            <li>Apka aparatu NIE musi być uruchomiona</li>
+          </ul>
         </section>
 
         {/* Android */}
         <section style={styles.section}>
           <div style={styles.sectionHead}>
             <span style={styles.icon}>🤖</span>
-            <span style={styles.sectionTitle}>Android</span>
+            <span style={styles.sectionTitle}>Klient z Androidem</span>
           </div>
           <p style={styles.sectionText}>
-            Dotknij brelokiem <strong>tyłu telefonu</strong> — najlepiej środek lub górna część.
+            <em>„Przyłóż brelok do tyłu telefonu — najlepiej do środka."</em>
           </p>
-          <p style={styles.sectionHint}>Działa na 90% telefonów Android z 2018+.</p>
+          <ul style={styles.bullets}>
+            <li>Telefon też musi być włączony i odblokowany</li>
+            <li>W ~5% modeli NFC jest wyłączone domyślnie — patrz sekcja niżej</li>
+            <li>Działa na 90% Androidów z 2018+</li>
+          </ul>
         </section>
 
         {/* Nie dziala */}
         <section style={styles.troubleshoot}>
           <div style={styles.sectionHead}>
             <span style={styles.icon}>⚠️</span>
-            <span style={styles.sectionTitle}>Nie działa?</span>
+            <span style={styles.sectionTitle}>Nie działa? 30-sekundowy fix</span>
           </div>
-          <ul style={styles.list}>
-            <li><strong>NFC wyłączone</strong> — sprawdź Ustawienia → Połączenia → NFC</li>
-            <li><strong>Etui metalowe</strong> — zdejmij chwilowo, NFC nie przebija przez metal</li>
-            <li><strong>Stary iPhone</strong> — modele 6, SE 1. gen lub starsze nie czytają NFC tagów</li>
-          </ul>
-        </section>
-
-        {/* QR fallback */}
-        <section style={styles.qrFallback}>
-          <span style={styles.icon}>📷</span>
-          <span style={styles.qrText}>
-            <strong>Można też zeskanować kod QR</strong> — wystarczy uruchomić aparat telefonu
-            i skierować na czarny kwadrat z drugiej strony breloka.
-          </span>
+          <ol style={styles.list}>
+            <li>
+              <strong>NFC wyłączone?</strong> Powiedz: <em>„Otwórz panel powiadomień u góry — szukaj ikony N"</em>.
+              Albo: Ustawienia → Połączenia → NFC.
+            </li>
+            <li>
+              <strong>Stary telefon?</strong> (iPhone 6/SE 1.gen, Android sprzed 2017) →
+              <em>„Zeskanuj kod QR z drugiej strony breloka — uruchom aparat i celuj"</em>.
+            </li>
+            <li>
+              <strong>Etui metalowe / portfelowe?</strong> Poproś o ściągnięcie na chwilę. NFC nie przebija przez metal.
+            </li>
+            <li>
+              <strong>Dalej nic?</strong> Spokojnie wręcz tradycyjną wizytówkę — wszystko mamy zarejestrowane,
+              klient i tak wpisze numer ręcznie.
+            </li>
+          </ol>
         </section>
 
         {/* Po skanie */}
         <section style={styles.afterScan}>
-          <div style={styles.afterTitle}>Wizytówka się otworzyła — co dalej?</div>
+          <div style={styles.afterTitle}>🚀 Po skanie — domykasz pętlę</div>
           <ol style={styles.list}>
-            <li>Kliknij <strong>„Zapisz kontakt"</strong> — dodaje się do książki adresowej telefonu</li>
-            <li>Klikaj belki (Telefon, Email, Strona, Social) — wszystko działa</li>
+            <li>
+              <em>„Kliknij Zapisz kontakt"</em> — wizytówka ląduje w jego książce adresowej, nie zniknie
+            </li>
+            <li>
+              Pokaż jeszcze: <em>„Tu masz mój Instagram, stronę, telefon — jeden klik dzwoni"</em>
+            </li>
+            <li>
+              Zamknij rozmowę: <em>„Po wizycie napisz / zadzwoń z tego numeru, oddzwonię w 30 minut"</em>
+            </li>
           </ol>
+        </section>
+
+        {/* Pro tips */}
+        <section style={styles.proTips}>
+          <div style={styles.proTipsTitle}>💡 Pro tips</div>
+          <ul style={styles.bullets}>
+            <li>
+              <strong>Trzymaj brelok w ręce już PRZED prezentacją</strong> — pokazuje pewność i nowoczesność,
+              klient widzi że to nie kant
+            </li>
+            <li>
+              <strong>Najpierw tłumacz „dlaczego"</strong>, potem „jak". <em>„Zamiast papieru który zgubisz,
+              dam Ci kontakt prosto do telefonu"</em>
+            </li>
+            <li>
+              <strong>Trzymaj minimum 1-2 cm od telefonu</strong> — bardzo blisko bywa gorsze niż 1 cm
+            </li>
+            <li>
+              <strong>Każdy skan widzisz w panelu</strong> — zobaczysz kto kiedy zeskanował (nie wiesz <em>kto</em>{" "}
+              osobiście, tylko liczbę + miasto). Świetne na koniec miesiąca: ile leadów zebrałeś
+            </li>
+            <li>
+              <strong>QR jest fallbackiem</strong> — gdy NFC zawodzi, ten sam brelok ma kod z tyłu który
+              prowadzi tam samo. Klient włącza aparat i celuje.
+            </li>
+          </ul>
         </section>
 
         {/* Footer */}
         <footer style={styles.footer}>
-          Powered by{" "}
-          <a href="https://twojenfc.pl" style={styles.footerLink}>
-            TwojeNFC.pl
-          </a>
+          <div style={{ marginBottom: 4 }}>
+            Pytania techniczne? Pisz do <a href="mailto:kontakt@twojenfc.pl" style={styles.footerLink}>kontakt@twojenfc.pl</a>
+          </div>
+          <div>
+            Powered by{" "}
+            <a href="https://twojenfc.pl" style={styles.footerLink}>
+              TwojeNFC.pl
+            </a>
+          </div>
         </footer>
       </article>
     </main>
@@ -98,13 +159,13 @@ export default function JakSkanowacPage() {
 
 /* ------------------------------------------------------------------ */
 const PALETTE = {
-  bg: "#1a1a2e",          // ciemny granat (jak Laboversum)
-  cardBg: "#252540",      // lighter card
-  textPrimary: "#f4ead5", // ecru
+  bg: "#1a1a2e",
+  cardBg: "#252540",
+  textPrimary: "#f4ead5",
   textMuted: "#9a9ab0",
-  accent: "#c9a961",      // warm gold (jak certyfikat premium)
-  accentSoft: "rgba(201, 169, 97, 0.12)",
-  border: "rgba(201, 169, 97, 0.25)",
+  accent: "#c9a961",
+  accentSoft: "rgba(201, 169, 97, 0.10)",
+  border: "rgba(201, 169, 97, 0.22)",
 };
 
 const FONT_STACK = "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
@@ -122,16 +183,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   card: {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: 560,
     background: PALETTE.cardBg,
     borderRadius: 20,
-    padding: "28px 24px",
+    padding: "28px 22px",
     border: `1px solid ${PALETTE.border}`,
     boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
   },
   header: {
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 20,
   },
   eyebrow: {
     fontSize: 11,
@@ -141,17 +202,38 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   title: {
-    fontSize: "clamp(24px, 6vw, 30px)",
+    fontSize: "clamp(22px, 5.5vw, 28px)",
     fontWeight: 700,
     margin: "0 0 10px",
     letterSpacing: "-0.01em",
     color: PALETTE.textPrimary,
+    lineHeight: 1.25,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: PALETTE.textMuted,
     margin: 0,
-    lineHeight: 1.5,
+    lineHeight: 1.55,
+  },
+  tldr: {
+    padding: "16px 18px",
+    background: "rgba(34, 197, 94, 0.08)",
+    border: "1px solid rgba(34, 197, 94, 0.28)",
+    borderRadius: 14,
+    marginBottom: 14,
+  },
+  tldrTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: PALETTE.textPrimary,
+    marginBottom: 8,
+  },
+  tldrList: {
+    margin: 0,
+    paddingLeft: 22,
+    fontSize: 13.5,
+    lineHeight: 1.7,
+    color: PALETTE.textPrimary,
   },
   section: {
     padding: "16px 18px",
@@ -179,13 +261,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     lineHeight: 1.55,
     color: PALETTE.textPrimary,
-    margin: "0 0 4px",
+    margin: "0 0 8px",
   },
-  sectionHint: {
-    fontSize: 12,
-    color: PALETTE.textMuted,
+  bullets: {
     margin: 0,
-    fontStyle: "italic",
+    paddingLeft: 18,
+    fontSize: 13,
+    lineHeight: 1.65,
+    color: PALETTE.textMuted,
   },
   troubleshoot: {
     padding: "16px 18px",
@@ -195,33 +278,18 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 12,
   },
   list: {
-    margin: "0",
+    margin: 0,
     paddingLeft: 20,
     fontSize: 13.5,
     lineHeight: 1.7,
     color: PALETTE.textPrimary,
   },
-  qrFallback: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: "14px 16px",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: 12,
-    marginBottom: 12,
-    border: "1px solid rgba(255,255,255,0.08)",
-  },
-  qrText: {
-    fontSize: 13,
-    lineHeight: 1.5,
-    color: PALETTE.textMuted,
-  },
   afterScan: {
     padding: "16px 18px",
-    background: "rgba(34, 197, 94, 0.08)",
-    border: "1px solid rgba(34, 197, 94, 0.25)",
+    background: "rgba(96, 165, 250, 0.08)",
+    border: "1px solid rgba(96, 165, 250, 0.28)",
     borderRadius: 14,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   afterTitle: {
     fontSize: 15,
@@ -229,12 +297,26 @@ const styles: Record<string, React.CSSProperties> = {
     color: PALETTE.textPrimary,
     marginBottom: 8,
   },
+  proTips: {
+    padding: "16px 18px",
+    background: "rgba(168, 85, 247, 0.08)",
+    border: "1px solid rgba(168, 85, 247, 0.28)",
+    borderRadius: 14,
+    marginBottom: 16,
+  },
+  proTipsTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: PALETTE.textPrimary,
+    marginBottom: 10,
+  },
   footer: {
     textAlign: "center",
     fontSize: 11,
     color: PALETTE.textMuted,
     paddingTop: 16,
     borderTop: `1px solid ${PALETTE.border}`,
+    lineHeight: 1.6,
   },
   footerLink: {
     color: PALETTE.accent,
