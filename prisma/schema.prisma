@@ -85,32 +85,10 @@ model Tag {
   scans       Scan[]
   linkClicks  LinkClick[]
   videoEvents VideoEvent[]
-  chipRegistry NfcChipRegistry[]
 
   @@index([isActive])
   @@index([clientId])
   @@index([campaignId])
-}
-
-// Rejestr fizycznych chipów NFC zaprogramowanych przez nfc-tools.
-// Programmer (ACR1252U) po zapisie URL na chip POST-uje do /api/admin/tags/register-chip
-// żeby utrwalić mapowanie tagId (slug) ↔ nfcUid (UID chipa). Daje:
-//   - audyt "ten chip został zaprogramowany dnia X"
-//   - fundament pod anti-klon (/vcard/<slug>::<UID> może w przyszłości walidować registry)
-//   - analytics per fizyczny chip (gdy klient ma 5 breloków każdy z innym UID)
-model NfcChipRegistry {
-  id              String    @id @default(cuid())
-  tagId           String                                          // FK do Tag.id (slug)
-  tag             Tag       @relation(fields: [tagId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  nfcUid          String    @unique                               // np. "53CD0010630001" (uppercase hex)
-  programmedAt    DateTime  @default(now())
-  programmedBy    String?                                         // opcjonalne: email admina (na przyszłość)
-  locked          Boolean   @default(false)                       // czy NDEF zostal zalockowany (read-only OTP bits)
-  lastValidatedAt DateTime?                                       // opcjonalna walidacja "test scan" przez programmer
-  notes           String?
-
-  @@index([tagId])
-  @@index([programmedAt])
 }
 
 model Scan {
