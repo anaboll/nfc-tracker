@@ -15,6 +15,13 @@
 #   SMOKE_PUBLIC_URL (default https://twojenfc.pl)
 #   SMOKE_REPLICAS   (default "3001 3002" — space-separated host ports)
 #   BN_STATS_TOKEN   (default from env, or skip that specific test)
+#
+# Flags:
+#   --replica-only   skip public Cloudflare checks. Used przez rolling-deploy
+#                    pomiedzy app1 a app2 — w tym oknie nginx round-robinuje
+#                    miedzy nowa (app1) i stara (app2) wersja, wiec public
+#                    test by byl flaky (50/50 hit). Direct na port repliki
+#                    jest deterministyczny — zawsze trafia w nowy kod.
 # ---------------------------------------------------------------------------
 
 set -uo pipefail
@@ -22,6 +29,14 @@ set -uo pipefail
 PUBLIC_URL="${SMOKE_PUBLIC_URL:-https://twojenfc.pl}"
 REPLICA_PORTS="${SMOKE_REPLICAS:-3001 3002}"
 BN_TOKEN="${BN_STATS_TOKEN:-}"
+REPLICA_ONLY=false
+
+for arg in "$@"; do
+  case $arg in
+    --replica-only) REPLICA_ONLY=true ;;
+    *) echo "Unknown flag: $arg" >&2; exit 1 ;;
+  esac
+done
 
 PASS=0
 FAIL=0
@@ -77,22 +92,31 @@ check_json_ok() {
 
 echo "=== Replica direct checks ==="
 for port in $REPLICA_PORTS; do
-  check_http "replica:$port /api/health"       "http://127.0.0.1:${port}/api/health"       200
-  check_http "replica:$port /"                 "http://127.0.0.1:${port}/"                  200
+  check_http "replica:$port /api/health"                  "http://127.0.0.1:${port}/api/health"                  200
+  check_http "replica:$port /"                            "http://127.0.0.1:${port}/"                            200
+  # Real route ktory dotyka Prisma + SSR render. /api/health i / moga przejsc
+  # nawet jak nowy kod ma bug w queries albo komponentach - dopiero ten test
+  # daje nam pewnosc ze cala app1 dziala zanim ruszamy app2.
+  check_http "replica:$port /vcard/laboversum-wizytowka"  "http://127.0.0.1:${port}/vcard/laboversum-wizytowka"  200
 done
 
-echo ""
-echo "=== Public URL checks (through Cloudflare + nginx) ==="
-check_http     "public / (landing)"               "${PUBLIC_URL}/"                                           200
-check_http     "public /api/health"               "${PUBLIC_URL}/api/health"                                 200
-check_http     "public /vcard/laboversum-wizytowka" "${PUBLIC_URL}/vcard/laboversum-wizytowka"               200
-check_redirect "public /s/wizytowka redirect"    "${PUBLIC_URL}/s/wizytowka"                                302 "/vcard/wizytowka"
-check_json_ok  "public POST /api/track-hash"     "${PUBLIC_URL}/api/track-hash"                             '{"code":"TEST"}'
-
-if [ -n "$BN_TOKEN" ]; then
-  check_http "public /api/bn-stats (auth'd)"      "${PUBLIC_URL}/api/bn-stats?token=${BN_TOKEN}"             200
+if [ "$REPLICA_ONLY" = true ]; then
+  echo ""
+  echo "(public checks pominiete - flag --replica-only)"
 else
-  echo "skip: /api/bn-stats (BN_STATS_TOKEN not set)"
+  echo ""
+  echo "=== Public URL checks (through Cloudflare + nginx) ==="
+  check_http     "public / (landing)"               "${PUBLIC_URL}/"                                           200
+  check_http     "public /api/health"               "${PUBLIC_URL}/api/health"                                 200
+  check_http     "public /vcard/laboversum-wizytowka" "${PUBLIC_URL}/vcard/laboversum-wizytowka"               200
+  check_redirect "public /s/wizytowka redirect"    "${PUBLIC_URL}/s/wizytowka"                                302 "/vcard/wizytowka"
+  check_json_ok  "public POST /api/track-hash"     "${PUBLIC_URL}/api/track-hash"                             '{"code":"TEST"}'
+
+  if [ -n "$BN_TOKEN" ]; then
+    check_http "public /api/bn-stats (auth'd)"      "${PUBLIC_URL}/api/bn-stats?token=${BN_TOKEN}"             200
+  else
+    echo "skip: /api/bn-stats (BN_STATS_TOKEN not set)"
+  fi
 fi
 
 echo ""

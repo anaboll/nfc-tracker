@@ -108,13 +108,32 @@ docker compose build app1
 # Roll app1 first, then app2. Order doesn't matter functionally — nginx round-
 # robins between them — but doing it sequentially guarantees at least one
 # healthy replica throughout.
+#
+# KLUCZOWE: pomiedzy app1 a app2 odpalamy smoke-test TYLKO na app1 (port 3001).
+# Jak nowy kod ma bug w jakims route, app1 to wykryje - app2 zostaje na starym
+# kodzie i serwuje uzytkownikow przez caly czas naprawy. Public testy pomijamy
+# tu bo nginx round-robinuje miedzy app1 (nowa) i app2 (stara) - byloby flaky.
 roll_replica app1 nfc_app_1
+
+if [ "$SKIP_SMOKE" = false ]; then
+  log "Running smoke test on app1 BEFORE rolling app2..."
+  if SMOKE_REPLICAS=3001 bash "$(dirname "$0")/smoke-test.sh" --replica-only; then
+    ok "app1 smoke test passed — proceeding to roll app2"
+  else
+    err "app1 smoke test FAILED — app2 zostaje na STAREJ wersji (uzytkownicy nadal obslugiwani)."
+    err "Fix the issue and re-run this script. Investigate: docker logs nfc_app_1 --tail 50"
+    exit 1
+  fi
+else
+  warn "Smoke test app1 SKIPPED (--skip-smoke). Proceeding to roll app2 blind."
+fi
+
 roll_replica app2 nfc_app_2
 
 ok "Both replicas recreated and healthy"
 
 if [ "$SKIP_SMOKE" = false ]; then
-  log "Running smoke tests..."
+  log "Running full smoke tests (replicas + public Cloudflare)..."
   if bash "$(dirname "$0")/smoke-test.sh"; then
     ok "Smoke tests passed — deploy complete"
   else
