@@ -244,46 +244,38 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
 
         if (tag.tagType === "vcard" && tag.links) {
           const src = tag.links as unknown as VCardData;
-          /* Per-osobe pola: czyscimy zeby user nie zapisal cudzych danych. */
+          /* Klon vCard: ZACHOWUJEMY WSZYSTKO (theme, photo/logo, email, phone,
+           * social, jobTitle, slogan, address - cala wizualna i organizacyjna
+           * tozsamosc). Czyscimy TYLKO firstName + lastName bo to jedyne pola
+           * ktore na 100% sa per-osoba i user MUSI je zmienic. Reszta to
+           * defaulty z ktorych user kasuje co chce inne (np. wpisuje nowy
+           * email zamiast tego ktorego nie chce). Bezpieczniej dac za duzo
+           * niz za malo - ostatecznym filtrem jest user przed zapisem. */
           const cleanVcard: VCardData = {
+            ...src,
             firstName: "",
             lastName: "",
-            jobTitle: undefined,
-            slogan: undefined,
-            phone: undefined,
-            email: undefined,
-            website: undefined,
-            instagram: undefined,
-            facebook: undefined,
-            linkedin: undefined,
-            tiktok: undefined,
-            youtube: undefined,
-            whatsapp: undefined,
-            telegram: undefined,
-            note: undefined,
-            photo: undefined,
-            /* Org-level + visual zostaje - to jest sens klonu */
-            company: src.company,
-            address: src.address,
-            websiteLogo: src.websiteLogo,
-            theme: src.theme ? { ...src.theme } : undefined,
-            contactDisplayMode: src.contactDisplayMode,
-            contactHeaderText: src.contactHeaderText,
-            socialHeaderText: src.socialHeaderText,
-            contactOrder: src.contactOrder ? [...src.contactOrder] : undefined,
-            socialOrder: src.socialOrder ? [...src.socialOrder] : undefined,
-            hiddenFields: src.hiddenFields ? [...src.hiddenFields] : undefined,
-            displayItems: src.displayItems ? [...src.displayItems] : undefined,
           };
           setVcard(cleanVcard);
           setLinks([{ ...emptyLink }]);
         } else if (tag.tagType === "certificate" && tag.links) {
           const src = tag.links as unknown as CertificateData;
-          /* Per-dzielo pola czyscimy, theme zachowujemy. SerialNumber pusty -
-           * backend wypelni przy zapisie. issueDate na dzis. */
+          /* Klon certyfikatu: ZACHOWUJEMY theme + parametry techniczne dziela
+           * (medium, substrate, dimensions). Czyscimy TYLKO identity dziela:
+           * title, artistFirstName, artistLastName, year, photos, signature.
+           * SerialNumber na "" (backend nada nowy). issueDate na dzis. */
           const cleanCert: CertificateData = {
-            ...DEFAULT_CERTIFICATE,
-            theme: src.theme ? { ...src.theme } : DEFAULT_CERTIFICATE.theme,
+            ...src,
+            title: "",
+            artistFirstName: "",
+            artistLastName: "",
+            year: new Date().getFullYear(),
+            photos: [],
+            signaturePhoto: undefined,
+            artistLogo: undefined,
+            description: undefined,
+            serialNumber: "",
+            issueDate: new Date().toISOString().slice(0, 10),
           };
           setCertificate(cleanCert);
           setVcard({ ...emptyVCard });
