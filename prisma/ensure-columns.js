@@ -348,6 +348,39 @@ async function main() {
     console.log("Tag edit token columns ensured");
 
     // =======================================================================
+    // 11. NFC CHIP REGISTRY (programmer integration)
+    // Programmer (nfc-tools/server.py) po zapisie URL na chip POST-uje do
+    // /api/admin/tags/register-chip — ten endpoint zapisuje wpis tutaj.
+    // Daje fundament pod analytics per fizyczny chip + przyszly anti-klon.
+    // =======================================================================
+    console.log("\n--- NfcChipRegistry table ---");
+
+    await run("NfcChipRegistry table",
+      `CREATE TABLE IF NOT EXISTS "NfcChipRegistry" (
+        "id" TEXT NOT NULL,
+        "tagId" TEXT NOT NULL,
+        "nfcUid" TEXT NOT NULL,
+        "programmedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "programmedBy" TEXT,
+        "locked" BOOLEAN NOT NULL DEFAULT false,
+        "lastValidatedAt" TIMESTAMP(3),
+        "notes" TEXT,
+        CONSTRAINT "NfcChipRegistry_pkey" PRIMARY KEY ("id")
+      )`);
+    await run("NfcChipRegistry.nfcUid unique",
+      'CREATE UNIQUE INDEX IF NOT EXISTS "NfcChipRegistry_nfcUid_key" ON "NfcChipRegistry"("nfcUid")');
+    await run("NfcChipRegistry.tagId index",
+      'CREATE INDEX IF NOT EXISTS "NfcChipRegistry_tagId_idx" ON "NfcChipRegistry"("tagId")');
+    await run("NfcChipRegistry.programmedAt index",
+      'CREATE INDEX IF NOT EXISTS "NfcChipRegistry_programmedAt_idx" ON "NfcChipRegistry"("programmedAt")');
+    await run("NfcChipRegistry.tagId FK -> Tag",
+      `DO $$ BEGIN
+        ALTER TABLE "NfcChipRegistry" ADD CONSTRAINT "NfcChipRegistry_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "Tag"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`);
+    console.log("NfcChipRegistry table ensured");
+
+    // =======================================================================
     // COMMIT transaction
     // =======================================================================
     await prisma.$executeRawUnsafe("COMMIT");
@@ -389,6 +422,7 @@ async function main() {
       User: ["id", "email", "password", "role", "viewerSections"],
       Client: ["id", "name", "slug", "isActive", "tier"],
       UserClient: ["id", "userId", "clientId"],
+      NfcChipRegistry: ["id", "tagId", "nfcUid", "programmedAt", "programmedBy", "locked", "lastValidatedAt", "notes"],
     };
 
     const missing = [];
