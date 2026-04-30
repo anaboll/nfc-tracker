@@ -42,6 +42,11 @@ x-app-common: &app-common
     SMTP_USER: "${SMTP_USER}"
     SMTP_PASS: "${SMTP_PASS}"
     CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+    # Token uzywany przez nfc-tools/server.py (programmer ACR1252U) do auth
+    # endpointu /api/admin/tags/register-chip. Powinien byc random 64 hex
+    # generowany jednorazowo (np. openssl rand -hex 32). Pusty = endpoint
+    # zwraca 500 i odrzuca wszystkie zadania.
+    NFC_PROGRAMMER_TOKEN: "${NFC_PROGRAMMER_TOKEN:-}"
   volumes:
     - uploads_data:/app/public/uploads
 
@@ -79,6 +84,7 @@ services:
       SMTP_USER: "${SMTP_USER}"
       SMTP_PASS: "${SMTP_PASS}"
       CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+      NFC_PROGRAMMER_TOKEN: "${NFC_PROGRAMMER_TOKEN:-}"
       REPLICA_ID: "app1"     # identifies which replica serves a request in /api/health
     ports:
       - "127.0.0.1:3001:3000"
@@ -100,6 +106,7 @@ services:
       SMTP_USER: "${SMTP_USER}"
       SMTP_PASS: "${SMTP_PASS}"
       CONTACT_EMAIL: "${CONTACT_EMAIL:-kontakt@twojenfc.pl}"
+      NFC_PROGRAMMER_TOKEN: "${NFC_PROGRAMMER_TOKEN:-}"
       REPLICA_ID: "app2"
     ports:
       - "127.0.0.1:3002:3000"
