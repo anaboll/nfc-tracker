@@ -90,6 +90,7 @@ export default function TagFormLayout({ form }: Props) {
         clientId={form.clientId}
         campaignId={form.campaignId}
         onReset={form.resetToSnapshot}
+        cloneSourceId={form.mode === "edit" ? form.originalTagId : undefined}
       />
 
       <div style={styles.container}>

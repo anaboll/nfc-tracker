@@ -18,6 +18,12 @@ export interface UseTagFormOptions {
   initialTagId?: string;
   preselectedClientId?: string;
   preselectedCampaignId?: string;
+  /* Klon: ID istniejacego taga ktorego dane sluza za szablon dla nowego.
+   * Tylko w mode='create'. Po fetch wypelniamy formularz danymi zrodlowego
+   * taga, ale CZYSCIMY pola identity (imie/nazwisko/email/telefon dla vCard,
+   * tytul/artysta dla cert) zeby user wiedzial co musi wypelnic. Layout,
+   * theme, kolory, fonty, czcionki zostaja - to jest sens klonowania. */
+  cloneFromId?: string;
 }
 
 export interface UseTagFormReturn {
@@ -111,7 +117,7 @@ const emptyLink: TagLink = { label: "", url: "", icon: "link" };
 /* ------------------------------------------------------------------ */
 
 export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
-  const { mode, initialTagId, preselectedClientId, preselectedCampaignId } = opts;
+  const { mode, initialTagId, preselectedClientId, preselectedCampaignId, cloneFromId } = opts;
   const router = useRouter();
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role || "viewer";
@@ -145,7 +151,10 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
 
   /* ---- Edit extras ---- */
   const [resetting, setResetting] = useState(false);
-  const [loading, setLoading] = useState(mode === "edit");
+  /* Loading true gdy: edycja istniejacego, ALBO klonowanie zrodlowego.
+   * Bez tego clone-mode pokazywalby pusta nowa forme przez ulamek sekundy
+   * zanim fetch zrodla skonczy sie i wypelni dane. */
+  const [loading, setLoading] = useState(mode === "edit" || !!cloneFromId);
   const [isDirty, setIsDirty] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState("");
   /* Oryginalne ID z bazy — niezmienne w trakcie edycji, uzywane jako klucz      * do PUT /api/tags. Dopiero na backendzie patrzymy na tagId z formularza jako  * `newId` i robimy rename jesli rozny. */
@@ -188,14 +197,110 @@ export function useTagForm(opts: UseTagFormOptions): UseTagFormReturn {
       .catch(() => {});
   }, []);
 
-  /* ---- Auto-generate neutral tag code on new-tag mount ---- */
+  /* ---- Auto-generate neutral tag code on new-tag mount ----
+   * Pomijamy gdy clone - tam czekamy az fetch zrodlowego taga skonczy sie
+   * i ustawi swoj wlasny nowy tagId (tez generowany randomly, ale po fetch
+   * zeby nie nadpisywac niczego). */
   useEffect(() => {
-    if (mode === "create" && tagId === "") {
+    if (mode === "create" && !cloneFromId && tagId === "") {
       setTagId(generateTagCode());
     }
     // Run once on mount — intentionally ignores tagId/setTagId deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, cloneFromId]);
+
+  /* ---- Fetch source tag for CLONE mode ----
+   * Wypelniamy formularz danymi z istniejacego taga, ale czyscimy pola
+   * identity (per-osobe/per-dzielo) zeby user wiedzial co MUSI wypelnic.
+   * Layout/theme/kolory/fonty zostaja - to jest sens klonu (zachowujemy
+   * design, podmieniamy tylko zawartosc).
+   *
+   * Czyszczenie per typ:
+   *   vcard       -> firstName/lastName/email/phone/jobTitle/social/photo (per-agent)
+   *                  zostaje company/address/websiteLogo/theme/displayItems
+   *   certificate -> title/artist/year/medium/dimensions/photos/signature (per-dzielo)
+   *                  zostaje theme (palette + font)
+   *   url/multilink -> tylko name + tagId nowy, reszta jak w zrodle
+   */
+  useEffect(() => {
+    if (mode !== "create" || !cloneFromId) return;
+    setLoading(true);
+    fetch(`/api/tags/${encodeURIComponent(cloneFromId)}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Tag zrodlowy nie znaleziony");
+        return r.json();
+      })
+      .then((tag: TagFull) => {
+        /* Nowe ID wygenerujemy losowo (jak normalny new-tag flow). */
+        setTagId(generateTagCode());
+        /* Identity zostaje pusta - user MUSI wpisac nowa nazwe. Brak auto-sufiksu
+         * "(kopia)" zeby user wiedzial ze pole jest puste i wymaga uwagi. */
+        setName("");
+        setTagType(tag.tagType);
+        setTargetUrl(tag.targetUrl);
+        setDescription(tag.description || "");
+        setClientIdRaw(tag.clientId || "");
+        setCampaignId(tag.campaignId || "");
+
+        if (tag.tagType === "vcard" && tag.links) {
+          const src = tag.links as unknown as VCardData;
+          /* Per-osobe pola: czyscimy zeby user nie zapisal cudzych danych. */
+          const cleanVcard: VCardData = {
+            firstName: "",
+            lastName: "",
+            jobTitle: undefined,
+            slogan: undefined,
+            phone: undefined,
+            email: undefined,
+            website: undefined,
+            instagram: undefined,
+            facebook: undefined,
+            linkedin: undefined,
+            tiktok: undefined,
+            youtube: undefined,
+            whatsapp: undefined,
+            telegram: undefined,
+            note: undefined,
+            photo: undefined,
+            /* Org-level + visual zostaje - to jest sens klonu */
+            company: src.company,
+            address: src.address,
+            websiteLogo: src.websiteLogo,
+            theme: src.theme ? { ...src.theme } : undefined,
+            contactDisplayMode: src.contactDisplayMode,
+            contactHeaderText: src.contactHeaderText,
+            socialHeaderText: src.socialHeaderText,
+            contactOrder: src.contactOrder ? [...src.contactOrder] : undefined,
+            socialOrder: src.socialOrder ? [...src.socialOrder] : undefined,
+            hiddenFields: src.hiddenFields ? [...src.hiddenFields] : undefined,
+            displayItems: src.displayItems ? [...src.displayItems] : undefined,
+          };
+          setVcard(cleanVcard);
+          setLinks([{ ...emptyLink }]);
+        } else if (tag.tagType === "certificate" && tag.links) {
+          const src = tag.links as unknown as CertificateData;
+          /* Per-dzielo pola czyscimy, theme zachowujemy. SerialNumber pusty -
+           * backend wypelni przy zapisie. issueDate na dzis. */
+          const cleanCert: CertificateData = {
+            ...DEFAULT_CERTIFICATE,
+            theme: src.theme ? { ...src.theme } : DEFAULT_CERTIFICATE.theme,
+          };
+          setCertificate(cleanCert);
+          setVcard({ ...emptyVCard });
+          setLinks([{ ...emptyLink }]);
+        } else if (tag.links && Array.isArray(tag.links)) {
+          /* multilink/url - linki zostaja jak w zrodle (user moze je zmienic). */
+          setLinks(tag.links as TagLink[]);
+          setVcard({ ...emptyVCard });
+        } else {
+          setLinks([{ ...emptyLink }]);
+          setVcard({ ...emptyVCard });
+        }
+      })
+      .catch(() => setSubmitError("Nie udalo sie pobrac tagu zrodlowego do klonowania"))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, cloneFromId]);
 
   /* ---- Fetch tag for edit mode ---- */
   useEffect(() => {

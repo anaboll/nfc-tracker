@@ -14,12 +14,23 @@ interface Props {
   clientId?: string;
   campaignId?: string;
   onReset?: () => void;  // cofa niezapisane zmiany do ostatniego save/load (bez wychodzenia z edytora)
+  /* ID istniejacego taga - potrzebny do akcji "Klonuj" (przekierowanie do
+   * /dashboard/tags/new?cloneFrom=<id>). Pokazuje sie tylko w trybie edit. */
+  cloneSourceId?: string;
 }
 
 export default function TagFormHeader({
-  mode, tagName, onSave, saving, justSaved, readOnly, isDirty, clientId, campaignId, onReset,
+  mode, tagName, onSave, saving, justSaved, readOnly, isDirty, clientId, campaignId, onReset, cloneSourceId,
 }: Props) {
   const router = useRouter();
+
+  const goClone = () => {
+    if (!cloneSourceId) return;
+    if (isDirty && !confirm("Masz niezapisane zmiany. Otworzyc klon zrodlowego (twoje zmiany zostana porzucone)?")) {
+      return;
+    }
+    router.push(`/dashboard/tags/new?cloneFrom=${encodeURIComponent(cloneSourceId)}`);
+  };
 
   const goBack = () => {
     const params = new URLSearchParams();
@@ -51,6 +62,21 @@ export default function TagFormHeader({
 
       {/* Actions */}
       <div style={styles.actions}>
+        {/* Klonuj - tworzy nowa akcje na bazie obecnej (dane wstepne, identity puste).
+            Tylko w edycji + tylko admin (readOnly = nie-admin). */}
+        {!readOnly && mode === "edit" && cloneSourceId && (
+          <button
+            onClick={goClone}
+            style={styles.cloneBtn}
+            title="Stworz nowa akcje na podstawie tej (kopia layoutu, identity puste)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "middle" }}>
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Klonuj
+          </button>
+        )}
         {/* Przywroc — cofa niezapisane zmiany bez wychodzenia z edytora.
             Pokazuje sie tylko w edycji, kiedy user cos zmienil (isDirty). */}
         {!readOnly && mode === "edit" && isDirty && onReset && (
@@ -191,6 +217,19 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--warning, #f59e0b)",
     background: "transparent",
     color: "var(--warning, #f59e0b)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    display: "flex",
+    alignItems: "center",
+  },
+  cloneBtn: {
+    padding: "8px 14px",
+    borderRadius: 8,
+    border: "1px solid var(--surface-2)",
+    background: "transparent",
+    color: "var(--txt-sec)",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",

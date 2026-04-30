@@ -9,11 +9,16 @@ function NewTagPageInner() {
   const searchParams = useSearchParams();
   const preselectedClientId = searchParams.get("clientId") || undefined;
   const preselectedCampaignId = searchParams.get("campaignId") || undefined;
+  /* ?cloneFrom=<tagId> - tryb klonu: hook fetch-uje zrodlowego taga i wypelnia
+   * formularz jego danymi (ale czysci pola identity). Linkowane z edytora przez
+   * przycisk "Klonuj" w TagFormHeader. */
+  const cloneFromId = searchParams.get("cloneFrom") || undefined;
 
   const form = useTagForm({
     mode: "create",
     preselectedClientId,
     preselectedCampaignId,
+    cloneFromId,
   });
 
   return <TagFormLayout form={form} />;
